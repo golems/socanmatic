@@ -54,22 +54,25 @@
 #include "ntcanopen.h"
 
 // verbosity output levels
-#define WARN 0
-#define INFO 1
-#define DEBUG 2
 
-#define DEFAULT_BAUD 1000
+#define WARN 0  ///< verbosity level for warnings
+#define INFO 1  ///< verbosity level for info messages
+#define DEBUG 2 ///< verbosity level for debug messages
 
+#define DEFAULT_BAUD 1000 ///< default can baud rate in kbps
+
+/// print a debug messages at some level
 #define DEBUGF(level, fmt, a... )                                       \
     (((args.verbosity) >= level )?fprintf( stderr, (fmt), ## a ) : 0);
 
 // ARG_KEYS
-#define ARG_READ_SDO 300
-#define ARG_CAN_STATUS 301
-#define ARG_LISTEN 302
-#define ARG_WRITE 303
-#define ARG_BAUD 304
-#define ARG_NET 305
+#define ARG_READ_SDO 300     ///< and argp key
+#define ARG_CAN_STATUS 301   ///< and argp key
+#define ARG_LISTEN 302       ///< and argp key
+#define ARG_WRITE 303        ///< and argp key
+#define ARG_BAUD 304         ///< and argp key
+#define ARG_NET 305          ///< and argp key
+#define ARG_WRITE_SDO 306    ///< and argp key
 
 /* -- ARG PARSING JUNK --*/
 static struct argp_option options[] = {
@@ -86,7 +89,14 @@ static struct argp_option options[] = {
         .key = ARG_READ_SDO,
         .arg = NULL,
         .flags = 0,
-        .doc = "Mode Setting: SDO to read, specified in hex"
+        .doc = "Mode Setting: Read an SDO"
+    },
+    {
+        .name = "writesdo",
+        .key = ARG_WRITE_SDO,
+        .arg = NULL,
+        .flags = 0,
+        .doc = "Mode Setting: Write an SDO"
     },
     {
         .name = "canstatus",
@@ -129,7 +139,7 @@ static struct argp_option options[] = {
         .key = 'b',
         .arg = "DATA",
         .flags = 0,
-        .doc = "A byte of data for Write mode, hex"
+        .doc = "A byte of data for Write mode, hex, wire order"
     },
     {
         .name = "id",
@@ -169,13 +179,18 @@ static struct argp_option options[] = {
     {0}
 };
 
+/// argp parsing function
 static error_t parse_opt( int key, char *arg, struct argp_state *state);
-
+/// argp program version
 const char *argp_program_version = "sparky-0";
+/// argp program doc line
 static char doc[] = "Control Program for Sparky the Robot";
+/// argp program arguments documention
 static char args_doc[] = "...";
+/// argp object
 static struct argp argp = {options, parse_opt, args_doc, doc };
 
+/// struct type declaration for parsed arguments
 typedef struct {
     int mode;
 
@@ -194,6 +209,7 @@ typedef struct {
     int16_t subindex;
 } args_t;
 
+/// struct to hold parsed args
 static args_t args = {
     //.dostatus = 0,
     //.dowrite = 0,
@@ -214,12 +230,13 @@ static args_t args = {
 
 
 
-
+/// print failure message and exit
 void fail(char *msg) {
     fprintf(stderr, "\%s\n", msg);
     exit(EXIT_FAILURE);
 }
 
+/// convert baud in kbps to NTCAN buad code
 int ntcan_baud_code( int kbps ) {
     if( kbps >= 1000 )
         return NTCAN_BAUD_1000;
@@ -242,6 +259,7 @@ int ntcan_baud_code( int kbps ) {
     return NTCAN_BAUD_1000;
 }
 
+/// convert NTCAN baud code to baud in kbps
 int ntcan_baud_kbps( int ntcan_baud ) {
     switch(ntcan_baud) {
     case NTCAN_BAUD_1000:
@@ -265,6 +283,7 @@ int ntcan_baud_kbps( int ntcan_baud ) {
     }
 }
 
+/// return a char[] describing the ntcan result
 char *ntcan_result_to_str( NTCAN_RESULT ntr ) {
     switch( ntr ) {
     case NTCAN_SUCCESS: return "SUCCESS";
@@ -299,6 +318,7 @@ char *ntcan_result_to_str( NTCAN_RESULT ntr ) {
     }
 }
 
+/// exit if ntr is not NTCAN_SUCCESS
 void ntcan_success_or_die(char *op_name, NTCAN_RESULT ntr ) {
     if( ntr != NTCAN_SUCCESS ){
         fprintf(stderr,
@@ -309,32 +329,18 @@ void ntcan_success_or_die(char *op_name, NTCAN_RESULT ntr ) {
     }
 }
 
+/// print debug message about the NTCAN_RESULT
 static void ntcan_debug(int level, char *op, NTCAN_RESULT ntr ) {
     if( ntr != NTCAN_SUCCESS) level++;
     DEBUGF(level, "%s: %s\n", op, ntcan_result_to_str( ntr ));
 }
 
-
-void ntcan_dump( CMSG *pmsg ) {
-    unsigned int u = pmsg->id;
-    printf("%x[%d] ", u, pmsg->len) ;
-    int i;
-    for( i = 0; i < pmsg->len; i++) {
-        u = pmsg->data[i];
-        printf("%x%s", u, (i < pmsg->len - 1)?":":"" );
-    }
-}
-
-/* Loop that listens for CAN message and prints to stdout */
-void dolisten() {
-    NTCAN_HANDLE h;
+/// opens can handle according to parsed command line parameters
+static void tool_canOpen(NTCAN_HANDLE *ph) {
     NTCAN_RESULT ntr;
+    NTCAN_HANDLE h;
     int baudcode = ntcan_baud_code( args.baud_kbps );
-    //check for specified range range
-    if( !(args.canid_range[0] >= 0 &&
-          args.canid_range[1] >= args.canid_range[0] )) {
-        fail("Must specify valid id range");
-    }
+
     // open can handle
     ntr = canOpen( args.net,   //net
                    0,   //flags
@@ -352,11 +358,40 @@ void dolisten() {
     ntcan_debug( INFO, "canSetBaudrate", ntr );
     ntcan_success_or_die("SetBaudrate", ntr);
 
+    *ph = h;
+}
+
+/// prints can message to stdout
+void ntcan_dump( CMSG *pmsg ) {
+    unsigned int u = pmsg->id;
+    printf("%2x[%d] ", u, pmsg->len) ;
+    int i;
+    for( i = 0; i < pmsg->len; i++) {
+        u = pmsg->data[i];
+        printf("%02x%s", u, (i < pmsg->len - 1)?":":"" );
+    }
+}
+
+/** Loop that listens for CAN message and prints to stdout */
+void dolisten() {
+    NTCAN_HANDLE h;
+    NTCAN_RESULT ntr;
+    int baudcode = ntcan_baud_code( args.baud_kbps );
+    //check for specified range range
+    if( !(args.canid_range[0] >= 0 &&
+          args.canid_range[1] >= args.canid_range[0] )) {
+        fail("Must specify valid id range");
+    }
+
+    // open can handle
+
+    tool_canOpen( &h );
+
     // bind id's
     {
         int i;
         for(i = args.canid_range[0]; i < args.canid_range[1]; i++ ){
-            canIdAdd( h, i );
+            ntr = canIdAdd( h, i );
             ntcan_debug(INFO, "IdAdd", ntr);
             ntcan_success_or_die("IdAdd", ntr);
         }
@@ -387,6 +422,7 @@ void dolisten() {
     return;
 }
 
+/// print status of can interface to stdout
 void ntcan_print_status(int net) {
     NTCAN_HANDLE h;
     NTCAN_RESULT ntr;
@@ -462,6 +498,7 @@ void ntcan_print_status(int net) {
     return;
 }
 
+/// write a single can message
 void dowrite() {
     //check args
     if( args.id < 0 )
@@ -484,24 +521,9 @@ void dowrite() {
         printf(" at %d kbps\n", ntcan_baud_kbps(baudcode) );
     }
 
-    //open
 
-    ntr = canOpen( args.net,   //net
-                   0,   //flags
-                   10,  //txqueue
-                   100,  //rxqueue
-                   1000, //txtimeout
-                   5000, //rxtimeout
-                   & h // handle
-        );
-    ntcan_debug( INFO, "canOpen", ntr );
-    ntcan_success_or_die("Open", ntr);
-
-    //set baud
-    ntr = canSetBaudrate( h, baudcode );
-    ntcan_debug( INFO, "canSetBaudrate", ntr );
-    ntcan_success_or_die("SetBaudrate", ntr);
-
+    // open
+    tool_canOpen( &h );
 
     //send message
     int num = 1; //sending 1 message
@@ -516,6 +538,7 @@ void dowrite() {
     return;
 }
 
+/// read a CANopen SDO
 void doreadsdo() {
     sdo_msg_t sdo;
     CMSG msg;
@@ -544,23 +567,8 @@ void doreadsdo() {
         printf("CMSG:        "); ntcan_dump( &msg ); printf("\n");
     }
 
-
-    //open
-    ntr = canOpen( args.net,   //net
-                   0,   //flags
-                   10,  //txqueue
-                   100,  //rxqueue
-                   1000, //txtimeout
-                   5000, //rxtimeout
-                   & h // handle
-        );
-    ntcan_debug( INFO, "canOpen", ntr );
-    ntcan_success_or_die("Open", ntr);
-
-    //set baud
-    ntr = canSetBaudrate( h, baudcode );
-    ntcan_debug( INFO, "canSetBaudrate", ntr );
-    ntcan_success_or_die("SetBaudrate", ntr);
+    // open
+    tool_canOpen( &h );
 
     // bind proper id
     canOpenIdAddSDOResponse( h, args.node );
@@ -582,10 +590,78 @@ void doreadsdo() {
 
     // print
     canOpenTranslateSDO( &msg, &sdo, 1 );
-    printf("Received CMSG: "); ntcan_dump( &msg ); printf("\n");
-    printf("Received SDO:  "); canOpenDumpSDO( &sdo ); printf("\n");
+    if( args.verbosity >= INFO ) {
+        printf("Received CMSG: "); ntcan_dump( &msg ); printf("\n");
+        printf("Received SDO:  "); canOpenDumpSDO( &sdo ); printf("\n");
+    }else {
+        canOpenDumpSDO( &sdo ); printf("\n");
+    }
+
 }
 
+/// write and sdo object
+void dowritesdo() {
+    sdo_msg_t sdo;
+    CMSG msg;
+    NTCAN_RESULT ntr;
+    NTCAN_HANDLE h;
+
+    //check params
+    if( args.node < 0 || args.node > 127 )
+        fail("Must specify valid node id");
+    if( -1 == args.index )
+        fail("Must specify valid index");
+    if( -1 == args.subindex )
+        fail("Must specify valid subindex");
+    if( 0 == args.length || args.length > 4 )
+        fail("Must specify valid number of data bytes");
+
+
+    //build sdo
+    sdo.node = args.node;
+    sdo.command = canOpenCommand( CANOPEN_EX_DL, 0, 1, 0);
+    sdo.index = args.index;
+    sdo.subindex = args.subindex;
+    sdo.length = args.length;
+    memcpy( sdo.data, args.data_bytes, sdo.length );
+    canOpenTranslateSDO( &msg, &sdo, 0 );
+    if( args.verbosity >= INFO ) {
+        printf("Sending SDO: "); canOpenDumpSDO( &sdo ); printf("\n");
+        printf("CMSG:        "); ntcan_dump( &msg ); printf("\n");
+    }
+
+    // open
+    tool_canOpen( &h );
+
+    // bind proper id
+    canOpenIdAddSDOResponse( h, args.node );
+
+    // send request
+    ntr = canOpenWriteSDO( h, &sdo );
+    ntcan_debug( INFO, "writeSDO", ntr );
+    ntcan_success_or_die("writeSDO", ntr);
+
+    // get response
+    ntr = canOpenWaitSDO( h, &sdo );
+    ntcan_debug( INFO, "waitSDO", ntr );
+    ntcan_success_or_die("waitSDO", ntr);
+
+    //close
+    ntr = canClose( h );
+    ntcan_debug( INFO, "canClose", ntr );
+    ntcan_success_or_die("Close", ntr);
+
+    // print
+    canOpenTranslateSDO( &msg, &sdo, 1 );
+    if( args.verbosity >= INFO ) {
+        printf("Received CMSG: "); ntcan_dump( &msg ); printf("\n");
+        printf("Received SDO:  "); canOpenDumpSDO( &sdo ); printf("\n");
+    }else {
+        canOpenDumpSDO( &sdo ); printf("\n");
+    }
+}
+
+/// main
 int main( int argc, char **argv ) {
     argp_parse (&argp, argc, argv, 0, NULL, NULL);
     switch(args.mode) {
@@ -601,6 +677,9 @@ int main( int argc, char **argv ) {
     case ARG_READ_SDO:
         doreadsdo();
         break;
+    case ARG_WRITE_SDO:
+        dowritesdo();
+        break;
     default:
         fail("Must specify valid mode");
     }
@@ -608,6 +687,7 @@ int main( int argc, char **argv ) {
     return EXIT_SUCCESS;
 }
 
+/// argp parsing function
 static error_t parse_opt( int key, char *arg, struct argp_state *state) {
     //printf("parse_opt: %c->%s\n", key, arg);
 
@@ -652,6 +732,7 @@ static error_t parse_opt( int key, char *arg, struct argp_state *state) {
     case ARG_LISTEN:
     case ARG_WRITE:
     case ARG_READ_SDO:
+    case ARG_WRITE_SDO:
         if( -1 == args.mode ) args.mode = key;
         else fail("Cannot specify multiple modes");
     case 0: //noflag arg

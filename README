@@ -16,7 +16,13 @@ Show status of can interface:
   `esdcantool --canstatus'
 
 Listen to CAN messages:
-  `esdcantool --baud 250 --listen --range='0:65536'
+  `esdcantool --baud 250 --listen --range='0:800'
 
 Send a CAN message:
   `esdcantool --write --id=eb -b 1'
+
+Read CANopen SDO 1018.01 on node 1:
+  `esdcantool --readsdo -n 1 -X 1018 -x 1'
+
+Write CANopen SDO 100b.0 on node 1 with 0xabcd:
+  `esdcantool --writesdo -n 1 -X 100b -x 0 -b cd -b ab

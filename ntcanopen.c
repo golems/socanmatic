@@ -40,7 +40,8 @@
  *
  * \author Neil Dantam
  *
- * \bugs
+ * \bug AMC servo drives require expedited SDO reads to have a full
+ * 8-byte data portion.  We must accomodate.
  */
 
 
@@ -101,10 +102,10 @@ NTCAN_RESULT canOpenWaitSDO( const NTCAN_HANDLE h, sdo_msg_t *sdomsg ) {
 }
 
 void canOpenDumpSDO( const sdo_msg_t *sdo ) {
-    printf( "%x.%x[%x.%x] ", sdo->node, sdo->command, sdo->index, sdo->subindex);
+    printf( "%02x.%02x[%04x.%02x] ", sdo->node, sdo->command, sdo->index, sdo->subindex);
     int i;
     for( i = 0; i < sdo->length; i++ )
-        printf("%x:", sdo->data[i] );
+        printf("%02x:", sdo->data[i] );
 }
 
 uint8_t canOpenCommand( const canopen_command_spec_t command_spec,
@@ -112,6 +113,8 @@ uint8_t canOpenCommand( const canopen_command_spec_t command_spec,
                         const uint8_t is_expedited,
                         const uint8_t is_len_in_cmd ) {
     uint8_t c = 0;
+    assert( nodata_len <= 3 );
+    assert(  (is_expedited && is_len_in_cmd) || ! nodata_len );
     c |= is_len_in_cmd?1:0;
     c |= (is_expedited?1:0) << 1;
     c |= (nodata_len & 0x3) << 2;

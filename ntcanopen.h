@@ -40,7 +40,7 @@
  *
  * \author Neil Dantam
  *
- * \bugs Deferring implentation of segmented messages
+ * \bug Deferring implentation of segmented messages
  */
 
 #ifndef NTCANOPEN_H_
