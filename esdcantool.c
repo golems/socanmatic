@@ -51,6 +51,7 @@
 #include <string.h>
 #include <argp.h>
 #include "ntcan.h"
+#include "ntcanopen.h"
 
 // verbosity output levels
 #define WARN 0
@@ -72,6 +73,36 @@
 
 /* -- ARG PARSING JUNK --*/
 static struct argp_option options[] = {
+    // mode flags
+    {
+        .name = "listen",
+        .key = ARG_LISTEN,
+        .arg = NULL,
+        .flags = 0,
+        .doc = "Mode Setting: Listen on the bus, print messages"
+    },
+    {
+        .name = "readsdo",
+        .key = ARG_READ_SDO,
+        .arg = NULL,
+        .flags = 0,
+        .doc = "Mode Setting: SDO to read, specified in hex"
+    },
+    {
+        .name = "canstatus",
+        .key = ARG_CAN_STATUS,
+        .arg = NULL,
+        .flags = 0,
+        .doc = "Mode Setting: Print CAN Status Information"
+    },
+    {
+        .name = "write",
+        .key = ARG_WRITE,
+        .arg = NULL,
+        .flags = 0,
+        .doc = "Mode Setting: Write CAN Message"
+    },
+    // option flags
     {
         .name = "verbose",
         .key = 'v',
@@ -87,13 +118,6 @@ static struct argp_option options[] = {
         .doc = "The CAN Open node ID we want to talk to"
     },
     {
-        .name = "listen",
-        .key = ARG_LISTEN,
-        .arg = NULL,
-        .flags = 0,
-        .doc = "Mode Setting: Listen on the bus, print messages"
-    },
-    {
         .name = "range",
         .key = 'r',
         .arg = "MIN:MAX",
@@ -101,25 +125,11 @@ static struct argp_option options[] = {
         .doc = "Range of CAN ID's to listen for, as \"MIN:MAX\" in hex"
     },
     {
-        .name = "readsdo",
-        .key = ARG_READ_SDO,
-        .arg = "SDO",
-        .flags = 0,
-        .doc = "Mode Setting: SDO to read, specified in hex"
-    },
-    {
-        .name = "canstatus",
-        .key = ARG_CAN_STATUS,
-        .arg = NULL,
-        .flags = 0,
-        .doc = "Mode Setting: Print CAN Status Information"
-    },
-    {
         .name = "byte",
         .key = 'b',
         .arg = "DATA",
         .flags = 0,
-        .doc = "A byte of data for Write mode"
+        .doc = "A byte of data for Write mode, hex"
     },
     {
         .name = "id",
@@ -136,18 +146,25 @@ static struct argp_option options[] = {
         .doc = "can baud in kbps"
     },
     {
-        .name = "write",
-        .key = ARG_WRITE,
-        .arg = NULL,
-        .flags = 0,
-        .doc = "Mode Setting: Write CAN Message"
-    },
-    {
         .name = "net",
         .key = ARG_NET,
         .arg = NULL,
         .flags = 0,
         .doc = "CAN Network to use, default 0"
+    },
+    {
+        .name = "index",
+        .key = 'X',
+        .arg = "INDEX",
+        .flags = 0,
+        .doc = "CANopen SDO index"
+    },
+    {
+        .name = "subindex",
+        .key = 'x',
+        .arg = "SUBINDEX",
+        .flags = 0,
+        .doc = "CANopen SDO subindex"
     },
     {0}
 };
@@ -160,31 +177,37 @@ static char args_doc[] = "...";
 static struct argp argp = {options, parse_opt, args_doc, doc };
 
 typedef struct {
-    int dostatus;
-    int dowrite;
+    int mode;
+
     int verbosity;
     int node;
-    int listen;
     int canid_range[2];
     int32_t id;
     uint8_t data_bytes[8];
-    uint8_t length;
+
     int baud_kbps;
     int net;
+
+    uint8_t length;
+
+    int32_t index;
+    int16_t subindex;
 } args_t;
 
 static args_t args = {
-    .dostatus = 0,
-    .dowrite = 0,
+    //.dostatus = 0,
+    //.dowrite = 0,
+    .mode = -1,
     .verbosity = 0,
     .node = -1,
-    .listen = 0,
     .canid_range = {-1, -1},
     .length = 0,
     .id = -1,
     .data_bytes = {0},
     .baud_kbps = DEFAULT_BAUD,
-    .net = 0
+    .net = 0,
+    .index = -1,
+    .subindex = -1
 };
 
 /*-- END ARG PARSING --*/
@@ -298,15 +321,15 @@ void ntcan_dump( CMSG *pmsg ) {
     int i;
     for( i = 0; i < pmsg->len; i++) {
         u = pmsg->data[i];
-        printf("%x:", u);
+        printf("%x%s", u, (i < pmsg->len - 1)?":":"" );
     }
-    printf("\n");
 }
 
 /* Loop that listens for CAN message and prints to stdout */
 void dolisten() {
     NTCAN_HANDLE h;
     NTCAN_RESULT ntr;
+    int baudcode = ntcan_baud_code( args.baud_kbps );
     //check for specified range range
     if( !(args.canid_range[0] >= 0 &&
           args.canid_range[1] >= args.canid_range[0] )) {
@@ -323,6 +346,12 @@ void dolisten() {
         );
     ntcan_success_or_die("Open", ntr);
     ntcan_debug(INFO, "open", ntr);
+
+    //set baud
+    ntr = canSetBaudrate( h, baudcode );
+    ntcan_debug( INFO, "canSetBaudrate", ntr );
+    ntcan_success_or_die("SetBaudrate", ntr);
+
     // bind id's
     {
         int i;
@@ -346,6 +375,7 @@ void dolisten() {
             ntcan_debug(DEBUG, "read", ntr);
             if( NTCAN_SUCCESS == ntr ) {
                 ntcan_dump(&msg);
+                printf("\n");
             }
         }
     }
@@ -486,16 +516,93 @@ void dowrite() {
     return;
 }
 
+void doreadsdo() {
+    sdo_msg_t sdo;
+    CMSG msg;
+    NTCAN_RESULT ntr;
+    NTCAN_HANDLE h;
+    int baudcode = ntcan_baud_code( args.baud_kbps );
+
+    // check args
+    if( args.node < 0 || args.node > 127 )
+        fail("Must specify valid node id");
+    if( -1 == args.index )
+        fail("Must specify valid index");
+    if( -1 == args.subindex )
+        fail("Must specify valid subindex");
+
+    // build sdo request
+    sdo.node = args.node;
+    sdo.command = canOpenCommand( CANOPEN_EX_UL, 0, 1, 0);
+    //sdo.command = 0x40;
+    sdo.index = args.index;
+    sdo.subindex = args.subindex;
+    sdo.length = 0;
+    canOpenTranslateSDO( &msg, &sdo, 0 );
+    if( args.verbosity >= INFO ) {
+        printf("Sending SDO: "); canOpenDumpSDO( &sdo ); printf("\n");
+        printf("CMSG:        "); ntcan_dump( &msg ); printf("\n");
+    }
+
+
+    //open
+    ntr = canOpen( args.net,   //net
+                   0,   //flags
+                   10,  //txqueue
+                   100,  //rxqueue
+                   1000, //txtimeout
+                   5000, //rxtimeout
+                   & h // handle
+        );
+    ntcan_debug( INFO, "canOpen", ntr );
+    ntcan_success_or_die("Open", ntr);
+
+    //set baud
+    ntr = canSetBaudrate( h, baudcode );
+    ntcan_debug( INFO, "canSetBaudrate", ntr );
+    ntcan_success_or_die("SetBaudrate", ntr);
+
+    // bind proper id
+    canOpenIdAddSDOResponse( h, args.node );
+
+    // send request
+    ntr = canOpenWriteSDO( h, &sdo );
+    ntcan_debug( INFO, "writeSDO", ntr );
+    ntcan_success_or_die("writeSDO", ntr);
+
+    // get response
+    ntr = canOpenWaitSDO( h, &sdo );
+    ntcan_debug( INFO, "waitSDO", ntr );
+    ntcan_success_or_die("waitSDO", ntr);
+
+    //close
+    ntr = canClose( h );
+    ntcan_debug( INFO, "canClose", ntr );
+    ntcan_success_or_die("Close", ntr);
+
+    // print
+    canOpenTranslateSDO( &msg, &sdo, 1 );
+    printf("Received CMSG: "); ntcan_dump( &msg ); printf("\n");
+    printf("Received SDO:  "); canOpenDumpSDO( &sdo ); printf("\n");
+}
+
 int main( int argc, char **argv ) {
     argp_parse (&argp, argc, argv, 0, NULL, NULL);
-    if( args.dostatus ) {
+    switch(args.mode) {
+    case ARG_CAN_STATUS:
         ntcan_print_status(args.net);
-    }
-    if( args.listen ) {
+        break;
+    case ARG_LISTEN:
         dolisten();
-    }
-    if( args.dowrite ) {
+        break;
+    case ARG_WRITE:
         dowrite();
+        break;
+    case ARG_READ_SDO:
+        doreadsdo();
+        break;
+    default:
+        fail("Must specify valid mode");
     }
 
     return EXIT_SUCCESS;
@@ -506,7 +613,8 @@ static error_t parse_opt( int key, char *arg, struct argp_state *state) {
 
     unsigned int parse_hex() {
         unsigned int u;
-        sscanf(arg,"%x", &u);
+        if( sscanf(arg,"%x", &u) != 1 )
+            fail( "Invalid number format" );
         return u;
     }
 
@@ -524,23 +632,31 @@ static error_t parse_opt( int key, char *arg, struct argp_state *state) {
     case 'r':
     {
         unsigned int min, max;
-        sscanf(arg, "%x:%x", &min, &max );
+        if( sscanf(arg, "%x:%x", &min, &max ) != 2 )
+            fail( "Invalid range format" );
         args.canid_range[0] = min;
         args.canid_range[1] = max;
     }
     break;
-    case ARG_CAN_STATUS: args.dostatus++;
+    case 'X': args.index = parse_hex();
         break;
-    case ARG_LISTEN: args.listen++;
-        break;
-    case ARG_WRITE: args.dowrite++;
+    case 'x': args.subindex = parse_hex();
         break;
     case ARG_BAUD: args.baud_kbps = atoi(arg);
         break;
     case ARG_NET: args.net = atoi(arg);
         break;
+
+        // MODES
+    case ARG_CAN_STATUS:
+    case ARG_LISTEN:
+    case ARG_WRITE:
+    case ARG_READ_SDO:
+        if( -1 == args.mode ) args.mode = key;
+        else fail("Cannot specify multiple modes");
     case 0: //noflag arg
         break;
     }
+
     return 0;
 }
