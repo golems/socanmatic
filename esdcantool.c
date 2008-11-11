@@ -256,6 +256,7 @@ int ntcan_baud_code( int kbps ) {
         return NTCAN_BAUD_20;
     if( kbps >= 10 )
         return NTCAN_BAUD_10;
+
     return NTCAN_BAUD_1000;
 }
 
