@@ -1,9 +1,29 @@
+## Makefile for esdcan
+
+## Edit thise variables to configure installation path
+# root to install to for `make install'
+PREFIX := /usr/local
+# if you use stow, root of your stow package directory
+STOWBASE := /usr/local/stow
+
+
+
+## Don't worry about the rest
+
+VERSION := 0.01
+PROJECT := esdcan
+
+STOWDIR := $(PROJECT)-$(VERSION)
+STOWPREFIX := $(STOWBASE)/$(STOWDIR)
+
+DISTPATH := $(HOME)/prism/tarballs
+DOXPATH := $(HOME)/prism/public_html/dox
+
+
 cc := gcc
 CC := g++
 
 CFLAGS := -g
-
-PREFIX := /usr/local
 
 
 .PHONY: doc clean distclean install default linkinstall_lib uninstall_lib
@@ -23,9 +43,6 @@ ntcanopen.o: ntcanopen.c ntcanopen.h
 libntcanopen.so: ntcanopen.o
 	gcc -shared -Wl,-soname,$@ -o $@ $<
 
-doc:
-	doxygen
-
 clean:
 	rm -vf *.o *.so esdcantool
 
@@ -34,6 +51,9 @@ distclean: clean
 
 
 install: libntcanopen.so
+	mkdir -p $(STOWPREFIX)/include
+	mkdir -p $(STOWPREFIX)/bin
+	mkdir -p $(STOWPREFIX)/lib
 	install --mode=755 libntcanopen.so $(PREFIX)/lib
 	install --mode=644 ntcanopen.h $(PREFIX)/include
 	install --mode=755 esdcantool $(PREFIX)/bin
@@ -49,3 +69,22 @@ uninstall_lib:
 linkinstall_lib: libntcanopen.so esdcantool
 	ln -s $(PWD)/libntcanopen.so $(PREFIX)/lib
 	ln -s $(PWD)/ntcanopen.h $(PREFIX)/include
+
+stow:
+	mkdir -p $(STOWPREFIX)/include
+	mkdir -p $(STOWPREFIX)/bin
+	mkdir -p $(STOWPREFIX)/lib
+	install --mode=755 libntcanopen.so $(STOWPREFIX)/lib
+	install --mode=644 ntcanopen.h $(STOWPREFIX)/include
+	install --mode=755 esdcantool $(STOWPREFIX)/bin
+	cd $(STOWBASE) && stow $(STOWDIR)
+
+dist: distclean
+	cd .. &&               \
+	tar --exclude=.svn --lzma -cvf $(DISTPATH)/$(PROJECT)-$(VERSION).tar.lzma $(PROJECT)
+
+doc:
+	doxygen
+
+docul: doc
+	cp -Tr doc/html $(DOXPATH)/$(PROJECT)

@@ -7,7 +7,9 @@ INSTALLATION
 
 2. Run `make'
 
-3. Execute `./esdcantool'
+3. Run `make install' or `make stow' (if you use stow)
+
+4. Execute `esdcantool'
 
 
 USAGE
