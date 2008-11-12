@@ -50,7 +50,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <argp.h>
+#include <assert.h>
 #include "ntcan.h"
+#include <stdint.h>
 #include "ntcanopen.h"
 
 // verbosity output levels
@@ -66,13 +68,14 @@
     (((args.verbosity) >= level )?fprintf( stderr, (fmt), ## a ) : 0);
 
 // ARG_KEYS
-#define ARG_READ_SDO 300     ///< and argp key
-#define ARG_CAN_STATUS 301   ///< and argp key
-#define ARG_LISTEN 302       ///< and argp key
-#define ARG_WRITE 303        ///< and argp key
-#define ARG_BAUD 304         ///< and argp key
-#define ARG_NET 305          ///< and argp key
-#define ARG_WRITE_SDO 306    ///< and argp key
+#define ARG_READ_SDO 300     ///< an argp key
+#define ARG_CAN_STATUS 301   ///< an argp key
+#define ARG_LISTEN 302       ///< an argp key
+#define ARG_WRITE 303        ///< an argp key
+#define ARG_BAUD 304         ///< an argp key
+#define ARG_NET 305          ///< an argp key
+#define ARG_WRITE_SDO 306    ///< an argp key
+#define ARG_NMT 307    ///< an argp key
 
 /* -- ARG PARSING JUNK --*/
 static struct argp_option options[] = {
@@ -111,6 +114,13 @@ static struct argp_option options[] = {
         .arg = NULL,
         .flags = 0,
         .doc = "Mode Setting: Write CAN Message"
+    },
+    {
+        .name = "nmt",
+        .key = ARG_NMT,
+        .arg = "[start_remote|stop_remote|pre_op|reset_node|reset_com]",
+        .flags = 0,
+        .doc = "Mode Setting: send NMT message"
     },
     // option flags
     {
@@ -182,16 +192,16 @@ static struct argp_option options[] = {
 /// argp parsing function
 static error_t parse_opt( int key, char *arg, struct argp_state *state);
 /// argp program version
-const char *argp_program_version = "sparky-0";
+const char *argp_program_version = "esdcantool-0.1";
 /// argp program doc line
-static char doc[] = "Control Program for Sparky the Robot";
+static char doc[] = "Shell tool to interact with esd CAN cards";
 /// argp program arguments documention
 static char args_doc[] = "...";
 /// argp object
 static struct argp argp = {options, parse_opt, args_doc, doc };
 
 /// struct type declaration for parsed arguments
-typedef struct {
+struct {
     int mode;
 
     int verbosity;
@@ -207,10 +217,9 @@ typedef struct {
 
     int32_t index;
     int16_t subindex;
-} args_t;
 
-/// struct to hold parsed args
-static args_t args = {
+    canopen_nmt_msg_t nmt_msg;
+} args = {
     //.dostatus = 0,
     //.dowrite = 0,
     .mode = -1,
@@ -223,7 +232,8 @@ static args_t args = {
     .baud_kbps = DEFAULT_BAUD,
     .net = 0,
     .index = -1,
-    .subindex = -1
+    .subindex = -1,
+    .nmt_msg = CANOPEN_NMT_INVAL
 };
 
 /*-- END ARG PARSING --*/
@@ -365,7 +375,7 @@ static void tool_canOpen(NTCAN_HANDLE *ph) {
 /// prints can message to stdout
 void ntcan_dump( CMSG *pmsg ) {
     unsigned int u = pmsg->id;
-    printf("%2x[%d] ", u, pmsg->len) ;
+    printf("%03x[%d] ", u, pmsg->len) ;
     int i;
     for( i = 0; i < pmsg->len; i++) {
         u = pmsg->data[i];
@@ -541,7 +551,7 @@ void dowrite() {
 
 /// read a CANopen SDO
 void doreadsdo() {
-    sdo_msg_t sdo;
+    sdo_msg_t sdo, rsdo;
     CMSG msg;
     NTCAN_RESULT ntr;
     NTCAN_HANDLE h;
@@ -574,15 +584,10 @@ void doreadsdo() {
     // bind proper id
     canOpenIdAddSDOResponse( h, args.node );
 
-    // send request
-    ntr = canOpenWriteSDO( h, &sdo );
-    ntcan_debug( INFO, "writeSDO", ntr );
-    ntcan_success_or_die("writeSDO", ntr);
-
-    // get response
-    ntr = canOpenWaitSDO( h, &sdo );
-    ntcan_debug( INFO, "waitSDO", ntr );
-    ntcan_success_or_die("waitSDO", ntr);
+    // communicate
+    ntr = canOpenSDOWriteWait( h, &sdo, &rsdo );
+    ntcan_debug( INFO, "write,wait", ntr );
+    ntcan_success_or_die("write,wait", ntr);
 
     //close
     ntr = canClose( h );
@@ -590,19 +595,20 @@ void doreadsdo() {
     ntcan_success_or_die("Close", ntr);
 
     // print
-    canOpenTranslateSDO( &msg, &sdo, 1 );
+    canOpenTranslateSDO( &msg, &rsdo, 1 );
     if( args.verbosity >= INFO ) {
         printf("Received CMSG: "); ntcan_dump( &msg ); printf("\n");
         printf("Received SDO:  "); canOpenDumpSDO( &sdo ); printf("\n");
     }else {
-        canOpenDumpSDO( &sdo ); printf("\n");
+        canOpenDumpSDO( &sdo ); printf("  -->  ");
+        canOpenDumpSDO( &rsdo ); printf("\n");
     }
 
 }
 
 /// write and sdo object
 void dowritesdo() {
-    sdo_msg_t sdo;
+    sdo_msg_t sdo, rsdo;
     CMSG msg;
     NTCAN_RESULT ntr;
     NTCAN_HANDLE h;
@@ -637,15 +643,10 @@ void dowritesdo() {
     // bind proper id
     canOpenIdAddSDOResponse( h, args.node );
 
-    // send request
-    ntr = canOpenWriteSDO( h, &sdo );
-    ntcan_debug( INFO, "writeSDO", ntr );
-    ntcan_success_or_die("writeSDO", ntr);
-
-    // get response
-    ntr = canOpenWaitSDO( h, &sdo );
-    ntcan_debug( INFO, "waitSDO", ntr );
-    ntcan_success_or_die("waitSDO", ntr);
+    // communicate
+    ntr = canOpenSDOWriteWait( h, &sdo, &rsdo );
+    ntcan_debug( INFO, "write,wait", ntr );
+    ntcan_success_or_die("write,wait", ntr);
 
     //close
     ntr = canClose( h );
@@ -658,8 +659,30 @@ void dowritesdo() {
         printf("Received CMSG: "); ntcan_dump( &msg ); printf("\n");
         printf("Received SDO:  "); canOpenDumpSDO( &sdo ); printf("\n");
     }else {
-        canOpenDumpSDO( &sdo ); printf("\n");
+        canOpenDumpSDO( &sdo ); printf("  -->  ");
+        canOpenDumpSDO( &rsdo ); printf("\n");
     }
+}
+
+/// send nmt message
+void donmt() {
+    NTCAN_HANDLE h;
+
+    if( -1 == args.node )
+        fail("Must specify target node of NMT message");
+    assert(CANOPEN_NMT_INVAL != args.nmt_msg );
+    // open
+    tool_canOpen( &h );
+
+    // send
+    NTCAN_HANDLE ntr = canOpenWriteNMT( h, args.node, args.nmt_msg );
+    ntcan_debug( INFO, "nmt", ntr );
+    ntcan_success_or_die("nmt", ntr);
+
+    //close
+    ntr = canClose( h );
+    ntcan_debug( INFO, "canClose", ntr );
+    ntcan_success_or_die("Close", ntr);
 }
 
 /// main
@@ -680,6 +703,9 @@ int main( int argc, char **argv ) {
         break;
     case ARG_WRITE_SDO:
         dowritesdo();
+        break;
+    case ARG_NMT:
+        donmt();
         break;
     default:
         fail("Must specify valid mode");
@@ -702,7 +728,7 @@ static error_t parse_opt( int key, char *arg, struct argp_state *state) {
     switch( key ) {
     case 'v': args.verbosity++;
         break;
-    case 'n': args.node = atoi(arg);
+    case 'n': args.node = parse_hex();
         break;
     case 'b':
         args.data_bytes[args.length++] = parse_hex();
@@ -729,6 +755,20 @@ static error_t parse_opt( int key, char *arg, struct argp_state *state) {
         break;
 
         // MODES
+    case ARG_NMT:
+        if( strcasecmp( arg, "start_remote") == 0 )
+            args.nmt_msg = CANOPEN_NMT_START_REMOTE;
+        else if( strcasecmp( arg, "stop_remote") == 0 )
+            args.nmt_msg = CANOPEN_NMT_STOP_REMOTE;
+        else if( strcasecmp( arg, "pre_op") == 0 )
+            args.nmt_msg = CANOPEN_NMT_PRE_OP;
+        else if( strcasecmp( arg, "reset_node") == 0 )
+            args.nmt_msg = CANOPEN_NMT_RESET_NODE;
+        else if( strcasecmp( arg, "reset_com") == 0 )
+            args.nmt_msg = CANOPEN_NMT_RESET_COM;
+        else
+            fail("Must specify valid NMT message type");
+        // don't break
     case ARG_CAN_STATUS:
     case ARG_LISTEN:
     case ARG_WRITE:

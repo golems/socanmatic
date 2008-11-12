@@ -6,9 +6,9 @@ CFLAGS := -g
 PREFIX := /usr/local
 
 
-.PHONY: doc clean distclean install default
+.PHONY: doc clean distclean install default linkinstall_lib uninstall_lib
 
-default: esdcantool
+default: esdcantool libntcanopen.so
 
 
 esdcantool: esdcantool.o ntcanopen.o
@@ -37,3 +37,15 @@ install: libntcanopen.so
 	install --mode=755 libntcanopen.so $(PREFIX)/lib
 	install --mode=644 ntcanopen.h $(PREFIX)/include
 	install --mode=755 esdcantool $(PREFIX)/bin
+
+bininstall: esdcantool
+	install --mode=755 esdcantool $(PREFIX)/bin
+
+uninstall_lib:
+	rm -f $(PREFIX)/lib/libntcanopen.so
+	rm -f $(PREFIX)/include/ntcanopen.h
+
+
+linkinstall_lib: libntcanopen.so esdcantool
+	ln -s $(PWD)/libntcanopen.so $(PREFIX)/lib
+	ln -s $(PWD)/ntcanopen.h $(PREFIX)/include
