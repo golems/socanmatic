@@ -50,6 +50,7 @@
 #include <stdlib.h>
 #include <ntcan.h>
 #include <assert.h>
+#include <errno.h>
 #include "ntcanopen.h"
 
 extern int verbosity;
