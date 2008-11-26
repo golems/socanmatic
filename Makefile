@@ -51,9 +51,9 @@ distclean: clean
 
 
 install: libntcanopen.so
-	mkdir -p $(STOWPREFIX)/include
-	mkdir -p $(STOWPREFIX)/bin
-	mkdir -p $(STOWPREFIX)/lib
+	mkdir -p $(PREFIX)/include
+	mkdir -p $(PREFIX)/bin
+	mkdir -p $(PREFIX)/lib
 	install --mode=755 libntcanopen.so $(PREFIX)/lib
 	install --mode=644 ntcanopen.h $(PREFIX)/include
 	install --mode=755 esdcantool $(PREFIX)/bin
