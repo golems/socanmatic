@@ -455,8 +455,10 @@ void ntcan_print_status(int net) {
     }
 
 
+    int i=1;
+    printf("net id is: %d\n", i);
     //open
-    ntr = canOpen( net,   //net
+    ntr = canOpen( i,   //net
                    0,   //flags
                    10,  //txqueue
                    100,  //rxqueue
@@ -464,6 +466,8 @@ void ntcan_print_status(int net) {
                    5000, //rxtimeout
                    &h // handle
         );
+
+    printf("canOpen returned: %d\n", ntr);
     ntcan_success_or_die("Open", ntr);
     ntcan_debug(INFO, "open", ntr);
 
