@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <ntcan.h>
 #include "amccan.h"
+#include "amcdrive.h"
 
 #define eprintf(f, args...) fprintf(stderr, f, ## args)
 
@@ -16,23 +17,13 @@ void try(char *name, int status) {
 }
 
 int main(int argc, char **argv) {
-	uint32_t k_p;
+	NTCAN_RESULT status;
+	NTCAN_HANDLE handle;
+	servo_vars_t servo;
 
-	try("canOpen", canOpen(0, 0, 10, 128, 1000, 2000, &handle));
-	try("canSetBaudrate", canSetBaudrate(handle, NTCAN_BAUD_1000));
+	status = amcdrive_init(0, 0x20, REQUEST_TPDO_POSITION|REQUEST_TPDO_VELOCITY, 1000, &handle, &servo);
+	try("amcdrive_init", status);
 
-	try("canOpenIdAddSDOResponse", canOpenIdAddSDOResponse(handle, 0x20));
-	try("canOpenIdAddSDOResponse", canOpenIdAddSDOResponse(handle, 0x21));
 
-    uint8_t rcmd;
-    uint16_t maxCurrent;
-	try("canOpenSDOWriteWait_ul_u32", canOpenSDOWriteWait_ul_u32(handle, 
-	    &rcmd, &maxCurrent, 0x20, AMCCAN_INDEX_BOARD_INFO,
-        AMCCAN_SUBINDEX_MAX_PEAK_CURRENT));
-    
-    eprintf("Max continuous current: %d\n", maxCurrent);
-    
-    canClose(handle);
-		
 }
 

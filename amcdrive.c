@@ -4,10 +4,11 @@
 #include <ntcan.h>
 #include "amccan.h"
 #include "amcdrive.h"
+#include "ntcanopen.h"
 
-static uint16_t position_cob_base = 0x200
-static uint16_t velocity_cob_base = 0x300
-static uint16_t current_cob_base = 0x400
+static uint16_t position_cob_base = 0x200;
+static uint16_t velocity_cob_base = 0x300;
+static uint16_t current_cob_base = 0x400;
 
 #define eprintf(f, args...) fprintf(stderr, f, ## args)
 
@@ -29,8 +30,8 @@ static NTCAN_RESULT try_ntcan(char *op, NTCAN_RESULT ntr) {
 static NTCAN_RESULT try_ntcan_dl(const char *op, const uint8_t *rcmd, NTCAN_RESULT ntr) {
     if (NTCAN_SUCCESS != ntr)
         return fail(ntr, "Failed %s: %s\n", op, canResultString(ntr));
-    if (rcmd && 0x80 == *rcmd)
-        return fail(-1, "Bad SDO DL %s\n", op);
+//    if (rcmd && 0x80 == *rcmd)
+//        return fail(-1, "Bad SDO DL %s\n", op);
 }
 
 static NTCAN_RESULT amcdrive_get_info(NTCAN_HANDLE handle, uint id, servo_vars_t *drive_info) {
@@ -43,7 +44,7 @@ static NTCAN_RESULT amcdrive_get_info(NTCAN_HANDLE handle, uint id, servo_vars_t
     if (status != NTCAN_SUCCESS)
         return status;
     
-    uint32_t switchingFrequnecyPBF;
+    uint32_t switchingFrequencyPBF;
     status = try_ntcan_dl("read switching frequency", &rcmd,
         canOpenSDOWriteWait_ul_u32(handle, &rcmd, &switchingFrequencyPBF, id,
             AMCCAN_INDEX_BOARD_INFO, AMCCAN_SUBINDEX_BOARD_SWITCH_FREQ));
@@ -52,7 +53,7 @@ static NTCAN_RESULT amcdrive_get_info(NTCAN_HANDLE handle, uint id, servo_vars_t
     drive_info->k_s = amcccan_decode_pbf(switchingFrequencyPBF);
     
     status = try_ntcan_dl("read feedback interpolation", &rcmd,
-        canOpenSDOWriteWait_ul_u32(handle, &rcmd, &drive_info->k_i, id,
+        canOpenSDOWriteWait_ul_u16(handle, &rcmd, &drive_info->k_i, id,
             AMCCAN_INDEX_FEEDBACK_PARM, AMCCAN_SUBINDEX_FEEDBACK_POS_INTERP));
     if (status != NTCAN_SUCCESS)
         return status;
@@ -60,7 +61,7 @@ static NTCAN_RESULT amcdrive_get_info(NTCAN_HANDLE handle, uint id, servo_vars_t
     return status;
 }
 
-static NTCAN_RESULT amcdrive_enable_pdos(NTCAN_HANDLE handle, uint id, uint pdos, server_vars_t *drive_info) {
+static NTCAN_RESULT amcdrive_enable_pdos(NTCAN_HANDLE handle, uint id, uint pdos, servo_vars_t *drive_info) {
     NTCAN_RESULT status;
     uint8_t rcmd;
     
@@ -113,6 +114,7 @@ static NTCAN_RESULT amcdrive_enable_pdos(NTCAN_HANDLE handle, uint id, uint pdos
 
 NTCAN_RESULT amcdrive_enable_async_timer(NTCAN_HANDLE handle, uint id, uint update_freq) {
     NTCAN_RESULT status;
+    uint8_t rcmd;
     
     // Configure PDOs to function in ASYNC mode
     status = try_ntcan_dl("tpdo_position_transmission", &rcmd,
@@ -151,8 +153,8 @@ NTCAN_RESULT amcdrive_enable_async_timer(NTCAN_HANDLE handle, uint id, uint upda
     if (status != NTCAN_SUCCESS)
         return status;
     
-    uint cycle_time = update_frequency <= 1000 ? 1000 / update_frequency : 1;
-    int tpdos[] { AMCCAN_TPDO_3, AMCCAN_TPDO_4, AMCCAN_TPDO_5 };
+    uint cycle_time = update_freq <= 1000 ? 1000 / update_freq : 1;
+    int tpdos[] = { AMCCAN_TPDO_3, AMCCAN_TPDO_4, AMCCAN_TPDO_5 };
     status = try_ntcan_dl("enable_timer", &rcmd,
         amccan_dl_timer1(handle, &rcmd, id, cycle_time, tpdos, 3));
     
@@ -207,9 +209,14 @@ NTCAN_RESULT amcdrive_init(uint bus, uint identifier, uint pdos,
                    // If you don't think this is what we should be doing, ask me
                    // before changing. -- Jon Olson
     
+    status = try_ntcan("add SDO response",
+        canOpenIdAddSDOResponse(*handle, identifier));
+    if (status != NTCAN_SUCCESS)
+        goto fail;
+    
     // Put the drive into pre-operational state
     status = try_ntcan("pre-op",
-        canOpenWriteNMT(handle, drive_node_ids[i], CANOPEN_NMT_PRE_OP));
+        canOpenWriteNMT(*handle, identifier, CANOPEN_NMT_PRE_OP));
     if (status != NTCAN_SUCCESS)
         goto fail;
     

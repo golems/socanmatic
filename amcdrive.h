@@ -29,4 +29,5 @@ typedef struct {
 #define REQUEST_TPDO_VELOCITY 0x20
 #define REQUEST_TPDO_CURRENT  0x40
 
-void amcdrive_init(uint drive, uint identifier, uint pdos, NTCAN_HANDLE *handle, servo_vars_t *drive_info);
+NTCAN_RESULT amcdrive_init(uint drive, uint identifier, uint pdos, uint update_freq, NTCAN_HANDLE *handle, servo_vars_t *drive_info);
+
