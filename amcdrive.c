@@ -25,13 +25,15 @@ static NTCAN_RESULT fail(NTCAN_RESULT result, const char *format, ...) {
 static NTCAN_RESULT try_ntcan(char *op, NTCAN_RESULT ntr) {
     if (NTCAN_SUCCESS != ntr)
         return fail(ntr, "Failed %s: %s\n", op, canResultString(ntr));
+    return ntr;
 }
 
 static NTCAN_RESULT try_ntcan_dl(const char *op, const uint8_t *rcmd, NTCAN_RESULT ntr) {
     if (NTCAN_SUCCESS != ntr)
         return fail(ntr, "Failed %s: %s\n", op, canResultString(ntr));
-//    if (rcmd && 0x80 == *rcmd)
-//        return fail(-1, "Bad SDO DL %s\n", op);
+    if (rcmd && 0x80 == *rcmd)
+        return fail(-1, "Bad SDO DL %s\n", op);
+    return ntr;
 }
 
 static NTCAN_RESULT amcdrive_get_info(NTCAN_HANDLE handle, uint id, servo_vars_t *drive_info) {
