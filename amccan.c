@@ -161,7 +161,7 @@ static int pdo_is_user_mappable( amccan_pdo_t pdo ) {
   case AMCCAN_RPDO_2: return 0;
   case AMCCAN_RPDO_3: return 0;
   case AMCCAN_RPDO_4: return 0;
-  case AMCCAN_RPDO_CONTROL_TORQ: return 0;
+  case AMCCAN_RPDO_5: return 0;
   case AMCCAN_RPDO_21: return 0;
   case AMCCAN_RPDO_22: return 0;
   case AMCCAN_RPDO_23: return 0;

@@ -33,6 +33,8 @@
  *
  */
 
+#include <ntcan.h>
+
 /**
  * \file amccan.h
  *
@@ -102,7 +104,7 @@ typedef enum {
   AMCCAN_RPDO_2,
   AMCCAN_RPDO_3,
   AMCCAN_RPDO_4,
-  AMCCAN_RPDO_CONTROL_TORQ,
+  AMCCAN_RPDO_5,
   AMCCAN_RPDO_21,
   AMCCAN_RPDO_22,
   AMCCAN_RPDO_24,
