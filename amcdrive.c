@@ -76,19 +76,19 @@ static NTCAN_RESULT amcdrive_enable_pdos(NTCAN_HANDLE handle, uint id, uint pdos
     drive_info->tpdo_current = current_cob_base++;
     
     status = try_ntcan_dl("rpdo_position", &rcmd,
-        amccan_dl_pdo_id(handle, &rcmd, id, AMCCAN_TPDO_3, 
+        amccan_dl_pdo_id(handle, &rcmd, id, AMCCAN_RPDO_3, 
             drive_info->rpdo_position, (pdos & ENABLE_RPDO_POSITION) != 0, 0));
     if (status != NTCAN_SUCCESS)
         return status;
     
     status = try_ntcan_dl("rpdo_velocity", &rcmd,
-        amccan_dl_pdo_id(handle, &rcmd, id, AMCCAN_TPDO_4, 
+        amccan_dl_pdo_id(handle, &rcmd, id, AMCCAN_RPDO_4, 
             drive_info->rpdo_velocity, (pdos & ENABLE_RPDO_VELOCITY) != 0, 0));
     if (status != NTCAN_SUCCESS)
         return status;
     
     status = try_ntcan_dl("rpdo_current", &rcmd,
-        amccan_dl_pdo_id(handle, &rcmd, id, AMCCAN_TPDO_5, 
+        amccan_dl_pdo_id(handle, &rcmd, id, AMCCAN_RPDO_5, 
             drive_info->rpdo_current, (pdos & ENABLE_RPDO_CURRENT) != 0, 0));
     if (status != NTCAN_SUCCESS)
         return status;
