@@ -14,7 +14,7 @@ void try(char *name, int status) {
 }
 
 int main(int argc, char **argv) {
-	uint32 k_p;
+	uint32_t k_p;
 
 	try("canOpen", canOpen(0, 0, 10, 128, 1000, 2000, &handle));
 	try("canSetBaudrate", canSetBaudrate(handle, NTCAN_BAUD_1000));
@@ -22,7 +22,15 @@ int main(int argc, char **argv) {
 	try("canOpenIdAddSDOResponse", canOpenIdAddSDOResponse(handle, 0x20));
 	try("canOpenIdAddSDOResponse", canOpenIdAddSDOResponse(handle, 0x21));
 
-	try("canOpenSDOWriteWait_ul_u32(handle, 
+    uint8_t rcmd;
+    uint16_t maxCurrent;
+	try("canOpenSDOWriteWait_ul_u32" canOpenSDOWriteWait_ul_u32(handle, 
+	    &rcmd, &macCurrent, 0x20, AMCCAN_INDEX_BOARD_INFO,
+        AMCCAN_SUBINDEX_MAX_PEAK_CURRENT));
+    
+    eprintf("Max continuous current: %d\n", maxCurrent);
+    
+    canClose(handle);
 		
 }
 
