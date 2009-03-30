@@ -1,5 +1,7 @@
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <ntcan.h>
 #include "amccan.h"
 
 #define eprintf(f, args...) fprintf(stderr, f, ## args)
@@ -24,8 +26,8 @@ int main(int argc, char **argv) {
 
     uint8_t rcmd;
     uint16_t maxCurrent;
-	try("canOpenSDOWriteWait_ul_u32" canOpenSDOWriteWait_ul_u32(handle, 
-	    &rcmd, &macCurrent, 0x20, AMCCAN_INDEX_BOARD_INFO,
+	try("canOpenSDOWriteWait_ul_u32", canOpenSDOWriteWait_ul_u32(handle, 
+	    &rcmd, &maxCurrent, 0x20, AMCCAN_INDEX_BOARD_INFO,
         AMCCAN_SUBINDEX_MAX_PEAK_CURRENT));
     
     eprintf("Max continuous current: %d\n", maxCurrent);

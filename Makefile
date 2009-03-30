@@ -1,13 +1,13 @@
 
 CC=gcc
 
-all: amccan.so
+all: libamccan.so
 
 .c.o:
 	$(CC) -c $<
 
-amccan.so: amccan.o ntcanopen.o
-	$(CC) -shared -Wl,-soname,$@ -o $@ $<
+libamccan.so: amccan.o ntcanopen.o
+	$(CC) -shared -Wl,-soname,$@ -o $@ amccan.o ntcanopen.o
 
 clean:
 	rm -rf *.so *.o *~
