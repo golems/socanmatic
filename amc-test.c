@@ -23,7 +23,7 @@ int main(int argc, char **argv) {
 
 	status = amcdrive_init(0, 0x20, REQUEST_TPDO_POSITION|REQUEST_TPDO_VELOCITY, 1000, &handle, &servo);
 	try("amcdrive_init", status);
-
-
+	
+	canClose(handle);
 }
 
