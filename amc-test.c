@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
         canOpen(0,          //net
                 0,          //flags
                 10,         //txqueue
-                1,        //rxqueue
+                128,        //rxqueue
                 1000,       //txtimeout
                 2000,       //rxtimeout
                 &handle));   // handle    
@@ -38,10 +38,13 @@ int main(int argc, char **argv) {
     try("canIdAdd", canIdAdd(handle, 0x301));
     
     double current = 0.0;
-    double setpoint = 8000.0;
+    double setpoint = 0000.0;
     try("spin up", amcdrive_set_current(handle, &servo, current));
-   
-    int i; 
+  
+	eprintf("CAUTION: Controller is now active\n");
+ 
+	double ie = 0;
+	int i = 0; 
     time_t start = time(NULL);
     double current_d, v_d;
     double e_old = 0;
@@ -62,16 +65,23 @@ int main(int argc, char **argv) {
             double ev = setpoint - pv;
             double de = (ev - e_old) / .001;
             e_old = ev;
-            
-            current += ev*.00001 + de*0.00001;
+			
+		ie += ev * .001;	           
+
+ 
+            current = ev*.0065 + de*0.00001 + ie*0.01;
+			if (current > 50)
+				current = 50;
+			if (current < -50)
+				current = -50;
             try("control", amcdrive_set_current(handle, &servo, current));
 
 
 
-
-            printf("Velocity: %f\n", pv);
-            printf("Error: %f\n", ev);
-            
+			printf("%d\t%f\t%f\t%f\t%f\t%f\t%f\n",i,pv,setpoint,ev,(de / 1000),(current * 1000),ie);
+//            printf("Velocity: %f\n", pv);
+//            printf("Error: %f\n", ev);
+            ++i;
         }
         if (canMsg.id == 0x401) {
             int16_t current;
@@ -83,6 +93,13 @@ int main(int argc, char **argv) {
         time_t now = time(NULL);
         if (now - start > 50)
             break;
+//		if (now - start > 12)
+//			setpoint = -4000;
+//		if (now - start > 25)
+//			setpoint =  4000;
+//		if (now - start > 37)
+//			setpoint = -8000;
+
     }
 
     usleep(500000);
