@@ -36,18 +36,29 @@ int main(int argc, char **argv) {
         &servo);
     try("amcdrive_init", status);
     try("canIdAdd", canIdAdd(handle, 0x301));
-    try("canIdAdd", canIdAdd(handle, 0x401));
+    
     double current = 0.0;
-    double setpoint = 2000.0;
+    double setpoint =8000.0;
     try("spin up", amcdrive_set_current(handle, &servo, current));
   
 	eprintf("CAUTION: Controller is now active\n");
+		int tw, tf, ts;
+		tw = tf = ts = 0;
  
 	double ie = 0;
 	int i = 0; 
     time_t start = time(NULL);
     double current_d, v_d;
     double e_old = 0;
+	int ringsize = 05; 
+	double ring[ringsize];
+	int k = 0;
+    int l = 0;
+    for(k = 0; k < ringsize; ++k )
+        ring[k] = 0;
+	double ev;
+
+
     while(1) {
         CMSG canMsg;
         
@@ -61,15 +72,25 @@ int main(int argc, char **argv) {
                 velocity |= canMsg.data[2+j];
                 velocity <<= 8;
             }
-            double pv = amccan_decode_ds1(velocity, servo.k_i, servo.k_s);
-            double ev = setpoint - pv;
-            double de = (ev - e_old) / .001;
+            double pv = amccan_decode_ds1((int32_t) velocity,(uint16_t) servo.k_i,(uint32_t) servo.k_s);
+            double new_ev = setpoint - pv;
+           
+			ring[l++] = new_ev;
+			l %= ringsize;
+
+			ev = 0;
+            for(j = 0; j < ringsize; j++)
+                ev += ring[j];
+            ev /= ringsize;
+
+
+			double de = (ev - e_old) / .001;
             e_old = ev;
 			
-		ie += ev * .001;	           
+			ie += ev * .001;	           
 
  
-            current = ev*.003 + de*0.000001 + ie*0.001;
+            current = ev*.0010 + de*0.000001 + ie*0.0005;
 			if (current > 50)
 				current = 50;
 			if (current < -50)
@@ -90,17 +111,27 @@ int main(int argc, char **argv) {
             printf("Current: %f\n", current_d);
         }
 
-		
-
         time_t now = time(NULL);
-        if (now - start > 20)
+        if (now - start >20)
             break;
-//		if (now - start > 12)
-//			setpoint = -4000;
-//		if (now - start > 25)
-//			setpoint =  4000;
-//		if (now - start > 37)
+//		if ((now - start > 5) && !tw){
+//			eprintf("-4000!");
 //			setpoint = -8000;
+//			ie = 0;
+//			tw = 1;
+//		}
+//		if ((now - start >10) && !tf){
+//			eprintf("4000!");
+//			setpoint = -8000;
+//			ie = 0;
+//			tf = 1;
+//		}
+//		if ((now - start >15) && !ts){
+//			eprintf("8000!");
+//			setpoint = -8000;
+//			ie = 0;
+//			ts = 1;
+//		{
 
     }
 
