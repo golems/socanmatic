@@ -57,7 +57,7 @@ int main(int argc, char **argv) {
     for(k = 0; k < ringsize; ++k )
         ring[k] = 0;
 	double ev;
-
+    int j;
 
     while(1) {
         CMSG canMsg;
@@ -67,11 +67,9 @@ int main(int argc, char **argv) {
             canRead(handle, &canMsg, &len, NULL));
         if (canMsg.id == 0x301) {
             int32_t velocity = 0;
-            int j;
-            for (j = 3; j >= 0; j--) {
-                velocity |= canMsg.data[2+j];
-                velocity <<= 8;
-            }
+            memcpy(&velocity, &canMsg.data[2], sizeof(int32_t));
+            velocity = ctohl(velocity);
+
             double pv = amccan_decode_ds1((int32_t) velocity,(uint16_t) servo.k_i,(uint32_t) servo.k_s);
             double new_ev = setpoint - pv;
            

@@ -42,8 +42,8 @@ int main(int argc, char **argv) {
     time_t start = time(NULL);
 	eprintf("CAUTION: Controller is now active\n");
 
-	control[0].setpoint = 60000;	
-	control[1].setpoint = 60000;	
+	control[0].current = 2.0;	
+	control[1].current = 2.0;	
 
 	while(1) {
 
@@ -55,16 +55,36 @@ int main(int argc, char **argv) {
 
 		if (canMsg.id == 0x301 || canMsg.id == 0x303) {
 			id = (canMsg.id - 0x300) / 2;
-			velocity_control(id, &control[id], &canMsg, &servos[id]);
+			velocity_control(id,&control[id], &canMsg, &servos[id]);
 		}
-	
+		
 		if (i == 0)
-			printf("count velocity_0 velocity_1 current_0 current_1");
-		printf("%d\t%f\t%f\t%f\t%f\n", i, control[0].pv * servos[0].current_sign, control[1].pv * servos[1].current_sign, control[0].setpoint, control[1].setpoint);
+			printf("count\tvelocity0\tvelocity1\tcurrent0\tcurrent1\tvelocity diffrence\n");
+	
+		printf("%d\t%f\t%f\t%f\t%f\t%f\n", i, control[0].pv * servos[0].current_sign, control[1].pv * servos[1].current_sign, control[0].current * 1000, control[1].current * 1000,(control[0].pv * servos[0].current_sign) - (control[1].pv * servos[1].current_sign));
 	
 		time_t now = time(NULL);
-        if (now - start > 20)
+        if (now - start > 75)
             break;
+        if (now - start > 15) {
+			control[0].current = 2.25;	
+			control[1].current = 2.25;	
+		};
+        if (now - start > 30) {
+			control[0].current = 2.5;	
+			control[1].current = 2.5;	
+		};
+        if (now - start > 45) {
+			control[0].current = 2.75;	
+			control[1].current = 2.75;	
+		};
+        if (now - start > 60) {
+			control[0].current = 3.;	
+			control[1].current = 3.;	
+		};
+
+
+
 		i++;
 	}
 
@@ -95,8 +115,6 @@ NTCAN_RESULT status;
 
     status = amcdrive_init_drives(handle,drives, 2,REQUEST_TPDO_VELOCITY|REQUEST_TPDO_CURRENT|ENABLE_RPDO_CURRENT,
         1000, servos);
-
-
     servos[0].current_sign = -1;
     try("amcdrive_init", status);
     try("canIdAdd", canIdAdd(handle, 0x301));
@@ -113,9 +131,10 @@ int velocity_control(int id,controller_info *control,CMSG *canMsg,servo_vars_t *
 
 
 
-	int32_t velocity = 0;
-	memcpy(&velocity, &canMsg->data[2], sizeof(int32_t));
-	velocity = ctohl(velocity);
+    int32_t velocity = 0;
+    memcpy(&velocity, &canMsg->data[2], sizeof(int32_t));
+    velocity = ctohl(velocity);
+
 
 	control->pv = amccan_decode_ds1(velocity, servo->k_i, servo->k_s);
 
@@ -125,14 +144,19 @@ int velocity_control(int id,controller_info *control,CMSG *canMsg,servo_vars_t *
 			
 	control->ie += control->ev * .001;
  
-    control->current = control->ev*.001 + control->de*0.000001 + control->ie*0.001;
-	control->current *= servo->current_sign;
+//	control->current *= servo->current_sign;
 			if (control->current > 50)
 				control->current = 50;
 			if (control->current < -50)
 				control->current = -50;
             try("control", amcdrive_set_current(handle, servo, control->current));
 
+
+
+
+
+
+
+
 	return 0;
 }
-

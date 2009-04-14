@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
     try("canIdAdd", canIdAdd(handle, 0x301));
     try("canIdAdd", canIdAdd(handle, 0x401));
     double current = 0.0;
-    double setpoint = 2000.0;
+    double setpoint = 20000.0;
     try("spin up", amcdrive_set_current(handle, &servo, current));
   
 	eprintf("CAUTION: Controller is now active\n");
@@ -55,18 +55,18 @@ int main(int argc, char **argv) {
         try("canRead",
             canRead(handle, &canMsg, &len, NULL));
         if (canMsg.id == 0x301) {
-            int32_t velocity = 0;
-            int j;
-            for (j = 3; j >= 0; j--) {
-                velocity |= canMsg.data[2+j];
-                velocity <<= 8;
-            }
-            double pv = amccan_decode_ds1(velocity, servo.k_i, servo.k_s);
+            
+			int32_t velocity = 0;
+			memcpy(&velocity, &canMsg.data[2], sizeof(int32_t));
+			velocity = ctohl(velocity);
+
+
+			double pv = amccan_decode_ds1(velocity, servo.k_i, servo.k_s);
             double ev = setpoint - pv;
             double de = (ev - e_old) / .001;
             e_old = ev;
 			
-		ie += ev * .001;	           
+			ie += ev * .001;	           
 
  
             current = ev*.003 + de*0.000001 + ie*0.001;
