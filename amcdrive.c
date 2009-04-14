@@ -276,6 +276,8 @@ NTCAN_RESULT amcdrive_init_drives(NTCAN_HANDLE handle, uint *identifiers, uint c
         if (status != NTCAN_SUCCESS)
             return status;
     }
+
+    return 0;
 }
 
 static NTCAN_RESULT amcdrive_rpdo_cw_i16(NTCAN_HANDLE handle, uint rpdo, int16_t value) {
