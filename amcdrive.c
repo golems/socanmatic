@@ -59,7 +59,7 @@ static NTCAN_RESULT amcdrive_get_info(NTCAN_HANDLE handle, uint id, servo_vars_t
             AMCCAN_INDEX_BOARD_INFO, AMCCAN_SUBINDEX_BOARD_SWITCH_FREQ));
     if (status != NTCAN_SUCCESS)
         return status;
-    drive_info->k_s = amcccan_decode_pbf(switchingFrequencyPBF);
+    drive_info->k_s = 1000*amcccan_decode_pbf(switchingFrequencyPBF);
     
     status = try_ntcan_dl("read feedback interpolation", &rcmd,
         canOpenSDOWriteWait_ul_u16(handle, &rcmd, &drive_info->k_i, id,
