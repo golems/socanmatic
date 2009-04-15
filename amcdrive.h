@@ -5,6 +5,7 @@
 typedef struct {
     uint canopen_id; // CANopen identifier
     int8_t current_sign; // Flip current?
+    int8_t error_state; // Is the dirve currently in a state of error?
     
     int16_t k_i;    // feedback position interp
     uint32_t k_s;    // switch freq

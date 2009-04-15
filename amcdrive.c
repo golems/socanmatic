@@ -206,6 +206,18 @@ NTCAN_RESULT amcdrive_start(NTCAN_HANDLE handle, uint id) {
     return status;
 }
 
+NTCAN_RESULT amcdrive_reset_drive(NTCAN_HANDLE handle, uint identifier) {
+    NTCAN_RESULT status;
+
+    status = try_ntcan("reset",
+        canOpenWriteNMT(handle, identifier, CANOPEN_NMT_RESET_NODE));
+    if (status != NTCAN_SUCCESS)
+        return status;
+    sleep(3);
+    
+    return status;
+}
+
 NTCAN_RESULT amcdrive_init_drive(NTCAN_HANDLE handle, uint identifier, uint pdos, 
     uint update_freq, servo_vars_t *drive_info) {
     NTCAN_RESULT status;
@@ -217,13 +229,6 @@ NTCAN_RESULT amcdrive_init_drive(NTCAN_HANDLE handle, uint identifier, uint pdos
                    // If you don't think this is what we should be doing, ask me
                    // before changing. -- Jon Olson
 
-    // Initialize drive
-    status = try_ntcan("reset",
-        canOpenWriteNMT(handle, identifier, CANOPEN_NMT_RESET_NODE));
-    if (status != NTCAN_SUCCESS)
-        goto fail;
-    sleep(5);
- 
     // Put the drive into pre-operational state
     status = try_ntcan("pre-op",
         canOpenWriteNMT(handle, identifier, CANOPEN_NMT_PRE_OP));
@@ -286,7 +291,7 @@ static NTCAN_RESULT amcdrive_rpdo_cw_i16(NTCAN_HANDLE handle, uint rpdo, int16_t
     canMsg.id = rpdo;
     canMsg.len = 4;
     
-    uint16_t control_word = htocs(0x0f);
+    uint16_t control_word = htocs(0x8f);
     value = htocs(value);
     // Configure control word
     memcpy(&canMsg.data[0], &control_word, 2); // Copy contol word
