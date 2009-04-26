@@ -251,7 +251,8 @@ double amccan_decode_ds1( int32_t i, uint16_t k_i, uint32_t k_s ) {
 
 double amccan_decode_dc1( int32_t i_dc1, uint32_t k_p ) {
   double ii = i_dc1;
-  return ii / ( (1 << 13)/k_p );
+  double divisor = (1 << 13) / k_p;
+  return (ii / divisor) / 10.0;
 }
 
 

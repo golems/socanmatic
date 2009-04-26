@@ -1,12 +1,24 @@
 
 #include <stdio.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 #include <ntcan.h>
 #include "amccan.h"
 #include "amcdrive.h"
 
 #define eprintf(f, args...) fprintf(stderr, f, ## args)
+
+struct js_event {
+    uint32_t time;
+    int16_t value;
+    uint8_t type;
+    uint8_t number;
+};
+
+#define JS_EVENT_BUTTON 0x01
+#define JS_EVENT_AXIS 0x02
 
 static NTCAN_HANDLE handle;
 
@@ -26,14 +38,36 @@ typedef struct {
 	double de; //derivative of error
 	double ie; //integral error
 } controller_info;
-	
 
+controller_info control[2];
+static int quit_now = 0;
+	
+void *js_listen(void *ignored) {
+    int fd = open("/dev/input/js0", O_RDONLY);
+    if (fd < 0) {
+        perror("open");
+        exit(-1);
+    }
+
+    while (!quit_now) {
+        struct js_event e;
+        int input = read(fd, &e, sizeof(struct js_event));
+        if (input < sizeof(struct js_event))
+            quit_now = 1;
+
+        if (e.type == JS_EVENT_AXIS) {
+            if (e.number == 1) {
+                control[0].setpoint = e.value;
+                control[1].setpoint = e.value;
+            }
+        }
+    }
+}
 
 int main(int argc, char **argv) {
 
     servo_vars_t servos[2];
 	int i = 0; 
-	controller_info control[2];
 	int id;
 
 	memset(control,0,2*sizeof(control));
@@ -42,10 +76,17 @@ int main(int argc, char **argv) {
     time_t start = time(NULL);
 	eprintf("CAUTION: Controller is now active\n");
 
-	control[0].setpoint = 30000;	
-	control[1].setpoint = 30000;	
+	control[0].setpoint = 0;	
+	control[1].setpoint = 0;	
 
-	while(1) {
+    pthread_t thread;
+    int status = pthread_create(&thread, NULL, js_listen, NULL);
+    if (status != 0) {
+        perror("pthread_create");
+        exit(-1);
+    }
+
+	while(!quit_now) {
 
 		CMSG canMsg;
 
@@ -59,13 +100,11 @@ int main(int argc, char **argv) {
 		}
 	
 		if (i == 0)
-			printf("count velocity_0 velocity_1 current_0 current_1");
-		printf("%d\t%f\t%f\t%f\t%f\n", i, control[0].pv * servos[0].current_sign, control[1].pv * servos[1].current_sign, control[0].setpoint, control[1].setpoint);
+			printf("count velocity_0 velocity_1 current_0 current_1\n");
+		printf("%d\t%f\t%f\t%f\t%f\n", i, control[0].pv * servos[0].current_sign, control[1].pv * servos[1].current_sign, control[0].current, control[1].current);
 	
-		time_t now = time(NULL);
-        if (now - start > 300)
-            break;
 		i++;
+
 	}
 
     usleep(500000);

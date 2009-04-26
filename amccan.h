@@ -47,6 +47,7 @@
 
 /// Values to assign to the control word CANopen object
 typedef enum {
+  AMCCAN_CONTROL_STATE_RESET = 0x80,
   AMCCAN_CONTROL_STATE_SHUTDOWN = 0x06,
   AMCCAN_CONTROL_STATE_ON = 0x07,
   AMCCAN_CONTROL_STATE_ENABLE = 0x0f

@@ -179,7 +179,28 @@ NTCAN_RESULT amcdrive_enable_async_timer(NTCAN_HANDLE handle, uint id, uint upda
 NTCAN_RESULT amcdrive_start(NTCAN_HANDLE handle, uint id) {
     NTCAN_RESULT status;
     uint8_t rcmd;
+   
+    // Both of these reset any errors -- requires a transition on CW from 0->1
+    status = try_ntcan_dl("control - shutdown", &rcmd,
+        amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_SHUTDOWN));
+    if (status != NTCAN_SUCCESS)
+        return status;
+ 
+    status = try_ntcan_dl("control - reset error", &rcmd,
+        amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_RESET));
+    if (status != NTCAN_SUCCESS)
+        return status;
+ 
+    status = try_ntcan_dl("control - shutdown", &rcmd,
+        amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_SHUTDOWN));
+    if (status != NTCAN_SUCCESS)
+        return status;
     
+    status = try_ntcan_dl("control - reset error", &rcmd,
+        amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_RESET));
+    if (status != NTCAN_SUCCESS)
+        return status;
+
     status = try_ntcan_dl("control - shutdown", &rcmd,
         amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_SHUTDOWN));
     if (status != NTCAN_SUCCESS)

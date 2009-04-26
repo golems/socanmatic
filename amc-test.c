@@ -32,7 +32,7 @@ int main(int argc, char **argv) {
     try("canSetBaudrate",
         canSetBaudrate(handle, NTCAN_BAUD_1000));
 
-    status = amcdrive_init_drive(handle, 0x20,REQUEST_TPDO_VELOCITY|REQUEST_TPDO_CURRENT|ENABLE_RPDO_CURRENT, 1000, 
+    status = amcdrive_init_drive(handle, 0x21,REQUEST_TPDO_VELOCITY|REQUEST_TPDO_CURRENT|ENABLE_RPDO_CURRENT, 1000, 
         &servo);
     try("amcdrive_init", status);
     try("canIdAdd", canIdAdd(handle, 0x301));
@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
 			ie += ev * .001;	           
 
  
-            current = ev*.003 + de*0.000001 + ie*0.001;
+            current =- ev*.0005;// + de*0.000001 + ie*0.001;
 			if (current > 50)
 				current = 50;
 			if (current < -50)

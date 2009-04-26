@@ -15,6 +15,9 @@ amc-test-vring: amc-test-vring.c
 amc-test-dual: amc-test-dual.c
 	$(CC) $(CFLAGS) -o amc-test-dual $< -lamccan -lntcan -lntcanopen
 
+amc-test-dual-js: amc-test-dual-js.c
+	$(CC) $(CFLAGS) -o amc-test-dual-js $< -lamccan -lntcan -lntcanopen -lpthread
+
 amc-test-dual-current: amc-test-dual-current.c
 	$(CC) $(CFLAGS) -o amc-test-dual-current $< -lamccan -lntcan -lntcanopen
 
@@ -26,6 +29,7 @@ libamccan.so: amccan.o amcdrive.o
 
 install: libamccan.so
 	cp amccan.h $(PREFIX)/include
+	cp byteorder.h $(PREFIX)/include
 	cp amcdrive.h $(PREFIX)/include
 	cp libamccan.so $(PREFIX)/lib
 	ldconfig
