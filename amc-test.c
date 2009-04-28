@@ -55,6 +55,13 @@ int main(int argc, char **argv) {
         try("canRead",
             canRead(handle, &canMsg, &len, NULL));
         if (canMsg.id == 0x301) {
+<<<<<<< .mine
+            int32_t velocity = 0;
+            memcpy(&velocities, &canMsg.data[2], 4);
+            velocity = ctohl(velocity);
+            
+            double pv = amccan_decode_ds1(velocity, servo.k_i, servo.k_s);
+=======
             
 			int32_t velocity = 0;
 			memcpy(&velocity, &canMsg.data[2], sizeof(int32_t));
@@ -62,6 +69,7 @@ int main(int argc, char **argv) {
 
 
 			double pv = amccan_decode_ds1(velocity, servo.k_i, servo.k_s);
+>>>>>>> .r757
             double ev = setpoint - pv;
             double de = (ev - e_old) / .001;
             e_old = ev;

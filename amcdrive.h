@@ -3,6 +3,8 @@
 #include "byteorder.h"
 
 typedef struct {
+    NTCAN_HANDLE handle;
+    
     uint canopen_id; // CANopen identifier
     int8_t current_sign; // Flip current?
     int8_t error_state; // Is the dirve currently in a state of error?

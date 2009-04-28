@@ -7,9 +7,7 @@
 #include "amcdrive.h"
 #include "ntcanopen.h"
 
-static uint16_t position_cob_base = 0x200;
-static uint16_t velocity_cob_base = 0x300;
-static uint16_t current_cob_base = 0x400;
+static uint16_t cob_base = 0x200;
 
 #define eprintf(f, args...) fprintf(stderr, f, ## args)
 
@@ -73,14 +71,20 @@ static NTCAN_RESULT amcdrive_get_info(NTCAN_HANDLE handle, uint id, servo_vars_t
 static NTCAN_RESULT amcdrive_enable_pdos(NTCAN_HANDLE handle, uint id, uint pdos, servo_vars_t *drive_info) {
     NTCAN_RESULT status;
     uint8_t rcmd;
+    uint16_t cob_offset = id * 6;
     
-    drive_info->rpdo_position = position_cob_base++;
-    drive_info->rpdo_velocity = velocity_cob_base++;
-    drive_info->rpdo_current = current_cob_base++;
+    drive_info->rpdo_position = cob_base+cob_offset;
+    drive_info->rpdo_velocity = cob_base+cob_offset+1;
+    drive_info->rpdo_current =  cob_base+cob_offset+2;
     
-    drive_info->tpdo_position = position_cob_base++;
-    drive_info->tpdo_velocity = velocity_cob_base++;
-    drive_info->tpdo_current = current_cob_base++;
+    drive_info->tpdo_position = cob_base+cob_offset+3;
+    drive_info->tpdo_velocity = cob_base+cob_offset+4;;
+    drive_info->tpdo_current =  cob_base+cob_offset+5;
+    
+    // If they requested it we assume they want it
+    canIdAdd(handle, drive_info->tpdo_position);
+    canIdAdd(handle, drive_info->tpdo_velocity);
+    canIdAdd(handle, drive_info->tpdo_current);
     
     dprintf("rpdo_position: %d\n", (pdos & ENABLE_RPDO_POSITION) == 0);
     status = try_ntcan_dl("rpdo_position", &rcmd,
@@ -277,6 +281,7 @@ NTCAN_RESULT amcdrive_init_drive(NTCAN_HANDLE handle, uint identifier, uint pdos
     
     drive_info->current_sign = 1;
     drive_info->canopen_id = identifier;
+    drive_info->handle = handle;
     
     return NTCAN_SUCCESS;
     
@@ -303,7 +308,38 @@ NTCAN_RESULT amcdrive_init_drives(NTCAN_HANDLE handle, uint *identifiers, uint c
             return status;
     }
 
-    return 0;
+    return NTCAN_SUCCESS;
+}
+
+NTCAN_RESULT amcdrive_open_drives(uint network, uint *identifiers, uint count, uint pdos, uint update_freq, servo_vars_t *drive_infos) {
+    NTCAN_HANDLE handle;
+    NTCAN_RESULT status;
+    status = try_ntcan("canOpen",
+        canOpen(0,          //net
+                0,          //flags
+                10,         //txqueue
+                128,        //rxqueue
+                1000,       //txtimeout
+                2000,       //rxtimeout
+                &handle));   // handle    
+    if (status != NTCAN_SUCCESS)
+        return status;
+    
+    status = try_ntcan("canSetBaudrate",
+        canSetBaudrate(handle, NTCAN_BAUD_1000));
+    if (status != NTCAN_SUCCESS)
+        goto fail;
+        
+    status = amcdrive_init_drives(handle, identifiers, count, pdos, update_freq, drive_infos);
+    if (status != NTCAN_SUCCESS)
+        goto fail;
+        
+    return NTCAN_SUCCESS;
+    
+fail:
+    
+    canClose(handle);
+    return status;
 }
 
 static NTCAN_RESULT amcdrive_rpdo_cw_i16(NTCAN_HANDLE handle, uint rpdo, int16_t value) {
