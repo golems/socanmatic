@@ -247,6 +247,10 @@ NTCAN_RESULT amcdrive_init_drive(NTCAN_HANDLE handle, uint identifier, uint pdos
     uint update_freq, servo_vars_t *drive_info) {
     NTCAN_RESULT status;
     
+    drive_info->current_sign = 1;
+    drive_info->canopen_id = identifier;
+    drive_info->handle = handle;
+    
     status = try_ntcan("add SDO response",
         canOpenIdAddSDOResponse(handle, identifier));
     if (status != NTCAN_SUCCESS)
@@ -269,7 +273,7 @@ NTCAN_RESULT amcdrive_init_drive(NTCAN_HANDLE handle, uint identifier, uint pdos
     status = amcdrive_enable_pdos(handle, identifier, pdos, drive_info);
     if (status != NTCAN_SUCCESS)
         goto fail;
-    
+
     // Enable the async transmission of process data objects on a timed basis
     status = amcdrive_enable_async_timer(handle, identifier, update_freq);
     if (status != NTCAN_SUCCESS)
@@ -278,10 +282,6 @@ NTCAN_RESULT amcdrive_init_drive(NTCAN_HANDLE handle, uint identifier, uint pdos
     status = amcdrive_start(handle, identifier);
     if (status != NTCAN_SUCCESS)
         goto fail;
-    
-    drive_info->current_sign = 1;
-    drive_info->canopen_id = identifier;
-    drive_info->handle = handle;
     
     return NTCAN_SUCCESS;
     
@@ -358,11 +358,12 @@ static NTCAN_RESULT amcdrive_rpdo_cw_i16(NTCAN_HANDLE handle, uint rpdo, int16_t
     return try_ntcan("amcdrive_rpdo", canWrite(handle, &canMsg, &count, NULL));
 }
 
-NTCAN_RESULT amcdrive_set_current(NTCAN_HANDLE handle, servo_vars_t *drive, double amps) {
+NTCAN_RESULT amcdrive_set_current(servo_vars_t *drive, double amps) {
+    NTCAN_HANDLE handle = drive->handle;
     CMSG canMsg;
     
     if (amps * 10 > drive->k_p)
-        return - 1; // D
+        amps = drive->k_p / 10; // No, limit it.
     
     // AMC CANopen drives take current in a custom unit called DC2. This is
     // equal to amps times 2^15 / K_p (the peak current for the drive).

@@ -38,5 +38,7 @@ typedef struct {
 NTCAN_RESULT amcdrive_init_drive(NTCAN_HANDLE network, uint identifier, uint pdos, uint update_freq, servo_vars_t *drive_info);
 NTCAN_RESULT amcdrive_init_drives(NTCAN_HANDLE network, uint *identifiers, uint count, uint pdos, uint update_freq, servo_vars_t *drive_infos);
 
-NTCAN_RESULT amcdrive_set_current(NTCAN_HANDLE network, servo_vars_t *drive, double amps);
+NTCAN_RESULT amcdrive_open_drives(uint network, uint *identifiers, uint count, uint pdos, uint update_freq, servo_vars_t *drive_infos);
+
+NTCAN_RESULT amcdrive_set_current(servo_vars_t *drive, double amps);
 
