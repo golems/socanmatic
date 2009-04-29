@@ -2,7 +2,7 @@
 PREFIX=/usr/local
 
 CC=gcc
-CFLAGS=-g
+CFLAGS=-g -fPIC
 
 all: libamccan.so
 
