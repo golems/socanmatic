@@ -28,10 +28,10 @@ libamccan.so: amccan.o amcdrive.o
 	$(CC) $(CFLAGS) -shared -Wl,-soname,$@ -o $@ $^
 
 install: libamccan.so
-	cp amccan.h $(PREFIX)/include
-	cp byteorder.h $(PREFIX)/include
-	cp amcdrive.h $(PREFIX)/include
-	cp libamccan.so $(PREFIX)/lib
+	install --mode 644 amccan.h $(PREFIX)/include
+	install --mode 644 byteorder.h $(PREFIX)/include
+	install --mode 644 amcdrive.h $(PREFIX)/include
+	install --mode 755 libamccan.so $(PREFIX)/lib
 	ldconfig
 
 clean:

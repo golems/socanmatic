@@ -2,6 +2,10 @@
 #include <ntcan.h>
 #include "byteorder.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct {
     NTCAN_HANDLE handle;
     
@@ -41,4 +45,8 @@ NTCAN_RESULT amcdrive_init_drives(NTCAN_HANDLE network, uint *identifiers, uint 
 NTCAN_RESULT amcdrive_open_drives(uint network, uint *identifiers, uint count, uint pdos, uint update_freq, servo_vars_t *drive_infos);
 
 NTCAN_RESULT amcdrive_set_current(servo_vars_t *drive, double amps);
+
+#ifdef __cplusplus
+}
+#endif
 

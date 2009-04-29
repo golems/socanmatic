@@ -35,6 +35,10 @@
 
 #include <ntcan.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * \file amccan.h
  *
@@ -207,3 +211,8 @@ NTCAN_RESULT amccan_pdo_current( NTCAN_HANDLE h, uint16_t cob_id, double amps,
 
 /** Returns switching frequency of the drive in kHz */
 uint32_t amcccan_decode_pbf( uint32_t pbf );
+
+#ifdef __cplusplus
+}
+#endif
+
