@@ -23,7 +23,7 @@ DOXPATH := $(HOME)/prism/public_html/dox
 cc := gcc
 CC := g++
 
-CFLAGS := -g
+CFLAGS := -g -fPIC
 
 
 .PHONY: doc clean distclean install default linkinstall_lib uninstall_lib
