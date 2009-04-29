@@ -315,7 +315,7 @@ NTCAN_RESULT amcdrive_open_drives(uint network, uint *identifiers, uint count, u
     NTCAN_HANDLE handle;
     NTCAN_RESULT status;
     status = try_ntcan("canOpen",
-        canOpen(0,          //net
+        canOpen(network,    //net
                 0,          //flags
                 10,         //txqueue
                 128,        //rxqueue
