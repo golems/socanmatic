@@ -346,10 +346,6 @@ NTCAN_RESULT amcdrive_open_drives(uint network, uint *identifiers, uint count, u
     if (status != NTCAN_SUCCESS)
         goto fail;
         
-//    status = amcdrive_reset_drives(handle, identifiers, count);
-//    if (status != NTCAN_SUCCESS)
-//        goto fail;
-//
     status = amcdrive_init_drives(handle, identifiers, count, pdos, update_freq, drive_infos);
     if (status != NTCAN_SUCCESS)
         goto fail;
