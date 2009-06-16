@@ -185,26 +185,32 @@ NTCAN_RESULT amcdrive_start(NTCAN_HANDLE handle, uint id) {
     uint8_t rcmd;
    
     // Both of these reset any errors -- requires a transition on CW from 0->1
-    status = try_ntcan_dl("control - shutdown", &rcmd,
-        amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_SHUTDOWN));
-    if (status != NTCAN_SUCCESS)
-        return status;
- 
-    status = try_ntcan_dl("control - reset error", &rcmd,
-        amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_RESET));
-    if (status != NTCAN_SUCCESS)
-        return status;
- 
-    status = try_ntcan_dl("control - shutdown", &rcmd,
-        amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_SHUTDOWN));
+//    status = try_ntcan_dl("control - shutdown", &rcmd,
+//        amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_SHUTDOWN));
+//    if (status != NTCAN_SUCCESS)
+//        return status;
+// 
+//    status = try_ntcan_dl("control - reset error", &rcmd,
+//        amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_RESET));
+//    if (status != NTCAN_SUCCESS)
+//        return status;
+// 
+//    status = try_ntcan_dl("control - shutdown", &rcmd,
+//        amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_SHUTDOWN));
+//    if (status != NTCAN_SUCCESS)
+//        return status;
+//    
+//    status = try_ntcan_dl("control - reset error", &rcmd,
+//        amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_RESET));
+//    if (status != NTCAN_SUCCESS)
+//        return status;
+//
+    // Put the drive into pre-operational state
+    status = try_ntcan("pre-op",
+        canOpenWriteNMT(handle, id, CANOPEN_NMT_PRE_OP));
     if (status != NTCAN_SUCCESS)
         return status;
     
-    status = try_ntcan_dl("control - reset error", &rcmd,
-        amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_RESET));
-    if (status != NTCAN_SUCCESS)
-        return status;
-
     status = try_ntcan_dl("control - shutdown", &rcmd,
         amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_SHUTDOWN));
     if (status != NTCAN_SUCCESS)
@@ -238,6 +244,21 @@ NTCAN_RESULT amcdrive_reset_drive(NTCAN_HANDLE handle, uint identifier) {
         canOpenWriteNMT(handle, identifier, CANOPEN_NMT_RESET_NODE));
     if (status != NTCAN_SUCCESS)
         return status;
+    sleep(3);
+    
+    return status;
+}
+
+NTCAN_RESULT amcdrive_reset_drives(NTCAN_HANDLE handle, uint *identifiers, uint count) {
+    NTCAN_RESULT status;
+
+    int i;
+    for (i = 0; i < count; i++) {
+        status = try_ntcan("reset",
+            canOpenWriteNMT(handle, identifiers[i], CANOPEN_NMT_RESET_NODE));
+        if (status != NTCAN_SUCCESS)
+            return status;
+    }
     sleep(3);
     
     return status;
@@ -330,6 +351,10 @@ NTCAN_RESULT amcdrive_open_drives(uint network, uint *identifiers, uint count, u
     if (status != NTCAN_SUCCESS)
         goto fail;
         
+    status = amcdrive_reset_drives(handle, identifiers, count);
+    if (status != NTCAN_SUCCESS)
+        goto fail;
+
     status = amcdrive_init_drives(handle, identifiers, count, pdos, update_freq, drive_infos);
     if (status != NTCAN_SUCCESS)
         goto fail;

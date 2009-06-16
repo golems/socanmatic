@@ -69,8 +69,8 @@ int main(int argc, char **argv) {
 	}
 
     usleep(500000);
-    try("spin down", amcdrive_set_current(handle, &servos[0], 0));
-    try("spin down", amcdrive_set_current(handle, &servos[1], 0));
+    try("spin down", amcdrive_set_current(&servos[0], 0));
+    try("spin down", amcdrive_set_current(&servos[1], 0));
 	return 0;
 }
 
@@ -103,8 +103,8 @@ NTCAN_RESULT status;
     try("canIdAdd", canIdAdd(handle, 0x303));
 
     double current = 0.0;
-    try("spin up", amcdrive_set_current(handle, &servos[0], current));
-    try("spin up", amcdrive_set_current(handle, &servos[1], current));
+    try("spin up", amcdrive_set_current(&servos[0], current));
+    try("spin up", amcdrive_set_current(&servos[1], current));
 	
 	return 0;
 }
@@ -131,7 +131,7 @@ int velocity_control(int id,controller_info *control,CMSG *canMsg,servo_vars_t *
 				control->current = 50;
 			if (control->current < -50)
 				control->current = -50;
-            try("control", amcdrive_set_current(handle, servo, control->current));
+            try("control", amcdrive_set_current(servo, control->current));
 
 	return 0;
 }
