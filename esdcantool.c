@@ -43,6 +43,9 @@
  * \bug Only works on gnu/linux.  This may be a feature.
  *
  * \bug Seems to break under the PREEMPT kernel.
+ *
+ * \bug Killing process during a read will kernel panic.  We use a
+ * signal handler to a more orderly shutdown.
  */
 
 
@@ -51,8 +54,9 @@
 #include <string.h>
 #include <argp.h>
 #include <assert.h>
-#include "ntcan.h"
 #include <stdint.h>
+#include <signal.h>
+#include "ntcan.h"
 #include "ntcanopen.h"
 
 // verbosity output levels
@@ -239,6 +243,20 @@ struct {
 /*-- END ARG PARSING --*/
 
 
+static int shutdown = 0;
+
+
+void sigshutdown(int sig) {
+    switch(sig) {
+    case SIGINT:
+        printf("\nShutting Down...\n");
+        shutdown = 1;
+        break;
+    default:
+        shutdown = 1;
+        fprintf(stderr, "Uknown Signal, exiting\n");
+    }
+}
 
 /// print failure message and exit
 void fail(char *msg) {
@@ -358,7 +376,7 @@ static void tool_canOpen(NTCAN_HANDLE *ph) {
                    10,  //txqueue
                    100,  //rxqueue
                    1000, //txtimeout
-                   2000, //rxtimeout
+                   1000, //rxtimeout
                    &h // handle
         );
     ntcan_success_or_die("Open", ntr);
@@ -411,7 +429,7 @@ void dolisten() {
     // read-print loop
     { CMSG msg;
         int num = 1;
-        while(1) {
+        while(!shutdown) {
             num = 1;
             ntr = canRead( h, &msg, &num, NULL );
             if( NTCAN_RX_TIMEOUT == ntr ) {
@@ -430,6 +448,7 @@ void dolisten() {
     ntr = canClose( h );
     ntcan_debug( INFO, "canClose", ntr );
     ntcan_success_or_die("Close", ntr);
+    fprintf(stderr, "done\n");
     return;
 }
 
@@ -697,6 +716,7 @@ int main( int argc, char **argv ) {
         ntcan_print_status(args.net);
         break;
     case ARG_LISTEN:
+        signal(SIGINT, sigshutdown );
         dolisten();
         break;
     case ARG_WRITE:
