@@ -189,6 +189,15 @@ NTCAN_RESULT amccan_dl_pdo_map( NTCAN_HANDLE, uint8_t *rcmd, uint8_t node, amcca
 NTCAN_RESULT amccan_dl_timer( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t node, int timer,
                                uint32_t cycle_time, int *pdos, int pdo_len );
 
+/** Set timer 1
+    \param cycle_time Cycle time of timer 1 in milliseconds
+    \param pdos TPDOs which timer1 will trigger
+    \param pdo_len length of parameter pdos array
+ */
+NTCAN_RESULT amccan_dl_timer1( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t node,
+                               uint32_t cycle_time, int *pdos,
+                               int pdo_len );
+
 /** Decodes a velocity value received from the drive.
 
  \return value in counts per second*/

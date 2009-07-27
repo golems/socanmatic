@@ -2,9 +2,9 @@
 PREFIX=/usr/local
 
 CC=gcc
-CFLAGS=-g -fPIC
+CFLAGS=-g -fPIC --std=gnu99 
 
-all: libamccan.so
+all: libamccan.so motord
 
 amc-test: amc-test.c
 	$(CC) $(CFLAGS) -o amc-test $< -lamccan -lntcan -lntcanopen
@@ -27,11 +27,15 @@ amc-test-dual-current: amc-test-dual-current.c
 libamccan.so: amccan.o amcdrive.o
 	$(CC) $(CFLAGS) -shared -Wl,-soname,$@ -o $@ $^
 
+motord: motord.c libamccan.so
+	$(CC) $(CFLAGS) -I. -o $@ $< -lamccan -lntcan -lntcanopen -lach -lpthread -lrt -L.
+
 install: libamccan.so
 	install --mode 644 amccan.h $(PREFIX)/include
 	install --mode 644 byteorder.h $(PREFIX)/include
 	install --mode 644 amcdrive.h $(PREFIX)/include
 	install --mode 755 libamccan.so $(PREFIX)/lib
+	install --mode 755 motord $(PREFIX)/bin
 	ldconfig
 
 clean:

@@ -3,6 +3,8 @@
 #include <stdarg.h>
 #include <ntcan.h>
 #include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include "amccan.h"
 #include "amcdrive.h"
 #include "ntcanopen.h"
@@ -232,6 +234,40 @@ NTCAN_RESULT amcdrive_start(NTCAN_HANDLE handle, uint id) {
     return status;
 }
 
+NTCAN_RESULT amcdrive_stop_drive(servo_vars_t *drive) {
+    NTCAN_RESULT status;
+    uint8_t rcmd;
+
+    status = try_ntcan_dl("control - shutdown", &rcmd,
+        amccan_dl_control(drive->handle, &rcmd, drive->canopen_id, AMCCAN_CONTROL_STATE_SHUTDOWN));
+    if (status != NTCAN_SUCCESS)
+        return status;
+
+    return status;
+}
+
+NTCAN_RESULT amcdrive_start_drive(servo_vars_t *drive) {
+    NTCAN_RESULT status;
+    uint8_t rcmd;
+
+    status = try_ntcan_dl("control - switch on", &rcmd,
+        amccan_dl_control(drive->handle, &rcmd, drive->canopen_id, AMCCAN_CONTROL_STATE_ON));
+    if (status != NTCAN_SUCCESS)
+        return status;
+    
+    status = try_ntcan_dl("current mode", &rcmd,
+        amccan_dl_op_mode( drive->handle, &rcmd, drive->canopen_id, AMCCAN_OP_MODE_CURRENT));
+    if (status != NTCAN_SUCCESS)
+        return status;
+    
+    status = try_ntcan_dl("control - enable",&rcmd,
+        amccan_dl_control(drive->handle, &rcmd, drive->canopen_id, AMCCAN_CONTROL_STATE_ENABLE));
+    if (status != NTCAN_SUCCESS)
+        return status;
+
+    return status;
+}
+
 NTCAN_RESULT amcdrive_reset_drive(NTCAN_HANDLE handle, uint identifier) {
     NTCAN_RESULT status;
 
@@ -374,6 +410,55 @@ static NTCAN_RESULT amcdrive_rpdo_cw_i16(NTCAN_HANDLE handle, uint rpdo, int16_t
     return try_ntcan("amcdrive_rpdo", canWrite(handle, &canMsg, &count, NULL));
 }
 
+NTCAN_RESULT amcdrive_update_drives(servo_vars_t *drives, int count) {
+    CMSG canMsgs[256]; // We can easily handle more than one message at a time
+
+    int len = 256;
+    int status = canRead(drives[0].handle, canMsgs, &len, NULL);
+
+    if (status != NTCAN_SUCCESS)
+        return status;
+
+    int m, i;
+    for (m = 0; m < len; m++) {
+        CMSG *canMsg = &canMsgs[m];
+        uint drive_id = (canMsg->id - 0x200) / 6;
+
+        // Ok, so this scan is O(n), and with a map it could be O(1), but n in our case is typically 2.
+        for (i = 0; i < count; i++) {
+            servo_vars_t *d = &drives[i];
+            if (d->canopen_id == drive_id) {
+                if (d->tpdo_position == canMsg->id) {
+                    int32_t old_position = d->raw_position;
+                    memcpy(&d->raw_position, &canMsg->data[2], sizeof(int32_t));
+                    int32_t position_delta = d->raw_position - old_position; // This handles wraparound correctly
+                    position_delta *= d->current_sign; // Anything that depends on position probably wants it to travel in the same direction as velocity... just sayin'
+                    d->position += position_delta;
+                    d->fresh_position = 1;
+                }
+                else if (d->tpdo_velocity == canMsg->id) {
+                    int32_t velocity = 0;
+                    memcpy(&velocity, &canMsg->data[2], sizeof(int32_t));
+                    velocity = ctohl(velocity);
+
+                    d->vel_cps = amccan_decode_ds1(velocity, d->k_i, d->k_s);
+                    d->vel_cps *= d->current_sign; // Report velocity in same direction as current
+                    d->fresh_velocity = 1;
+                }
+                else if (d->tpdo_current == canMsg->id) {
+                    int16_t current;
+                    memcpy(&current, &canMsg->data[2], sizeof(int16_t));
+                    d->i_act = amccan_decode_dc1(current, d->k_p);
+                    d->i_act *= d->current_sign;
+                    d->fresh_current = 1;
+                }
+                break;
+            }
+        }
+    }
+
+    return NTCAN_SUCCESS;
+}
 NTCAN_RESULT amcdrive_set_current(servo_vars_t *drive, double amps) {
     NTCAN_HANDLE handle = drive->handle;
     CMSG canMsg;
