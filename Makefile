@@ -1,9 +1,9 @@
 ## Makefile for esdcan
 
-VERSION := 20090715
+VERSION := 20090820
 PROJECT := esdcan
 
-LIBFILES := libntcanopen.so
+SHAREDLIBS := ntcanopen
 BINFILES := esdcantool
 
 default: $(LIBFILES) $(BINFILES)
