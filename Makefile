@@ -6,12 +6,15 @@ PROJECT := esdcan
 SHAREDLIBS := ntcanopen
 BINFILES := esdcantool
 
-default: $(LIBFILES) $(BINFILES)
 
 # make-cmmon should handle this somehow...
 CFLAGS := -g -fPIC
 
+default: all
+
 include /usr/share/make-common/common.1.mk
+
+all: $(LIBFILES) $(BINFILES)
 
 $(call LINKBIN, esdcantool, esdcantool.o ntcanopen.o, ntcan)
 $(call LINKLIB, ntcanopen, ntcanopen.o)
