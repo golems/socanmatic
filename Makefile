@@ -1,43 +1,26 @@
+## Makefile for js
 
-PREFIX=/usr/local
+VERSION := 0.0.1
+PROJECT := amcdrive
 
-CC=gcc
-CFLAGS=-g -fPIC --std=gnu99 
+SHAREDLIBS := amcdrive
+BINFILES := amc-test-dual-js
 
-all: libamccan.so motord
+default: all
 
-amc-test: amc-test.c
-	$(CC) $(CFLAGS) -o amc-test $< -lamccan -lntcan -lntcanopen
+include /usr/share/make-common/common.1.mk
 
-amc-test-vring: amc-test-vring.c
-	$(CC) $(CFLAGS) -o amc-test-vring $< -lamccan -lntcan -lntcanopen
+all: $(LIBFILES) $(BINFILES)
 
-amc-test-dual: amc-test-dual.c
-	$(CC) $(CFLAGS) -o amc-test-dual $< -lamccan -lntcan -lntcanopen
+# apparently ach requires this, or at least c99
+CFLAGS += --std=gnu99
 
-amc-test-dual-js: amc-test-dual-js.c
-	$(CC) $(CFLAGS) -o amc-test-dual-js $< -lamccan -lntcan -lntcanopen -lpthread
+$(call LINKLIB, amcdrive, amccan.o amcdrive.o)
+$(call LINKBIN, amc-test-dual-js, amc-test-dual-js.o, amcdrive ntcan ntcanopen pthread)
 
-amc-test-dual-current: amc-test-dual-current.c
-	$(CC) $(CFLAGS) -o amc-test-dual-current $< -lamccan -lntcan -lntcanopen
+clean: 
+	rm -vf *.o *.so amc-test-dual-js *.deb 
+	rm -rf .deps debian doc $(PROJECT)-$(VERSION)
 
-.c.o:
-	$(CC) $(CFLAGS) -c $<
-
-libamccan.so: amccan.o amcdrive.o
-	$(CC) $(CFLAGS) -shared -Wl,-soname,$@ -o $@ $^
-
-motord: motord.c libamccan.so
-	$(CC) $(CFLAGS) -I. -o $@ $< -lamccan -lntcan -lntcanopen -lach -lpthread -lrt -L.
-
-install: libamccan.so
-	install --mode 644 amccan.h $(PREFIX)/include
-	install --mode 644 byteorder.h $(PREFIX)/include
-	install --mode 644 amcdrive.h $(PREFIX)/include
-	install --mode 755 libamccan.so $(PREFIX)/lib
-	install --mode 755 motord $(PREFIX)/bin
-	ldconfig
-
-clean:
-	rm -rf *.so *.o *~
-
+doc:
+	doxygen
