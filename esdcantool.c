@@ -172,7 +172,7 @@ static struct argp_option options[] = {
     {
         .name = "net",
         .key = ARG_NET,
-        .arg = NULL,
+        .arg = "net-number",
         .flags = 0,
         .doc = "CAN Network to use, default 0"
     },
@@ -456,7 +456,7 @@ void dolisten() {
 void ntcan_print_status(int net) {
     NTCAN_HANDLE h;
     NTCAN_RESULT ntr;
-    CAN_IF_STATUS status;
+    CAN_IF_STATUS status = {0};
     uint32_t baud;
 
     int bitset( uint16_t u, int bit ) {
@@ -474,10 +474,9 @@ void ntcan_print_status(int net) {
     }
 
 
-    int i=1;
-    printf("net id is: %d\n", i);
+    printf("net id is: %d\n", args.net);
     //open
-    ntr = canOpen( i,   //net
+    ntr = canOpen( args.net,   //net
                    0,   //flags
                    10,  //txqueue
                    100,  //rxqueue
@@ -775,7 +774,8 @@ static error_t parse_opt( int key, char *arg, struct argp_state *state) {
         break;
     case ARG_BAUD: args.baud_kbps = atoi(arg);
         break;
-    case ARG_NET: args.net = atoi(arg);
+    case ARG_NET:
+        args.net = atoi(arg);
         break;
 
         // MODES

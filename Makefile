@@ -1,6 +1,6 @@
 ## Makefile for esdcan
 
-VERSION := 20090820
+VERSION := 20090922
 PROJECT := esdcan
 
 SHAREDLIBS := ntcanopen
