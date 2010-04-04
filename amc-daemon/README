@@ -1,0 +1,16 @@
+\files: 
+pciod.c - a daemon providing an ach interface to power cube modules
+pciod_ssm - the somatic message management library for motor state and command messages
+pciod_commander - a shell tool for talking to the can network through pciod
+
+See pciod_ssm.h for an overview of how to use this library 
+
+Currently pciod is set up for only 2 channels: one for commands and another for states.
+The main loop blocks while waiting for commands, and only updates when the acknowldgement 
+is received.
+
+//TODO: implement a timeout on the wait call, and when it's up just poll the devices 
+for their status and update the state channel
+
+//TODO: implement the update request function (need to know what CAN message to use, and 
+add this to the motor_command message enum)
