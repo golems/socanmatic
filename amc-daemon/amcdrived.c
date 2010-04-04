@@ -236,7 +236,7 @@ int amcdrive_execute_and_update(servo_vars_t servo, Somatic__MotorCmd *msg, ach_
 		fprintf(stdout,"%lf::",msg->values->data[i]);
 	fprintf(stdout,"]\n");
 
-    NTCAN_RESULT status = amcdrive_set_current(&servo, 3.0);
+    NTCAN_RESULT status = amcdrive_set_current(&servo, msg->values->data[0]);
     somatic_hard_assert( status == NTCAN_SUCCESS, "spin up\n");
 
 
