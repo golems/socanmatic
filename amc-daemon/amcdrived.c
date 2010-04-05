@@ -143,7 +143,7 @@ static int parse_opt(int key, char *arg, struct argp_state *state) {
  * and update the state
  * \note msg size should match group size
  */
-int amcdrive_execute_and_update(servo_vars_t *servo, Somatic__MotorCmd *msg, ach_channel_t *state_chan)
+int amcdrive_execute_and_update(servo_vars_t servo, Somatic__MotorCmd *msg, ach_channel_t *state_chan)
 {
 
 	NTCAN_RESULT status;
@@ -165,17 +165,9 @@ int amcdrive_execute_and_update(servo_vars_t *servo, Somatic__MotorCmd *msg, ach
 		}
 	}*/
 
-	if (opt_verbosity) {
-		size_t i;
-		for (i = 0; i < msg->values->n_data; ++i)
-			fprintf(stdout, "%lf::", msg->values->data[i]);
-		fprintf(stdout, "]\n");
-	}
-
 	// Send current to amcdrive
 	status = amcdrive_set_current(&servo, msg->values->data[0]);
     somatic_hard_assert( status == NTCAN_SUCCESS, "CAN network failure!\n");
-
 
 	// Receive position from amcdrive
 	CMSG canMsg;
@@ -185,9 +177,9 @@ int amcdrive_execute_and_update(servo_vars_t *servo, Somatic__MotorCmd *msg, ach
     somatic_hard_assert( status == NTCAN_SUCCESS, "canRead\n");
 
 	int32_t velocity = 0;
-	memcpy(&velocity, &canMsg.data, sizeof(int32_t));
+	memcpy(&velocity, &canMsg.data[2], sizeof(int32_t));
 	velocity = ctohl(velocity);
-	double vel = amccan_decode_ds1(velocity, servo->k_i, servo->k_s);  // Velocity
+	double vel = amccan_decode_ds1(velocity, servo.k_i, servo.k_s);  // Velocity
 
 
 
@@ -220,7 +212,7 @@ int main(int argc, char *argv[]) {
 
 	// Open your device
 	NTCAN_RESULT status;
-	servo_vars_t *servo;
+	servo_vars_t servo;
 
 	status = canOpen(0,          //net
 					 0,          //flags
@@ -285,7 +277,7 @@ int main(int argc, char *argv[]) {
 			somatic_motorcmd_print(cmd);
 
 		/// Issue command, and update state with acks
-		int r = amcdrive_execute_and_update(&servo, cmd, motor_state_channel);
+		int r = amcdrive_execute_and_update(servo, cmd, motor_state_channel);
 
 		/// Cleanup
 		somatic__motor_cmd__free_unpacked( cmd, &protobuf_c_system_allocator );
