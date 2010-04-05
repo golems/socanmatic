@@ -175,9 +175,10 @@ int amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, ac
 
 	// Send current to amcdrive
 	status = amcdrive_set_current(&servos[0], msg->values->data[0]);
-    somatic_hard_assert( status == NTCAN_SUCCESS, "CAN network failure!\n");
+    somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot set current (Left)!\n");
+
 	status = amcdrive_set_current(&servos[1], msg->values->data[1]);
-    somatic_hard_assert( status == NTCAN_SUCCESS, "CAN network failure!\n");
+    somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot set current (Right)!\n");
 
 
 	// Receive position from amcdrive
@@ -205,8 +206,17 @@ int amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, ac
 	state.position = SOMATIC_NEW(Somatic__Vector);
 	somatic__vector__init(state.position);
 
-	state.position->data[0] = 0;
-	state.position->n_data = 1; //TODO: Sneaky use of global variable.  *should* pull from group
+	state.position->data[0] = 0.0;
+	state.position->data[1] = 0.0;
+	state.position->n_data = 2;
+
+	state.velocity = SOMATIC_NEW(Somatic__Vector);
+	somatic__vector__init(state.velocity);
+
+	state.velocity->data[0] = 0;
+	state.velocity->data[1] = 0;
+	state.velocity->n_data = 2;
+
 
 	return somatic_motorstate_publish(&state, state_chan);
 }
@@ -215,8 +225,8 @@ int amcdrive_open(servo_vars_t *servos){
     NTCAN_RESULT status;
 
     uint32_t drives[2];
-    drives[0] = 0x20;
-    drives[1] = 0x21;
+    drives[0] = 0x20; // Left
+    drives[1] = 0x21; // Right
 
     status = amcdrive_open_drives(0, drives, 2,
         REQUEST_TPDO_VELOCITY|REQUEST_TPDO_POSITION|ENABLE_RPDO_CURRENT,
@@ -255,7 +265,7 @@ int main(int argc, char *argv[]) {
 	/// Create channels if requested
 	if (opt_create == 1) {
 		somatic_create_channel(opt_cmd_chan, 10, 30);
-		somatic_create_channel(opt_state_chan, 10, 30);
+		somatic_create_channel(opt_state_chan, 10, 256);
 	}
 
 	/// Ach channels for amcdrived
