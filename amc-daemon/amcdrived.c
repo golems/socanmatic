@@ -197,22 +197,20 @@ int amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, ac
 	/**
 	 * Package a state message, and send/publish to state channel
 	 */
-//	Somatic__MotorState state;
-//	somatic__motor_state__init(&state);
-//
-//	state.has_status = 0; // what do we want to do with this?
-//	state.status = SOMATIC__MOTOR_STATUS__MOTOR_OK;
-//
-//	state.position = SOMATIC_NEW(Somatic__Vector);
-//	somatic__vector__init(state.position);
-//
+	Somatic__MotorState state;
+	somatic__motor_state__init(&state);
+
+	state.has_status = 0; // what do we want to do with this?
+	state.status = SOMATIC__MOTOR_STATUS__MOTOR_OK;
+
+	state.position = SOMATIC_NEW(Somatic__Vector);
+	somatic__vector__init(state.position);
+
 //	state.position->data[0] = 0.0;
 //	state.position->data[1] = 0.0;
 //	state.position->n_data = 2;
 
-	return 1;
-
-	//return somatic_motorstate_publish(&state, state_chan);
+	return somatic_motorstate_publish(&state, state_chan);
 }
 
 int amcdrive_open(servo_vars_t *servos){
