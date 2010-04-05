@@ -143,7 +143,7 @@ static int parse_opt(int key, char *arg, struct argp_state *state) {
  * and update the state
  * \note msg size should match group size
  */
-int amcdrive_execute_and_update(servo_vars_t servo, Somatic__MotorCmd *msg, ach_channel_t *state_chan)
+int amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, ach_channel_t *state_chan)
 {
 
 	NTCAN_RESULT status;
@@ -174,8 +174,11 @@ int amcdrive_execute_and_update(servo_vars_t servo, Somatic__MotorCmd *msg, ach_
 
 
 	// Send current to amcdrive
-	status = amcdrive_set_current(&servo, msg->values->data[0]);
+	status = amcdrive_set_current(&servos[0], msg->values->data[0]);
     somatic_hard_assert( status == NTCAN_SUCCESS, "CAN network failure!\n");
+	status = amcdrive_set_current(&servos[1], msg->values->data[1]);
+    somatic_hard_assert( status == NTCAN_SUCCESS, "CAN network failure!\n");
+
 
 	// Receive position from amcdrive
 	CMSG canMsg;
@@ -190,9 +193,6 @@ int amcdrive_execute_and_update(servo_vars_t servo, Somatic__MotorCmd *msg, ach_
 //	double vel = amccan_decode_ds1(velocity, servo.k_i, servo.k_s);  // Velocity
 
 
-
-
-
 	/**
 	 * Package a state message, and send/publish to state channel
 	 */
@@ -205,12 +205,36 @@ int amcdrive_execute_and_update(servo_vars_t servo, Somatic__MotorCmd *msg, ach_
 	state.position = SOMATIC_NEW(Somatic__Vector);
 	somatic__vector__init(state.position);
 
-	state.position->data[0] = servo.vel_cps;
+	state.position->data[0] = 0;
 	state.position->n_data = 1; //TODO: Sneaky use of global variable.  *should* pull from group
 
 	return somatic_motorstate_publish(&state, state_chan);
 }
 
+int amcdrive_open(servo_vars_t *servos){
+    NTCAN_RESULT status;
+
+    uint32_t drives[2];
+    drives[0] = 0x20;
+    drives[1] = 0x21;
+
+    status = amcdrive_open_drives(0, drives, 2,
+        REQUEST_TPDO_VELOCITY|REQUEST_TPDO_POSITION|ENABLE_RPDO_CURRENT,
+        1000, servos);
+    if (status != NTCAN_SUCCESS) {
+        perror("amcdrive_open_drives");
+        return status;
+    }
+    servos[1].current_sign = -1;
+
+    double current = 0.0;
+    status = amcdrive_set_current(&servos[0], current);
+    somatic_hard_assert(status == NTCAN_SUCCESS, "zero out 0\n");
+    status = amcdrive_set_current(&servos[1], current);
+    somatic_hard_assert(status == NTCAN_SUCCESS, "zero out 1\n");
+
+    return 0;
+}
 
 int main(int argc, char *argv[]) {
 
@@ -220,21 +244,12 @@ int main(int argc, char *argv[]) {
 	/// install signal handler
 	somatic_sighandler_simple_install();
 
-	// Open your device
+	/// amcdrive setup
 	NTCAN_RESULT status;
-	servo_vars_t servo;
+	servo_vars_t servos[2];
 
-	status = canOpen(0,          //net
-					 0,          //flags
-					 10,         //txqueue
-					 128,        //rxqueue
-					 1000,       //txtimeout
-					 2000,       //rxtimeout
-					 &handle);   // handle
-	somatic_hard_assert(status == NTCAN_SUCCESS, "canOpen\n");
-
-	status = canSetBaudrate(handle, NTCAN_BAUD_1000);
-	somatic_hard_assert(status == NTCAN_SUCCESS, "canSetBaudrate\n");
+	status = amcdrive_open(servos);
+	somatic_hard_assert(status == NTCAN_SUCCESS, "amcdrive initialization failed\n");
 
 
 	/// Create channels if requested
@@ -250,11 +265,6 @@ int main(int argc, char *argv[]) {
 	/// Declare the state and command messages
 	//Somatic__MotorCmd *cmd_msg = somatic_motorcmd_alloc(n_modules);
 	//Somatic__MotorState *state_msg = somatic_motorstate_alloc(n_modules);
-
-
-	/// Initialize the CAN network
-	status = amcdrive_init_drive(handle, 0x20,REQUEST_TPDO_VELOCITY|REQUEST_TPDO_CURRENT|ENABLE_RPDO_CURRENT, 1000, &servo);
-	somatic_hard_assert(status == NTCAN_SUCCESS, "amcdrive initialization failed\n");
 
 
 	if (opt_verbosity) {
@@ -287,7 +297,7 @@ int main(int argc, char *argv[]) {
 			somatic_motorcmd_print(cmd);
 
 		/// Issue command, and update state with acks
-		int r = amcdrive_execute_and_update(servo, cmd, motor_state_channel);
+		int r = amcdrive_execute_and_update(servos, cmd, motor_state_channel);
 
 		/// Cleanup
 		somatic__motor_cmd__free_unpacked( cmd, &protobuf_c_system_allocator );
