@@ -68,7 +68,7 @@ size_t state_channel_size = 30;
 /* Option Vars */
 static int opt_verbosity = 0;
 static int opt_create = 0;
-static int opt_n_vals = 7;
+static int opt_n_vals = 1;
 static const char *opt_cmd_chan = AMCDRIVED_CMD_CHANNEL_NAME;
 static const char *opt_state_chan = AMCDRIVED_STATE_CHANNEL_NAME;
 

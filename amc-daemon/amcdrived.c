@@ -165,6 +165,14 @@ int amcdrive_execute_and_update(servo_vars_t servo, Somatic__MotorCmd *msg, ach_
 		}
 	}*/
 
+	if (opt_verbosity) {
+		size_t i;
+		for (i = 0; i < msg->values->n_data; ++i)
+			fprintf(stdout, "%lf::", msg->values->data[i]);
+		fprintf(stdout, "]\n");
+	}
+
+
 	// Send current to amcdrive
 	status = amcdrive_set_current(&servo, msg->values->data[0]);
     somatic_hard_assert( status == NTCAN_SUCCESS, "CAN network failure!\n");
@@ -181,6 +189,7 @@ int amcdrive_execute_and_update(servo_vars_t servo, Somatic__MotorCmd *msg, ach_
 	velocity = ctohl(velocity);
 	double vel = amccan_decode_ds1(velocity, servo.k_i, servo.k_s);  // Velocity
 
+	fprintf(stdout, "%f", vel);
 
 
 	/**
@@ -195,8 +204,8 @@ int amcdrive_execute_and_update(servo_vars_t servo, Somatic__MotorCmd *msg, ach_
 	state.velocity = SOMATIC_NEW(Somatic__Vector);
 	somatic__vector__init(state.velocity);
 
-	state.velocity->data[0] = vel;
-	state.velocity->n_data = 1; //TODO: Sneaky use of global variable.  *should* pull from group
+	//state.velocity->data[0] = vel;
+	//state.velocity->n_data = 1; //TODO: Sneaky use of global variable.  *should* pull from group
 
 	return somatic_motorstate_publish(&state, state_chan);
 }
