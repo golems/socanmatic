@@ -4,7 +4,7 @@ VERSION := 0.0.1
 PROJECT := amcdrive
 
 SHAREDLIBS := amcdrive
-BINFILES := amc-test-dual-js
+BINFILES := amc-test
 
 default: all
 
@@ -16,10 +16,10 @@ all: $(LIBFILES) $(BINFILES)
 CFLAGS += --std=gnu99
 
 $(call LINKLIB, amcdrive, amccan.o amcdrive.o)
-$(call LINKBIN, amc-test-dual-js, amc-test-dual-js.o, amcdrive ntcan ntcanopen pthread)
+$(call LINKBIN, amc-test, amc-test.o, amcdrive ntcan ntcanopen pthread)
 
 clean: 
-	rm -vf *.o *.so amc-test-dual-js *.deb 
+	rm -vf *.o *.so amc-test *.deb 
 	rm -rf .deps debian doc $(PROJECT)-$(VERSION)
 
 doc:
