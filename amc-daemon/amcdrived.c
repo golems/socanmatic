@@ -187,11 +187,13 @@ int amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, ac
 //    int len = 1;
 //    status = canRead(handle, &canMsg, &len, NULL);
 //    somatic_hard_assert( status == NTCAN_SUCCESS, "canRead\n");
-
+//
 //	int32_t velocity = 0;
 //	memcpy(&velocity, &canMsg.data[2], sizeof(int32_t));
 //	velocity = ctohl(velocity);
 //	double vel = amccan_decode_ds1(velocity, servo.k_i, servo.k_s);  // Velocity
+
+
 
 
 	/**
@@ -206,9 +208,10 @@ int amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, ac
 	state.position = SOMATIC_NEW(Somatic__Vector);
 	somatic__vector__init(state.position);
 
-//	state.position->data[0] = 0.0;
+	state.position->data[0] = 0.0;
 //	state.position->data[1] = 0.0;
 //	state.position->n_data = 2;
+
 
 	return somatic_motorstate_publish(&state, state_chan);
 }
