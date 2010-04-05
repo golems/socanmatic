@@ -60,7 +60,7 @@
 /* GLOBAL VARS */
 /* ----------- */
 size_t cmd_channel_size = 30;
-size_t state_channel_size = 30;
+size_t state_channel_size = 1000;
 
 /* ---------- */
 /* ARGP Junk  */
@@ -224,7 +224,7 @@ int main(int argc, char **argv) {
 	// Create channels if requested
 	if (opt_create == 1) {
 		somatic_create_channel(opt_cmd_chan, 10, cmd_channel_size);
-		somatic_create_channel(opt_state_chan, 10, state_channel_size);
+		somatic_create_channel(opt_state_chan, 1000, state_channel_size);
 	}
 
 	// Ach channels for pciod

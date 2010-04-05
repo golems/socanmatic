@@ -210,14 +210,6 @@ int amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, ac
 	state.position->data[1] = 0.0;
 	state.position->n_data = 2;
 
-	state.velocity = SOMATIC_NEW(Somatic__Vector);
-	somatic__vector__init(state.velocity);
-
-	state.velocity->data[0] = 0;
-	state.velocity->data[1] = 0;
-	state.velocity->n_data = 2;
-
-
 	return somatic_motorstate_publish(&state, state_chan);
 }
 
@@ -265,7 +257,7 @@ int main(int argc, char *argv[]) {
 	/// Create channels if requested
 	if (opt_create == 1) {
 		somatic_create_channel(opt_cmd_chan, 10, 30);
-		somatic_create_channel(opt_state_chan, 10, 256);
+		somatic_create_channel(opt_state_chan, 1000, 1000);
 	}
 
 	/// Ach channels for amcdrived
@@ -288,7 +280,7 @@ int main(int argc, char *argv[]) {
 
 	/** \par Main loop
 	 *
-	 *  Listen on the motor command channel, and issue a pcio command for
+	 *  Listen on the motor command channel, and issue a amcdrive command for
 	 *  each incoming message.  When an acknowledgment is received from
 	 *  the module group, post it on the state channel.
 	 *
@@ -306,7 +298,7 @@ int main(int argc, char *argv[]) {
 		if (opt_verbosity)
 			somatic_motorcmd_print(cmd);
 
-		/// Issue command, and update state with acks
+		/// Issue command, and update state
 		int r = amcdrive_execute_and_update(servos, cmd, motor_state_channel);
 
 		/// Cleanup
