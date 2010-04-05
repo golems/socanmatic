@@ -259,7 +259,7 @@ int main(int argc, char **argv) {
 	 *  used "size_t size = somatic__motorstate__get_packed_size(msg);"
 	 *  in pciod to find the size after packing a message
 	 */
-	size_t msg_size = 1000; // the size of the state message
+	size_t msg_size = 128; // the size of the state message
 	int ach_result;
 	while (!somatic_sig_received) {
 		char cmdbuf[40];
