@@ -199,6 +199,9 @@ int amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, ac
 	/**
 	 * Package a state message, and send/publish to state channel
 	 */
+	double a1[2], a2[2];
+	a1[0] = a1[1] = 0.0;
+
 	Somatic__MotorState state;
 	somatic__motor_state__init(&state);
 
@@ -208,9 +211,9 @@ int amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, ac
 	state.position = SOMATIC_NEW(Somatic__Vector);
 	somatic__vector__init(state.position);
 
-	state.position->data[0] = 0.0;
+	state.position->data = a1;
 //	state.position->data[1] = 0.0;
-//	state.position->n_data = 2;
+	state.position->n_data = 2;
 
 
 	return somatic_motorstate_publish(&state, state_chan);
@@ -268,8 +271,8 @@ int main(int argc, char *argv[]) {
 	ach_channel_t *motor_state_channel = somatic_open_channel(opt_state_chan);
 
 	/// Declare the state and command messages
-	Somatic__MotorCmd *cmd_msg = somatic_motorcmd_alloc(n_modules);
-	Somatic__MotorState *state_msg = somatic_motorstate_alloc(n_modules);
+	//Somatic__MotorCmd *cmd_msg = somatic_motorcmd_alloc(n_modules);
+	//Somatic__MotorState *state_msg = somatic_motorstate_alloc(n_modules);
 
 
 	if (opt_verbosity) {
