@@ -10,7 +10,7 @@
  *  \brief Daemon to control a CAN network using motor and state messages
  *  from an ACH channel
  *
- *  amcdrived is an ACH front-end to pcio, the library for communicating with amcdrives
+ *  amcdrived is an ACH front-end to amcdrive, the library for communicating with amcdrives
  *  on a CAN network.
  */
 
@@ -32,7 +32,7 @@
 #include "include/amcdrive.h"
 #include "include/amcdrived.h"
 
-static NTCAN_HANDLE handle;
+//static NTCAN_HANDLE handle;
 
 /* ---------- */
 /* ARGP Junk  */
@@ -57,7 +57,8 @@ static struct argp_option options[] = {
         .key = 'i',
         .arg = "index",
         .flags = 0,
-        .doc = "Define a motor index (by default increments with every new module id"
+        .doc = "Define a motor index (by default increments with every new module id)"
+
     },
     {
         .name = "module",
@@ -76,7 +77,7 @@ static struct argp_option options[] = {
     {
         .name = "cmd-chan",
         .key = 'c',
-        .arg = "pcio_cmd_channel",
+        .arg = "amcdrive_cmd_channel",
         .flags = 0,
         .doc = "ach channel to send amcdrive commands to"
     },
@@ -182,26 +183,20 @@ int amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, ac
 
 
 	// Receive position from amcdrive
-	CMSG canMsg;
-
-//    int len = 1;
-//    status = canRead(handle, &canMsg, &len, NULL);
-//    somatic_hard_assert( status == NTCAN_SUCCESS, "canRead\n");
-//
-//	int32_t velocity = 0;
-//	memcpy(&velocity, &canMsg.data[2], sizeof(int32_t));
-//	velocity = ctohl(velocity);
-//	double vel = amccan_decode_ds1(velocity, servo.k_i, servo.k_s);  // Velocity
+	status =  amcdrive_update_drives(servos, n_modules);
+    somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot update drive states!\n");
 
 
 
 
-	/**
+    /**
 	 * Package a state message, and send/publish to state channel
 	 */
 	double position[2], velocity[2];
-	position[0] = position[1] = 0.0;
-	velocity[0] = velocity[1] = 1.1;
+	position[0] = servos[0].position;
+	position[1] = servos[1].position;
+	velocity[0] = servos[0].vel_cps;
+	velocity[1] = servos[1].vel_cps;
 
 	Somatic__MotorState state;
 	somatic__motor_state__init(&state);
@@ -278,10 +273,6 @@ int main(int argc, char *argv[]) {
 	ach_channel_t *motor_cmd_channel = somatic_open_channel(opt_cmd_chan);
 	ach_channel_t *motor_state_channel = somatic_open_channel(opt_state_chan);
 
-	/// Declare the state and command messages
-	//Somatic__MotorCmd *cmd_msg = somatic_motorcmd_alloc(n_modules);
-	//Somatic__MotorState *state_msg = somatic_motorstate_alloc(n_modules);
-
 
 	if (opt_verbosity) {
 		fprintf(stderr, "\n* JSD *\n");
@@ -307,7 +298,7 @@ int main(int argc, char *argv[]) {
 	while (!somatic_sig_received) {
 		/// read current state from state channel
 		Somatic__MotorCmd *cmd = somatic_motorcmd_receive(motor_cmd_channel, &ach_result, msg_size, NULL, &protobuf_c_system_allocator);
-		somatic_hard_assert(ach_result == ACH_OK,"Ach wait failure\n");
+		somatic_hard_assert(ach_result == ACH_OK, "Ach wait failure!\n");
 
 		if (opt_verbosity)
 			somatic_motorcmd_print(cmd);
