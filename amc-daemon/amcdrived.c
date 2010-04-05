@@ -1,5 +1,5 @@
 /* -*- mode: C; c-basic-offset: 2  -*- */
-/** \file pciod.c
+/** \file amcdrived.c
  *
  *  \author Jon Scholz
  *  \author Neil Dantam
@@ -10,7 +10,7 @@
  *  \brief Daemon to control a CAN network using motor and state messages
  *  from an ACH channel
  *
- *  pciod is an ACH front-end to pcio, the library for communicating with power-cubes
+ *  amcdrived is an ACH front-end to pcio, the library for communicating with amcdrives
  *  on a CAN network.
  */
 
@@ -32,28 +32,17 @@
 #include "include/amcdrive.h"
 #include "include/amcdrived.h"
 
-
-#define eprintf(f, args...) fprintf(stderr, f, ## args)
-
 static NTCAN_HANDLE handle;
 
 /* ---------- */
 /* ARGP Junk  */
 /* ---------- */
 //TODO: replace these with vars from parsing args
-//#define MAX_BUSSES 4
 static const char *opt_cmd_chan = AMCDRIVED_CMD_CHANNEL_NAME;
 static const char *opt_state_chan = AMCDRIVED_STATE_CHANNEL_NAME;
 static int opt_create = 0;
 static int opt_verbosity = 0;
-//static size_t n_busses = 0;
 static size_t n_modules = 1;
-//static size_t bus_count[MAX_BUSSES];	// number of modules per bus
-//static int bus_ids[MAX_BUSSES]; // Array of bus ids (allows busses to be specified in any order)
-
-// A list mapping motor indices to module information (needed to build the pcio_group_t)
-//static pcio_module_list_t *pcio_mod_list;
-
 
 static struct argp_option options[] = {
     {
@@ -117,60 +106,19 @@ static struct argp_option options[] = {
 /// argp parsing function
 static int parse_opt( int key, char *arg, struct argp_state *state);
 /// argp program version
-const char *argp_program_version = "pciod 0.2";
+const char *argp_program_version = "amcdrived 0.0.1";
 /// argp program arguments documention
 static char args_doc[] = "";
 /// argp program doc line
-static char doc[] = "reads somatic messages and sends pcio motor commands";
+static char doc[] = "reads somatic messages and sends amcdrive motor commands";
 /// argp object
 static struct argp argp = {options, parse_opt, args_doc, doc, NULL, NULL, NULL };
 
 static int parse_opt(int key, char *arg, struct argp_state *state) {
 	(void) state; // ignore unused parameter
 
-//	static int current_index = 0; // current motor index to be used with 'm' and 'b' args
-//	static int current_bus_id = 0;		// The actual bus id to set in pcio_group
-//	static int current_bus_index = 0; 	// The ordinality of the current bus
-
 	switch (key) {
-//	case 'i':
-//		current_index = atoi(arg);
-//		break;
-//	case 'm':
-//		/* Add a new module to the list, and set its CAN bus number and command index */
-//		{
-//		pcio_mod_list->module_id = atoi( arg );
-//		pcio_mod_list->bus_num = current_bus_id;
-//		pcio_mod_list->index = current_index;
-//
-//		/* List overhead: */
-//		pcio_mod_list->next = (pcio_module_list_t*) malloc(sizeof(pcio_module_list_t));
-//		pcio_mod_list->next->head = pcio_mod_list->head;
-//		pcio_mod_list = pcio_mod_list->next;
-//		pcio_mod_list->next = NULL;
-//
-//		/* Update the size of current bus */
-//		bus_count[current_bus_index]++;
-//		current_index++; // increment idx, in case user isn't specifying manually
-//		n_modules++;	// increment n_modules to, since it might differ from current_index
-//		}
-//		break;
-//	case 'b':
-//		/* set the bus for subsequent modules */
-//		current_bus_id = atoi(arg);
-//		// Find index of this bus id
-//		int i;
-//		current_bus_index = -1;
-//		for (i=0;i<MAX_BUSSES;++i)
-//			if (bus_ids[i] == current_bus_id)
-//				current_bus_index = i;
-//		if (current_bus_index == -1) {
-//			current_bus_index = (int)n_busses;
-//			bus_ids[current_bus_index] = current_bus_id;
-//		}
-//		n_busses++;
-//		//printf("%d %d %d %d\n\n",bus_ids[0],bus_ids[1],bus_ids[2],bus_ids[3]);
-//		break;
+
 	case 'c':
 		opt_cmd_chan = strdup(arg);
 		break;
@@ -191,58 +139,52 @@ static int parse_opt(int key, char *arg, struct argp_state *state) {
 
 
 /**
- * Generate the pcio calls requested by the specified motor command message,
- * and update the state with the module acknowledgments
+ * Generate the amcdrive calls requested by the specified motor command message,
+ * and update the state
  * \note msg size should match group size
  */
 int amcdrive_execute_and_update(servo_vars_t servo, Somatic__MotorCmd *msg, ach_channel_t *state_chan)
 {
-//	pcio_param_id command;
-//	if (opt_verbosity) {
-//		switch (msg->param) {
-//		case SOMATIC__MOTOR_PARAM__MOTOR_CURRENT:
-//			command = PCIO_PARAM_BUSCURRENT; // Correct?  I just picked the one that looked right
-//			fprintf(stdout,"Setting motor currents: [");
-//			break;
-//		case SOMATIC__MOTOR_PARAM__MOTOR_VELOCITY:
-//			command = PCIO_TARGET_VEL; // Correct?  I just picked the one that looked right
-//			fprintf(stdout,"Setting motor velocities: [");
-//			break;
-//		case SOMATIC__MOTOR_PARAM__MOTOR_POSITION:
-//			command = PCIO_ACT_FPOS; // Correct?  I just picked the one that looked right
-//			fprintf(stdout,"Setting motor positions: [");
-//			break;
-//		default:
-//			break;
-//		}
-//		size_t i;
-//		for (i=0; i < msg->values->n_data; ++i)
-//			fprintf(stdout,"%lf::",msg->values->data[i]);
-//		fprintf(stdout,"]\n");
-//	}
-//
-//	double ack_vals[msg->values->n_data];
-//
-//	/**
-//	 *  Send command values in cmd_vals to pcio group, and receive position
-//	 *  Acknowledgments in ack_vals
-//	 */
-//	int r = pcio_group_cmd_ack(group, ack_vals, msg->values->n_data, command, msg->values->data);
-//	somatic_hard_assert( r == NTCAN_SUCCESS, "CAN network failure\n");
 
+	NTCAN_RESULT status;
 
-	size_t i;
-	for (i=0; i < msg->values->n_data; ++i)
-		fprintf(stdout,"%lf::",msg->values->data[i]);
-	fprintf(stdout,"]\n");
+/*	// Select Motor Command
+	if (opt_verbosity) {
+		switch (msg->param) {
+		case SOMATIC__MOTOR_PARAM__MOTOR_CURRENT:
+			fprintf(stdout,"Setting motor currents: [");
+			break;
+		case SOMATIC__MOTOR_PARAM__MOTOR_VELOCITY:
+			fprintf(stdout,"Setting motor velocities: [");
+			break;
+		case SOMATIC__MOTOR_PARAM__MOTOR_POSITION:
+			fprintf(stdout,"Setting motor positions: [");
+			break;
+		default:
+			break;
+		}
+	}*/
 
-    NTCAN_RESULT status = amcdrive_set_current(&servo, msg->values->data[0]);
-    somatic_hard_assert( status == NTCAN_SUCCESS, "spin up\n");
+	// Send current to amcdrive
+	status = amcdrive_set_current(&servo, msg->values->data[0]);
+    somatic_hard_assert( status == NTCAN_SUCCESS, "CAN network failure!\n");
+
+	// Receive position from amcdrive
+	CMSG canMsg;
+
+    int len = 1;
+    status = canRead(handle, &canMsg, &len, NULL);
+    somatic_hard_assert( status == NTCAN_SUCCESS, "canRead\n");
+
+	int32_t velocity = 0;
+	memcpy(&velocity, &canMsg.data[2], sizeof(int32_t));
+	velocity = ctohl(velocity);
+	double vel = amccan_decode_ds1(velocity, servo.k_i, servo.k_s);  // Velocity
 
 
 
 	/**
-	 * Package a state message for the ack returned, and send to state channel
+	 * Package a state message, and send/publish to state channel
 	 */
 	Somatic__MotorState state;
 	somatic__motor_state__init(&state);
@@ -250,11 +192,11 @@ int amcdrive_execute_and_update(servo_vars_t servo, Somatic__MotorCmd *msg, ach_
 	state.has_status = 0; // what do we want to do with this?
 	state.status = SOMATIC__MOTOR_STATUS__MOTOR_OK;
 
-	state.position = SOMATIC_NEW(Somatic__Vector);
-	somatic__vector__init(state.position);
+	state.velocity = SOMATIC_NEW(Somatic__Vector);
+	somatic__vector__init(state.velocity);
 
-	//state.position->data = ack_vals;
-	//state.position->n_data = n_modules; //TODO: Sneaky use of global variable.  *should* pull from group
+	state.velocity->data[0] = vel;
+	state.velocity->n_data = n_modules; //TODO: Sneaky use of global variable.  *should* pull from group
 
 	return somatic_motorstate_publish(&state, state_chan);
 }

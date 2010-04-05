@@ -34,7 +34,7 @@
  *
  */
 
-/** \file pciod_commander.c
+/** \file amcdrived_commander.c
  *
  *  Shell tool to interact with pciod motor command and state channels
  *
@@ -86,14 +86,14 @@ static struct argp_option options[] = {
         .key = 'c',
         .arg = "channel",
         .flags = 0,
-        .doc = "ach channel name for sending powercube commands"
+        .doc = "ach channel name for sending amcdrived commands"
     },
     {
 		.name = "states",
 		.key = 's',
 		.arg = "channel",
 		.flags = 0,
-		.doc = "ach channel name for receiving pcio state messages"
+		.doc = "ach channel name for receiving amcdrive state messages"
     },
     {
         .name = "Create",
@@ -115,7 +115,7 @@ static struct argp_option options[] = {
 /// argp parsing function
 static int parse_opt( int key, char *arg, struct argp_state *state);
 /// argp program version
-const char *argp_program_version = "pciod_commander v0.0.1";
+const char *argp_program_version = "amcdrived_commander v0.0.1";
 /// argp program arguments documention
 static char args_doc[] = "";
 /// argp program doc line
