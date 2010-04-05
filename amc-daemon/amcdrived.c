@@ -180,16 +180,17 @@ int amcdrive_execute_and_update(servo_vars_t servo, Somatic__MotorCmd *msg, ach_
 	// Receive position from amcdrive
 	CMSG canMsg;
 
-    int len = 1;
-    status = canRead(handle, &canMsg, &len, NULL);
-    somatic_hard_assert( status == NTCAN_SUCCESS, "canRead\n");
+//    int len = 1;
+//    status = canRead(handle, &canMsg, &len, NULL);
+//    somatic_hard_assert( status == NTCAN_SUCCESS, "canRead\n");
 
-	int32_t velocity = 0;
-	memcpy(&velocity, &canMsg.data[2], sizeof(int32_t));
-	velocity = ctohl(velocity);
-	double vel = amccan_decode_ds1(velocity, servo.k_i, servo.k_s);  // Velocity
+//	int32_t velocity = 0;
+//	memcpy(&velocity, &canMsg.data[2], sizeof(int32_t));
+//	velocity = ctohl(velocity);
+//	double vel = amccan_decode_ds1(velocity, servo.k_i, servo.k_s);  // Velocity
 
-	printf("%f\n", vel);
+
+
 
 
 	/**
@@ -204,7 +205,7 @@ int amcdrive_execute_and_update(servo_vars_t servo, Somatic__MotorCmd *msg, ach_
 	state.position = SOMATIC_NEW(Somatic__Vector);
 	somatic__vector__init(state.position);
 
-	state.position->data[0] = vel;
+	state.position->data[0] = servo.vel_cps;
 	state.position->n_data = 1; //TODO: Sneaky use of global variable.  *should* pull from group
 
 	return somatic_motorstate_publish(&state, state_chan);
