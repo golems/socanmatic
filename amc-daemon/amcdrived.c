@@ -212,7 +212,7 @@ int amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, ac
 
 	return 1;
 
-	return somatic_motorstate_publish(&state, state_chan);
+	//return somatic_motorstate_publish(&state, state_chan);
 }
 
 int amcdrive_open(servo_vars_t *servos){
