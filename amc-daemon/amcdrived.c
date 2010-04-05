@@ -268,8 +268,8 @@ int main(int argc, char *argv[]) {
 	ach_channel_t *motor_state_channel = somatic_open_channel(opt_state_chan);
 
 	/// Declare the state and command messages
-	//Somatic__MotorCmd *cmd_msg = somatic_motorcmd_alloc(n_modules);
-	//Somatic__MotorState *state_msg = somatic_motorstate_alloc(n_modules);
+	Somatic__MotorCmd *cmd_msg = somatic_motorcmd_alloc(n_modules);
+	Somatic__MotorState *state_msg = somatic_motorstate_alloc(n_modules);
 
 
 	if (opt_verbosity) {
