@@ -32,14 +32,14 @@ int main(int argc, char **argv) {
     try("canSetBaudrate",
         canSetBaudrate(handle, NTCAN_BAUD_1000));
 
-    status = amcdrive_reset_drive(handle, 0x21);
-    try("amcdrive_reset", status);
-//    status = amcdrive_init_drive(handle, 0x21,REQUEST_TPDO_VELOCITY|REQUEST_TPDO_CURRENT|ENABLE_RPDO_CURRENT, 1000,
-//        &servo);
-//    try("amcdrive_init", status);
-//
-//    double current = 3.0;
-//    try("spin up", amcdrive_set_current(&servo, current));
+//    status = amcdrive_reset_drive(handle, 0x21);
+//    try("amcdrive_reset", status);
+    status = amcdrive_init_drive(handle, 0x21,REQUEST_TPDO_VELOCITY|REQUEST_TPDO_CURRENT|ENABLE_RPDO_CURRENT, 1000,
+        &servo);
+    try("amcdrive_init", status);
+
+    double current = 0.0;
+    try("spin up", amcdrive_set_current(&servo, current));
   
 
     usleep(500000);
