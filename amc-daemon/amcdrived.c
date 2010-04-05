@@ -83,7 +83,7 @@ static struct argp_option options[] = {
     {
 		.name = "state-chan",
 		.key = 's',
-		.arg = "pcio_state_channel",
+		.arg = "amcdrive_state_channel",
 		.flags = 0,
 		.doc = "ach channel to listen for commands on"
     },
@@ -189,7 +189,7 @@ int amcdrive_execute_and_update(servo_vars_t servo, Somatic__MotorCmd *msg, ach_
 	velocity = ctohl(velocity);
 	double vel = amccan_decode_ds1(velocity, servo.k_i, servo.k_s);  // Velocity
 
-	fprintf(stdout, "%f", vel);
+	printf("%f\n", vel);
 
 
 	/**
@@ -201,11 +201,11 @@ int amcdrive_execute_and_update(servo_vars_t servo, Somatic__MotorCmd *msg, ach_
 	state.has_status = 0; // what do we want to do with this?
 	state.status = SOMATIC__MOTOR_STATUS__MOTOR_OK;
 
-	state.velocity = SOMATIC_NEW(Somatic__Vector);
-	somatic__vector__init(state.velocity);
+	state.position = SOMATIC_NEW(Somatic__Vector);
+	somatic__vector__init(state.position);
 
-	//state.velocity->data[0] = vel;
-	//state.velocity->n_data = 1; //TODO: Sneaky use of global variable.  *should* pull from group
+	state.position->data[0] = vel;
+	state.position->n_data = 1; //TODO: Sneaky use of global variable.  *should* pull from group
 
 	return somatic_motorstate_publish(&state, state_chan);
 }
