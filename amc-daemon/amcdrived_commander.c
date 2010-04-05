@@ -34,7 +34,7 @@
  *
  */
 
-/** \file amcdrived_commander.c
+/** \file pciod_commander.c
  *
  *  Shell tool to interact with pciod motor command and state channels
  *
@@ -59,7 +59,8 @@
 /* ----------- */
 /* GLOBAL VARS */
 /* ----------- */
-
+size_t cmd_channel_size = 30;
+size_t state_channel_size = 30;
 
 /* ---------- */
 /* ARGP Junk  */
@@ -67,6 +68,7 @@
 /* Option Vars */
 static int opt_verbosity = 0;
 static int opt_create = 0;
+static int opt_n_vals = 7;
 static const char *opt_cmd_chan = AMCDRIVED_CMD_CHANNEL_NAME;
 static const char *opt_state_chan = AMCDRIVED_STATE_CHANNEL_NAME;
 
@@ -86,14 +88,14 @@ static struct argp_option options[] = {
         .key = 'c',
         .arg = "channel",
         .flags = 0,
-        .doc = "ach channel name for sending amcdrived commands"
+        .doc = "ach channel name for sending powercube commands"
     },
     {
 		.name = "states",
 		.key = 's',
 		.arg = "channel",
 		.flags = 0,
-		.doc = "ach channel name for receiving amcdrive state messages"
+		.doc = "ach channel name for receiving pcio state messages"
     },
     {
         .name = "Create",
@@ -101,6 +103,13 @@ static struct argp_option options[] = {
         .arg = NULL,
         .flags = 0,
         .doc = "Create channel with specified name (off by default)"
+    },
+    {
+            .name = "n_modules",
+            .key = 'n',
+            .arg = "n",
+            .flags = 0,
+            .doc = "Generate messages for n modules"
     },
     {
         .name = NULL,
@@ -115,7 +124,7 @@ static struct argp_option options[] = {
 /// argp parsing function
 static int parse_opt( int key, char *arg, struct argp_state *state);
 /// argp program version
-const char *argp_program_version = "amcdrived_commander v0.0.1";
+const char *argp_program_version = "pciod_commander v0.0.1";
 /// argp program arguments documention
 static char args_doc[] = "";
 /// argp program doc line
@@ -139,6 +148,10 @@ static int parse_opt( int key, char *arg, struct argp_state *state) {
 		break;
     case 'C':
     	opt_create = 1;
+    	break;
+    case 'n':
+        opt_n_vals = atoi(arg)	;
+        break;
     case 0:
         break;
     }
@@ -172,6 +185,8 @@ Somatic__MotorParam parse_command(char *str, double *vals)
 		case 'p':
 			param = SOMATIC__MOTOR_PARAM__MOTOR_POSITION;
 			break;
+		case 'q':
+			exit(0);
 		default:
 			fprintf(stderr,"Unrecognized command \"%s\"\n", tok);
 			return(-1);
@@ -184,6 +199,13 @@ Somatic__MotorParam parse_command(char *str, double *vals)
 		vals[i] = atof(tok);
 		tok = strtok(NULL," ");
 		i++;
+	}
+
+	// If we received only one value, apply it to all modules
+	if (i == 1) {
+		int j;
+		for (j = i; j < opt_n_vals; ++j)
+			vals[j] = vals[0];
 	}
 
 	return param;
@@ -201,8 +223,8 @@ int main(int argc, char **argv) {
 
 	// Create channels if requested
 	if (opt_create == 1) {
-		somatic_create_channel(opt_cmd_chan, 10, 30);
-		somatic_create_channel(opt_state_chan, 10, 30);
+		somatic_create_channel(opt_cmd_chan, 10, cmd_channel_size);
+		somatic_create_channel(opt_state_chan, 10, state_channel_size);
 	}
 
 	// Ach channels for pciod
@@ -228,6 +250,7 @@ int main(int argc, char **argv) {
 			"  c \t  -set current \n"
 			"  v \t  -set velocity \n"
 			"  p \t  -set position \n"
+			"  q(uit)  -exit program\n"
 			"\n"
 			"e.g.: >> v 5 5 5 0 0 0 0\n";
 	printf("%s\n",usage_str);
@@ -250,13 +273,20 @@ int main(int argc, char **argv) {
 
 			// Parse if input was provided
 			if (strlen(cmdbuf)) {
-				size_t n_vals = (strlen(cmdbuf) - 1) / 2; // expected array size user provided proper string
-				double vals[n_vals];
+				//size_t n_vals = (strlen(cmdbuf) - 1) / 2; // expected array size user provided proper string
+				double vals[opt_n_vals];
 				Somatic__MotorParam param = parse_command(cmdbuf, vals);
+
+				if (opt_verbosity) {
+					int i; printf("Sending values: ");
+					for (i = 0;i<opt_n_vals; ++i)
+						printf("%lf ",vals[i]);
+					printf("\n");
+				}
 
 				if ((int)param != -1) {
 					// write motor message to motor channel
-					somatic_generate_motorcmd(motor_cmd_channel, vals, n_vals, param);
+					somatic_generate_motorcmd(motor_cmd_channel, vals, (size_t)opt_n_vals, param);
 
 					// read current state from state channel
 					Somatic__MotorState *state = somatic_motorstate_receive(motor_state_channel, &ach_result, msg_size, NULL, &protobuf_c_system_allocator);
