@@ -173,12 +173,19 @@ int amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, ac
 		fprintf(stdout, "]\n");
 	}
 
+	// Torque-to-current conversion
+	double motorLeftCurrent = msg->values->data[0]/KT_LEFT;
+	double motorRightCurrent = msg->values->data[1]/KT_RIGHT;
+
+	// Current limit
+    motorLeftCurrent = min(MAX_CURRENT, max(-MAX_CURRENT, motorLeftCurrent));
+    motorRightCurrent = min(MAX_CURRENT, max(-MAX_CURRENT, motorRightCurrent));
 
 	// Send current to amcdrive
-	status = amcdrive_set_current(&servos[0], msg->values->data[0]);
+	status = amcdrive_set_current(&servos[0], motorLeftCurrent);
     somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot set current (Left)!\n");
 
-	status = amcdrive_set_current(&servos[1], msg->values->data[1]);
+	status = amcdrive_set_current(&servos[1], motorRightCurrent);
     somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot set current (Right)!\n");
 
 
@@ -191,10 +198,10 @@ int amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, ac
 	 * Package a state message, and send/publish to state channel
 	 */
 	double position[2], velocity[2];
-	position[0] = servos[0].position;
-	position[1] = servos[1].position;
-	velocity[0] = servos[0].vel_cps;
-	velocity[1] = servos[1].vel_cps;
+	position[0] = servos[0].position*KC;
+	position[1] = servos[1].position*KC;
+	velocity[0] = servos[0].vel_cps*KC;
+	velocity[1] = servos[1].vel_cps*KC;
 
 	Somatic__MotorState state;
 	somatic__motor_state__init(&state);
@@ -236,11 +243,9 @@ int amcdrive_open(servo_vars_t *servos){
     }
     servos[1].current_sign = -1;
 
-
-    double current = 0.0;
-    status = amcdrive_set_current(&servos[0], current);
+    status = amcdrive_set_current(&servos[0], 0.0);
     somatic_hard_assert(status == NTCAN_SUCCESS, "zero out 0\n");
-    status = amcdrive_set_current(&servos[1], current);
+    status = amcdrive_set_current(&servos[1], 0.0);
     somatic_hard_assert(status == NTCAN_SUCCESS, "zero out 1\n");
 
     return 0;

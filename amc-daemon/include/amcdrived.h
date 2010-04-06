@@ -49,4 +49,18 @@
 /// Default state channel name
 #define AMCDRIVED_STATE_CHANNEL_NAME "amcdrived_state"
 
+#define MAX_CURRENT 50        // Max motor current rating (Amps)
+
+// State and conversion
+#define KT_LEFT 1.01149307;  // N.m/A
+#define KT_RIGHT 1.0195995;  // N.m/A
+#define KC 6.2832/60000;     // rev/count (Note: KC = 2*pi/60000),
+
+#ifndef max
+#define max(a,b)            (((a) > (b)) ? (a) : (b))
+#endif
+#ifndef min
+#define min(a,b)            (((a) < (b)) ? (a) : (b))
+#endif
+
 #endif /* AMCDRIVED_H_ */
