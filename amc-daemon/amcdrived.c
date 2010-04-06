@@ -204,12 +204,16 @@ int amcdrive_open(servo_vars_t *servos){
         perror("amcdrive_open_drives");
         return status;
     }
-    servos[0].current_sign = -1;
+    servos[1].current_sign = -1;
 
     status = amcdrive_set_current(&servos[0], 0.0);
     status = amcdrive_set_current(&servos[1], 0.0);
     somatic_hard_assert(status == NTCAN_SUCCESS, "zero out 0\n");
     somatic_hard_assert(status == NTCAN_SUCCESS, "zero out 1\n");
+
+	// Update amcdrive state
+	status =  amcdrive_update_drives(servos, (int)n_modules);
+    somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot update drive states!\n");
 
     return 0;
 }

@@ -54,7 +54,7 @@
 // State and conversion
 #define KT_LEFT  1.01149307; // N.m/A
 #define KT_RIGHT 1.0195995;  // N.m/A
-#define KC 6.2832/60000;     // rev/count (Note: KC = 2*pi/60000),
+#define KC 6.2832/60000;     // rad/count (Note: KC = 2*pi/60000),
 
 #ifndef max
 #define max(a,b)            (((a) > (b)) ? (a) : (b))
