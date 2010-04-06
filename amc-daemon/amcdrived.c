@@ -187,8 +187,6 @@ int amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, ac
     somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot update drive states!\n");
 
 
-
-
     /**
 	 * Package a state message, and send/publish to state channel
 	 */
@@ -237,6 +235,7 @@ int amcdrive_open(servo_vars_t *servos){
         return status;
     }
     servos[1].current_sign = -1;
+
 
     double current = 0.0;
     status = amcdrive_set_current(&servos[0], current);

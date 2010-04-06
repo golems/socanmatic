@@ -201,12 +201,12 @@ Somatic__MotorParam parse_command(char *str, double *vals)
 		i++;
 	}
 
-	// If we received only one value, apply it to all modules
-	if (i == 1) {
-		int j;
-		for (j = i; j < opt_n_vals; ++j)
-			vals[j] = vals[0];
-	}
+//	// If we received only one value, apply it to all modules
+//	if (i == 1) {
+//		int j;
+//		for (j = i; j < opt_n_vals; ++j)
+//			vals[j] = vals[0];
+//	}
 
 	return param;
 }
@@ -242,9 +242,7 @@ int main(int argc, char **argv) {
 	const char *usage_str =
 			"Usage: command_parameter [list of values]\n"
 			"       The list of values should match the length of the \n"
-			"       channel that pciod_commander is writing to.\n"
-			"       If only one value is provided, pciod_commander will\n"
-			"       write this value to all modules in the group\n"
+			"       channel that amcdrived_commander is writing to.\n"
 			"\n"
 			"Valid commands:\n"
 			"  c \t  -set current \n"
@@ -252,12 +250,12 @@ int main(int argc, char **argv) {
 			"  p \t  -set position \n"
 			"  q(uit)  -exit program\n"
 			"\n"
-			"e.g.: >> v 5 5 5 0 0 0 0\n";
+			"e.g.: >> v 5 5\n";
 	printf("%s\n",usage_str);
 
 	/*
 	 *  used "size_t size = somatic__motorstate__get_packed_size(msg);"
-	 *  in pciod to find the size after packing a message
+	 *  in amcdrive to find the size after packing a message
 	 */
 	size_t msg_size = 128; // the size of the state message
 	int ach_result;
@@ -285,15 +283,19 @@ int main(int argc, char **argv) {
 				}
 
 				if ((int)param != -1) {
-					// write motor message to motor channel
-					somatic_generate_motorcmd(motor_cmd_channel, vals, (size_t)opt_n_vals, param);
 
-					// read current state from state channel
-					Somatic__MotorState *state = somatic_motorstate_receive(motor_state_channel, &ach_result, msg_size, NULL, &protobuf_c_system_allocator);
-					somatic_hard_assert(ach_result == ACH_OK,"Ach wait failure\n");
+					while (!somatic_sig_received) {
 
-					somatic_motorstate_print(state);
-					somatic__motor_state__free_unpacked( state, &protobuf_c_system_allocator );
+						// write motor message to motor channel
+						somatic_generate_motorcmd(motor_cmd_channel, vals, (size_t)opt_n_vals, param);
+
+						// read current state from state channel
+						Somatic__MotorState *state = somatic_motorstate_receive(motor_state_channel, &ach_result, msg_size, NULL, &protobuf_c_system_allocator);
+						somatic_hard_assert(ach_result == ACH_OK,"Ach wait failure\n");
+
+						somatic_motorstate_print(state);
+						somatic__motor_state__free_unpacked( state, &protobuf_c_system_allocator );
+					}
 				}
 			}
 		}
