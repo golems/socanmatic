@@ -53,28 +53,6 @@ static struct argp_option options[] = {
         .doc = "Causes verbose output"
     },
     {
-        .name = "index",
-        .key = 'i',
-        .arg = "index",
-        .flags = 0,
-        .doc = "Define a motor index (by default increments with every new module id)"
-
-    },
-    {
-        .name = "module",
-        .key = 'm',
-        .arg = "module_id",
-        .flags = 0,
-        .doc = "Define a module ID for a motor index"
-    },
-    {
-        .name = "bus",
-        .key = 'b',
-        .arg = "CAN_bus",
-        .flags = 0,
-        .doc = "define a CAN bus for a module"
-    },
-    {
         .name = "cmd-chan",
         .key = 'c',
         .arg = "amcdrive_cmd_channel",
@@ -190,7 +168,7 @@ int amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, ac
 
 
 	// Receive position from amcdrive
-	status =  amcdrive_update_drives(servos, n_modules);
+	status =  amcdrive_update_drives(&servos, (int)n_modules);
     somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot update drive states!\n");
 
 
@@ -206,24 +184,25 @@ int amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, ac
 	Somatic__MotorState state;
 	somatic__motor_state__init(&state);
 
-	// Status
+	// Set Status
 	state.has_status = 0; // what do we want to do with this?
 	state.status = SOMATIC__MOTOR_STATUS__MOTOR_OK;
 
-	// Position
+	// Set Position
 	state.position = SOMATIC_NEW(Somatic__Vector);
 	somatic__vector__init(state.position);
 
 	state.position->data = position;
 	state.position->n_data = n_modules;
 
-	// Velocity
+	// Set Velocity
 	state.velocity = SOMATIC_NEW(Somatic__Vector);
 	somatic__vector__init(state.velocity);
 
 	state.velocity->data = velocity;
 	state.velocity->n_data = n_modules;
 
+	// Publish
 	return somatic_motorstate_publish(&state, state_chan);
 }
 
@@ -265,7 +244,6 @@ int main(int argc, char *argv[]) {
 
 	status = amcdrive_open(servos);
 	somatic_hard_assert(status == NTCAN_SUCCESS, "amcdrive initialization failed\n");
-
 
 	/// Create channels if requested
 	if (opt_create == 1) {
