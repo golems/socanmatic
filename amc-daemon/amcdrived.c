@@ -118,32 +118,18 @@ static int parse_opt(int key, char *arg, struct argp_state *state) {
 
 
 /**
- * Generate the amcdrive calls requested by the specified motor command message,
- * and update the state
- * \note msg size should match group size
+ * Generate the amcdrive calls requested by the specified motor command message, and update the state
  */
 int amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, ach_channel_t *state_chan)
 {
 
 	NTCAN_RESULT status;
 
-/*	// Select Motor Command
-	if (opt_verbosity) {
-		switch (msg->param) {
-		case SOMATIC__MOTOR_PARAM__MOTOR_CURRENT:
-			fprintf(stdout,"Setting motor currents: [");
-			break;
-		case SOMATIC__MOTOR_PARAM__MOTOR_VELOCITY:
-			fprintf(stdout,"Setting motor velocities: [");
-			break;
-		case SOMATIC__MOTOR_PARAM__MOTOR_POSITION:
-			fprintf(stdout,"Setting motor positions: [");
-			break;
-		default:
-			break;
-		}
-	}*/
+    /**
+	 * Receive command message from the command channel, and send to amcdrive
+	 */
 
+	// Print motor commands received from the command channel
 	if (opt_verbosity) {
 		size_t i;
 		for (i = 0; i < msg->values->n_data; ++i)
@@ -161,26 +147,24 @@ int amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, ac
 
 	// Send current to amcdrive
 	status = amcdrive_set_current(&servos[0], motorLeftCurrent);
-    somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot set current (Left)!\n");
-
 	status = amcdrive_set_current(&servos[1], motorRightCurrent);
+    somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot set current (Left)!\n");
     somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot set current (Right)!\n");
 
-
-	// Receive position from amcdrive
-	status =  amcdrive_update_drives(&servos, (int)n_modules);
+	// Update amcdrive state
+	status =  amcdrive_update_drives(servos, (int)n_modules);
     somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot update drive states!\n");
 
-
-    /**
-	 * Package a state message, and send/publish to state channel
-	 */
 	double position[2], velocity[2];
 	position[0] = servos[0].position*KC;
 	position[1] = servos[1].position*KC;
 	velocity[0] = servos[0].vel_cps*KC;
 	velocity[1] = servos[1].vel_cps*KC;
 
+
+    /**
+	 * Package a state message, and send/publish to state channel
+	 */
 	Somatic__MotorState state;
 	somatic__motor_state__init(&state);
 
@@ -202,7 +186,7 @@ int amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, ac
 	state.velocity->data = velocity;
 	state.velocity->n_data = n_modules;
 
-	// Publish
+	// Publish state
 	return somatic_motorstate_publish(&state, state_chan);
 }
 
@@ -220,11 +204,11 @@ int amcdrive_open(servo_vars_t *servos){
         perror("amcdrive_open_drives");
         return status;
     }
-    servos[1].current_sign = -1;
+    servos[0].current_sign = -1;
 
     status = amcdrive_set_current(&servos[0], 0.0);
-    somatic_hard_assert(status == NTCAN_SUCCESS, "zero out 0\n");
     status = amcdrive_set_current(&servos[1], 0.0);
+    somatic_hard_assert(status == NTCAN_SUCCESS, "zero out 0\n");
     somatic_hard_assert(status == NTCAN_SUCCESS, "zero out 1\n");
 
     return 0;
