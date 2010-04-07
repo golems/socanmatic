@@ -43,18 +43,23 @@
 #ifndef AMCDRIVED_H_
 #define AMCDRIVED_H_
 
-/// Default command channel name
-#define AMCDRIVED_CMD_CHANNEL_NAME "amcdrived_cmd"
+#include <math.h>
 
-/// Default state channel name
-#define AMCDRIVED_STATE_CHANNEL_NAME "amcdrived_state"
+#define AMCDRIVED_CMD_CHANNEL_NAME "amcdrived_cmd" 		// Default command channel name
 
-#define MAX_CURRENT 50        // Max motor current rating (Amps)
+#define AMCDRIVED_STATE_CHANNEL_NAME "amcdrived_state"  // Default state channel name
 
-// State and conversion
-#define KT_LEFT  1.01149307; // N.m/A
-#define KT_RIGHT 1.0195995;  // N.m/A
-#define KC 6.2832/60000;     // rad/count (Note: KC = 2*pi/60000),
+#define MAX_CURRENT 50        // Max motor current (Amps)
+
+#define ENCODER_COUNT 4000
+#define GEAR_REDUCTION (15/1)
+
+// Torque-current ratio
+#define KT_LEFT  1.01149307; // N.m/A (Left motor)
+#define KT_RIGHT 1.0195995;  // N.m/A (Right motor)
+
+#define COUNT_TO_RAD(count) \
+  ( (count) * 2 * M_PI / (ENCODER_COUNT * GEAR_REDUCTION ) )
 
 #ifndef max
 #define max(a,b)            (((a) > (b)) ? (a) : (b))
