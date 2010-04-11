@@ -203,7 +203,7 @@ int amcdrive_open(servo_vars_t *servos){
         perror("amcdrive_open_drives");
         return status;
     }
-    servos[1].current_sign = 1;
+    servos[1].current_sign = -1;
 
     status = amcdrive_set_current(&servos[0], 0.0);
     status = amcdrive_set_current(&servos[1], 0.0);
