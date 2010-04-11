@@ -61,6 +61,9 @@
 #define COUNT_TO_RAD(count) \
   ( (count) * 2 * M_PI / (ENCODER_COUNT * GEAR_REDUCTION ) )
 
+#define RAD_TO_COUNT(count) \
+  ( (count) * (ENCODER_COUNT * GEAR_REDUCTION ) / (2 * M_PI) )
+
 #ifndef max
 #define max(a,b)            (((a) > (b)) ? (a) : (b))
 #endif
