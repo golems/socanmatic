@@ -144,12 +144,12 @@ int amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, ac
 	// Current limit
     motorLeftCurrent = min(MAX_CURRENT, max(-MAX_CURRENT, motorLeftCurrent));
     motorRightCurrent = min(MAX_CURRENT, max(-MAX_CURRENT, motorRightCurrent));
-//
-//	// Send current to amcdrive
-//	status = amcdrive_set_current(&servos[0], motorLeftCurrent);
-//	status = amcdrive_set_current(&servos[1], motorRightCurrent);
-//    somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot set current (Left)!\n");
-//    somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot set current (Right)!\n");
+
+	// Send current to amcdrive
+	status = amcdrive_set_current(&servos[0], motorLeftCurrent);
+	status = amcdrive_set_current(&servos[1], motorRightCurrent);
+    somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot set current (Left)!\n");
+    somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot set current (Right)!\n");
 
 	// Update amcdrive state
 	status =  amcdrive_update_drives(servos, (int)n_modules);
