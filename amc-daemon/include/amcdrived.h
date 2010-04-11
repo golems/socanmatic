@@ -34,10 +34,11 @@
  */
 
 /*
- * pciod.h
+ * amcdrived.h
  *
  *  Created on: Apr 4, 2010
  *      Author: jscholz
+ *              kasemsit
  */
 
 #ifndef AMCDRIVED_H_
@@ -54,15 +55,15 @@
 #define ENCODER_COUNT 4000
 #define GEAR_REDUCTION (15/1)
 
-// Torque-current ratio
+// Torque-current ratio for left and right wheels
 #define KT_LEFT  1.01149307; // N.m/A (Left motor)
 #define KT_RIGHT 1.0195995;  // N.m/A (Right motor)
 
 #define COUNT_TO_RAD(count) \
   ( (count) * 2 * M_PI / (ENCODER_COUNT * GEAR_REDUCTION ) )
 
-#define RAD_TO_COUNT(count) \
-  ( (count) * (ENCODER_COUNT * GEAR_REDUCTION ) / (2 * M_PI) )
+#define RAD_TO_COUNT(rad) \
+  ( (rad) * (ENCODER_COUNT * GEAR_REDUCTION ) / (2 * M_PI) )
 
 #ifndef max
 #define max(a,b)            (((a) > (b)) ? (a) : (b))

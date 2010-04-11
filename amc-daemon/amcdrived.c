@@ -12,7 +12,13 @@
  *
  *  amcdrived is an ACH front-end to amcdrive, the library for communicating with amcdrives
  *  on a CAN network.
+ *
+ *  NOTE:
+ *  amcdrived reads state message in rad, rad/s
+ *            write cmd message in N.m
+ *
  */
+
 
 #include <argp.h>
 #include <stdlib.h>
@@ -125,6 +131,12 @@ int amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, ac
 
 	NTCAN_RESULT status;
 
+	// amcdrive daemon currently accepts only current command
+	if (msg->param != SOMATIC__MOTOR_PARAM__MOTOR_CURRENT) {
+		fprintf(stdout, "ERROR: Accept only current command.\n");
+		exit(0);
+	}
+
     /**
 	 * Receive command message from the command channel, and send to amcdrive
 	 */
@@ -235,7 +247,7 @@ int main(int argc, char *argv[]) {
 	/// Create channels if requested
 	if (opt_create == 1) {
 		somatic_create_channel(opt_cmd_chan, 10, 30);
-		somatic_create_channel(opt_state_chan, 1000, 1000);
+		somatic_create_channel(opt_state_chan, 10, 30);
 	}
 
 	/// Ach channels for amcdrived
@@ -254,7 +266,7 @@ int main(int argc, char *argv[]) {
 
 	/** \par Main loop
 	 *
-	 *  Listen on the motor command channel, and issue a amcdrive command for
+	 *  Listen on the motor command channel, and issue an amcdrive command for
 	 *  each incoming message.  When an acknowledgment is received from
 	 *  the module group, post it on the state channel.
 	 *
@@ -277,12 +289,13 @@ int main(int argc, char *argv[]) {
 
 		/// Cleanup
 		somatic__motor_cmd__free_unpacked( cmd, &protobuf_c_system_allocator );
-		break;
+
 	}
 
 
 	somatic_close_channel(motor_cmd_channel);
 	somatic_close_channel(motor_state_channel);
+
 
 	return 0;
 }

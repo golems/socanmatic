@@ -34,9 +34,9 @@
  *
  */
 
-/** \file pciod_commander.c
+/** \file amcdrived_commander.c
  *
- *  Shell tool to interact with pciod motor command and state channels
+ *  Shell tool to interact with amcdrived motor command and state channels
  *
  *  \author Jon Scholz
  */
@@ -60,7 +60,7 @@
 /* GLOBAL VARS */
 /* ----------- */
 size_t cmd_channel_size = 30;
-size_t state_channel_size = 1000;
+size_t state_channel_size = 30;
 
 /* ---------- */
 /* ARGP Junk  */
@@ -95,7 +95,7 @@ static struct argp_option options[] = {
 		.key = 's',
 		.arg = "channel",
 		.flags = 0,
-		.doc = "ach channel name for receiving pcio state messages"
+		.doc = "ach channel name for receiving amcdrive state messages"
     },
     {
         .name = "Create",
@@ -124,7 +124,7 @@ static struct argp_option options[] = {
 /// argp parsing function
 static int parse_opt( int key, char *arg, struct argp_state *state);
 /// argp program version
-const char *argp_program_version = "pciod_commander v0.0.1";
+const char *argp_program_version = "amcdrived_commander v0.0.1";
 /// argp program arguments documention
 static char args_doc[] = "";
 /// argp program doc line
@@ -221,13 +221,13 @@ int main(int argc, char **argv) {
 	// install signal handler
 	somatic_sighandler_simple_install();
 
-	// Create channels if requested
-	if (opt_create == 1) {
-		somatic_create_channel(opt_cmd_chan, 10, cmd_channel_size);
-		somatic_create_channel(opt_state_chan, 1000, state_channel_size);
-	}
+//	// Create channels if requested
+//	if (opt_create == 1) {
+//		somatic_create_channel(opt_cmd_chan, 10, cmd_channel_size);
+//		somatic_create_channel(opt_state_chan, 10, state_channel_size);
+//	}
 
-	// Ach channels for pciod
+	// Ach channels for amcdrived
 	ach_channel_t *motor_cmd_channel = somatic_open_channel(opt_cmd_chan);
 	ach_channel_t *motor_state_channel = somatic_open_channel(opt_state_chan);
 
@@ -246,11 +246,11 @@ int main(int argc, char **argv) {
 			"\n"
 			"Valid commands:\n"
 			"  c \t  -set current \n"
-			"  v \t  -set velocity \n"
-			"  p \t  -set position \n"
+//			"  v \t  -set velocity \n"
+//			"  p \t  -set position \n"
 			"  q(uit)  -exit program\n"
 			"\n"
-			"e.g.: >> v 5 5\n";
+			"e.g.: >> c 5 5\n";
 	printf("%s\n",usage_str);
 
 	/*
@@ -283,22 +283,18 @@ int main(int argc, char **argv) {
 				}
 
 				if ((int)param != -1) {
-
-					while (!somatic_sig_received) {
-
-						// write motor message to motor channel
-						somatic_generate_motorcmd(motor_cmd_channel, vals, (size_t)opt_n_vals, param);
-
-						// read current state from state channel
-						Somatic__MotorState *state = somatic_motorstate_receive(motor_state_channel, &ach_result, msg_size, NULL, &protobuf_c_system_allocator);
-						somatic_hard_assert(ach_result == ACH_OK,"Ach wait failure\n");
-
-						somatic_motorstate_print(state);
-						somatic__motor_state__free_unpacked( state, &protobuf_c_system_allocator );
-					}
+					// write motor message to motor channel
+					somatic_generate_motorcmd(motor_cmd_channel, vals, (size_t)opt_n_vals, param);
 				}
 			}
 		}
+
+		// read current state from state channel
+		Somatic__MotorState *state = somatic_motorstate_receive(motor_state_channel, &ach_result, msg_size, NULL, &protobuf_c_system_allocator);
+		somatic_hard_assert(ach_result == ACH_OK,"Ach wait failure\n");
+
+		somatic_motorstate_print(state);
+		somatic__motor_state__free_unpacked( state, &protobuf_c_system_allocator );
 	}
 
 	somatic_close_channel(motor_cmd_channel);
