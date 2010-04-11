@@ -433,7 +433,8 @@ NTCAN_RESULT canOpenWriteNMT( NTCAN_HANDLE h, uint8_t node,
 }
 
 
-char *canResultString( NTCAN_RESULT ntr ) {
+const char *canResultString( int i ) {
+    NTCAN_RESULT ntr = i;
     switch( ntr ) {
     case NTCAN_SUCCESS: return "SUCCESS";
     case NTCAN_RX_TIMEOUT: return "RX_TIMEOUT";

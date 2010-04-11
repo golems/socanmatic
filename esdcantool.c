@@ -440,6 +440,7 @@ void dolisten() {
             if( NTCAN_SUCCESS == ntr ) {
                 ntcan_dump(&msg);
                 printf("\n");
+                fflush(stdout);
             }
         }
     }
