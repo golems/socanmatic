@@ -5,7 +5,7 @@ PROJECT := amcdrive
 VERSION := 20100404
 
 # Binary Files
-BINFILES := amcdrived amcdrived_commander
+BINFILES := amcdrived
 
 # Library files
 SHAREDLIBS := amcdrive 
@@ -27,7 +27,6 @@ $(call LINKLIB, amcdrive, amccan.o amcdrive.o)
 
 ## BUILDING BINARIES: call with $(call LINKBIN, name_of_binary, object files, shared libs, static libs)
 $(call LINKBIN, amcdrived, amcdrived.o amcdrive.o amccan.o, ntcan ntcanopen somatic ach protobuf-c stdc++ rt blas lapack)
-$(call LINKBIN, amcdrived_commander, amcdrived_commander.o amcdrive.o amccan.o, ntcan ntcanopen somatic ach protobuf-c stdc++ rt blas lapack)
 
 .PHONY: default clean
 

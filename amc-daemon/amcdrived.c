@@ -44,8 +44,8 @@
 /* ARGP Junk  */
 /* ---------- */
 //TODO: replace these with vars from parsing args
-static const char *opt_cmd_chan = AMCDRIVED_CMD_CHANNEL_NAME;
-static const char *opt_state_chan = AMCDRIVED_STATE_CHANNEL_NAME;
+static const char *opt_cmd_chan = AMCIOD_CMD_CHANNEL_NAME;
+static const char *opt_state_chan = AMCIOD_STATE_CHANNEL_NAME;
 static int opt_create = 0;
 static int opt_verbosity = 0;
 static size_t n_modules = 2;
