@@ -11,7 +11,8 @@
  *       disclaimer.
  *     * Redistributions in binary form must reproduce the above
  *       copyright notice, this list of conditions and the following
- *       disclaimer in the documentation and/or other materials
+ *       disclaimer in the documentation and/or other mate
+	case 's':rials
  *       provided with the distribution.
  *     * Neither the name of the Georgia Tech Research Corporation nor
  *       the names of its contributors may be used to endorse or
@@ -41,16 +42,16 @@
  *              kasemsit
  */
 
-#ifndef AMCDRIVED_H_
-#define AMCDRIVED_H_
+#ifndef AMCIOD_H_
+#define AMCIOD_H_
 
 #include <math.h>
 
 // Default channel constants
 #define AMCIOD_CMD_CHANNEL_NAME "amciod-cmd"
 #define AMCIOD_STATE_CHANNEL_NAME "amciod-state"
-#define AMCIOD_CMD_CHANNEL_SIZE 200;
-#define AMCIOD_STATE_CHANNEL_SIZE 200;
+#define AMCIOD_CMD_CHANNEL_SIZE 1000;
+#define AMCIOD_STATE_CHANNEL_SIZE 1000;
 
 #define MAX_CURRENT 50        // Max motor current (Amps)
 
@@ -74,4 +75,4 @@
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 #endif
 
-#endif /* AMCDRIVED_H_ */
+#endif /* AMCIOD_H_ */
