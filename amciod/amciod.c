@@ -171,10 +171,10 @@ int amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, ac
     somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot update drive states!\n");
 
 	double position[2], velocity[2];
-	position[0] = COUNT_TO_RAD(servos[0].position)*2;
-	position[1] = COUNT_TO_RAD(servos[1].position)*2;
-	velocity[0] = COUNT_TO_RAD(servos[0].vel_cps)*2;
-	velocity[1] = COUNT_TO_RAD(servos[1].vel_cps)*2;
+	position[0] = COUNT_TO_RAD(servos[0].position);
+	position[1] = COUNT_TO_RAD(servos[1].position);
+	velocity[0] = COUNT_TO_RAD(servos[0].vel_cps);
+	velocity[1] = COUNT_TO_RAD(servos[1].vel_cps);
 
     /**
 	 * Package a state message, and send/publish to state channel
@@ -227,9 +227,11 @@ int amcdrive_open(servo_vars_t *servos){
     status = amcdrive_set_current(&servos[1], 0.0);
     somatic_hard_assert(status == NTCAN_SUCCESS, "zero out 1\n");
 
-	// Update amcdrive state
-	status =  amcdrive_update_drives(servos, (int)n_modules);
+    // Update amcdrive state
+    status =  amcdrive_update_drives(servos, (int)n_modules);
     somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot update drive states!\n");
+
+
 
     return 0;
 }
