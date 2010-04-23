@@ -193,7 +193,7 @@ NTCAN_RESULT amcdrive_start(NTCAN_HANDLE handle, uint id) {
         return status;
  
     status = try_ntcan_dl("control - reset error", &rcmd,
-    amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_RESET));
+    amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_RESET_FAULT));
     if (status != NTCAN_SUCCESS)
         return status;
  
@@ -203,7 +203,7 @@ NTCAN_RESULT amcdrive_start(NTCAN_HANDLE handle, uint id) {
         return status;
     
     status = try_ntcan_dl("control - reset error", &rcmd,
-    amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_RESET));
+    amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_RESET_FAULT));
     if (status != NTCAN_SUCCESS)
         return status;
 
@@ -213,7 +213,7 @@ NTCAN_RESULT amcdrive_start(NTCAN_HANDLE handle, uint id) {
 	return status;
    
     status = try_ntcan_dl("control - reset error", &rcmd,
-    amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_RESET));
+    amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_RESET_FAULT));
     if (status != NTCAN_SUCCESS)
 	return status;
    
@@ -228,7 +228,7 @@ NTCAN_RESULT amcdrive_start(NTCAN_HANDLE handle, uint id) {
         return status;
     
     status = try_ntcan_dl("control - switch on", &rcmd,
-        amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_ON));
+        amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_SWITCH_ON));
     if (status != NTCAN_SUCCESS)
         return status;
     
@@ -238,7 +238,7 @@ NTCAN_RESULT amcdrive_start(NTCAN_HANDLE handle, uint id) {
         return status;
     
     status = try_ntcan_dl("control - enable",&rcmd,
-        amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_ENABLE));
+        amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_ENABLE_OPERATION));
     if (status != NTCAN_SUCCESS)
         return status;
     
@@ -262,7 +262,7 @@ NTCAN_RESULT amcdrive_start_drive(servo_vars_t *drive) {
     uint8_t rcmd;
 
     status = try_ntcan_dl("control - switch on", &rcmd,
-        amccan_dl_control(drive->handle, &rcmd, drive->canopen_id, AMCCAN_CONTROL_STATE_ON));
+        amccan_dl_control(drive->handle, &rcmd, drive->canopen_id, AMCCAN_CONTROL_STATE_SWITCH_ON));
     if (status != NTCAN_SUCCESS)
         return status;
     
@@ -272,7 +272,7 @@ NTCAN_RESULT amcdrive_start_drive(servo_vars_t *drive) {
         return status;
     
     status = try_ntcan_dl("control - enable",&rcmd,
-        amccan_dl_control(drive->handle, &rcmd, drive->canopen_id, AMCCAN_CONTROL_STATE_ENABLE));
+        amccan_dl_control(drive->handle, &rcmd, drive->canopen_id, AMCCAN_CONTROL_STATE_ENABLE_OPERATION));
     if (status != NTCAN_SUCCESS)
         return status;
 

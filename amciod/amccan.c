@@ -51,7 +51,7 @@
 #include "ntcanopen.h"
 #include "include/amccan.h"
 
-static uint16_t pdo_com_index[] = {
+static uint16_t pdo_com_index[] = { /* From p28 */
   0x1400, //RPDO 1
   0x1401, //RPDO 2
   0x1402, //RPDO 3
@@ -74,7 +74,7 @@ static uint16_t pdo_com_index[] = {
 };
 
 
-static uint16_t pdo_map_index[] = {
+static uint16_t pdo_map_index[] = { /* From p28 */
   0x1600, //RPDO 1
   0x1601, //RPDO 2
   0x1602, //RPDO 3
