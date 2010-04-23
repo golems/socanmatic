@@ -50,8 +50,8 @@
 // Default channel constants
 #define AMCIOD_CMD_CHANNEL_NAME "amciod-cmd"
 #define AMCIOD_STATE_CHANNEL_NAME "amciod-state"
-#define AMCIOD_CMD_CHANNEL_SIZE 1000;
-#define AMCIOD_STATE_CHANNEL_SIZE 1000;
+#define AMCIOD_CMD_CHANNEL_SIZE 22
+#define AMCIOD_STATE_CHANNEL_SIZE 40
 
 #define MAX_CURRENT 50        // Max motor current (Amps)
 

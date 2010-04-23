@@ -1,24 +1,24 @@
 /* -*- mode: C; c-basic-offset: 2  -*- */
-/** \file amcdrived.c
+/** \file amciod.c
  *
  *  \author Jon Scholz
  *  \author Neil Dantam
  *  \author Evan Seguin
+ *  \author Kasemsit Teeyapan
  */
 
 /** \mainpage
  *  \brief Daemon to control a CAN network using motor and state messages
  *  from an ACH channel
  *
- *  amcdrived is an ACH front-end to amcdrive, the library for communicating with amcdrives
+ *  amciod is an ACH front-end to amcdrive, the library for communicating with amcdrives
  *  on a CAN network.
  *
  *  NOTE:
- *  amcdrived reads state message in rad, rad/s
+ *  amciod reads state message in rad, rad/s
  *            write cmd message in N.m
  *
  */
-
 
 #include <argp.h>
 #include <stdlib.h>
@@ -37,8 +37,6 @@
 #include "include/amccan.h"
 #include "include/amcdrive.h"
 #include "include/amciod.h"
-
-static NTCAN_HANDLE handle;
 
 /* ---------- */
 /* ARGP Junk  */
@@ -64,14 +62,14 @@ static struct argp_option options[] = {
     {
         .name = "cmd-chan",
         .key = 'c',
-        .arg = "amcdrive_cmd_channel",
+        .arg = "amciod_cmd_channel",
         .flags = 0,
         .doc = "ach channel to send amcdrive commands to"
     },
     {
 		.name = "state-chan",
 		.key = 's',
-		.arg = "amcdrive_state_channel",
+		.arg = "amciod_state_channel",
 		.flags = 0,
 		.doc = "ach channel to listen for commands on"
     },
@@ -94,7 +92,7 @@ static struct argp_option options[] = {
 /// argp parsing function
 static int parse_opt( int key, char *arg, struct argp_state *state);
 /// argp program version
-const char *argp_program_version = "amcdrived 0.0.1";
+const char *argp_program_version = "amciod 0.0.1";
 /// argp program arguments documention
 static char args_doc[] = "";
 /// argp program doc line
@@ -125,11 +123,88 @@ static int parse_opt(int key, char *arg, struct argp_state *state) {
 	return 0;
 }
 
+/**
+ * Function Declaration
+ */
+void amcdrive_execute_and_update(servo_vars_t *, Somatic__MotorCmd *, ach_channel_t *);
+int amcdrive_open(servo_vars_t *);
 
 /**
  * Generate the amcdrive calls requested by the specified motor command message, and update the state
  */
-int amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, ach_channel_t *state_chan)
+int main(int argc, char *argv[]) {
+
+	/// Parse command line args
+	argp_parse(&argp, argc, argv, 0, NULL, NULL);
+
+	/// install signal handler
+	somatic_sighandler_simple_install();
+
+	/// amcdrive setup
+	NTCAN_RESULT status;
+	servo_vars_t servos[2];
+
+	status = amcdrive_open(servos);
+	somatic_hard_assert(status == NTCAN_SUCCESS, "amcdrive initialization failed\n");
+
+	/// Create channels if requested
+	if (opt_create == 1) {
+		somatic_create_channel(opt_cmd_chan, 10, amciod_cmd_channel_size);
+		somatic_create_channel(opt_state_chan, 10, amciod_state_channel_size);
+	}
+
+	/// Ach channels for amcdrived
+	ach_channel_t *motor_cmd_channel = somatic_open_channel(opt_cmd_chan);
+	ach_channel_t *motor_state_channel = somatic_open_channel(opt_state_chan);
+
+
+	if (opt_verbosity) {
+		fprintf(stderr, "\n* JSD *\n");
+		fprintf(stderr, "Verbosity:    %d\n", opt_verbosity);
+		fprintf(stderr, "command channel:      %s\n", opt_cmd_chan);
+		fprintf(stderr, "state channel:      %s\n", opt_state_chan);
+		fprintf(stderr, "-------\n");
+	}
+
+
+	/** \par Main loop
+	 *
+	 *  Listen on the motor command channel, and issue an amcdrive command for
+	 *  each incoming message.  When an acknowledgment is received from
+	 *  the module group, post it on the state channel.
+	 *
+	 *  TODO: In addition, set a blocking timeout, and when it expires issue a
+	 *  state update request to the modules and update the state channel
+	 */
+	int ach_result;
+
+	//  used "size_t size = somatic__motorstate__get_packed_size(msg);"  to find the size after packing a message
+
+	while (!somatic_sig_received) {
+		/// read current state from state channel
+
+		Somatic__MotorCmd *cmd = somatic_motorcmd_receive(motor_cmd_channel, &ach_result, AMCIOD_CMD_CHANNEL_SIZE, NULL, &protobuf_c_system_allocator);
+		somatic_hard_assert(ach_result == ACH_OK, "Ach wait failure!\n");
+
+		if (opt_verbosity) {
+			somatic_motorcmd_print(cmd);
+		}
+
+		/// Issue command, and update state
+		amcdrive_execute_and_update(servos, cmd, motor_state_channel);
+
+		/// Cleanup
+		somatic__motor_cmd__free_unpacked( cmd, &protobuf_c_system_allocator );
+
+	}
+
+	somatic_close_channel(motor_cmd_channel);
+	somatic_close_channel(motor_state_channel);
+
+	return 0;
+}
+
+void amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, ach_channel_t *state_chan)
 {
 
 	NTCAN_RESULT status;
@@ -150,6 +225,9 @@ int amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, ac
 		for (i = 0; i < msg->values->n_data; ++i)
 			fprintf(stdout, "%lf::", msg->values->data[i]);
 		fprintf(stdout, "]\n");
+
+		size_t size = somatic__motor_cmd__get_packed_size(msg);
+		printf("\tmotor_cmd packed size = %d \n",size);
 	}
 
 	// Torque-to-current conversion
@@ -200,17 +278,27 @@ int amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, ac
 	state.velocity->data = velocity;
 	state.velocity->n_data = n_modules;
 
-
 	// Publish state
-	return somatic_motorstate_publish(&state, state_chan);
+	status = somatic_motorstate_publish(&state, state_chan);
+	somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot update publish states!\n");
+
+	// Print state channel size
+	if (opt_verbosity) {
+		size_t size = somatic__motor_state__get_packed_size(&state);
+		printf("\tmotor_state packed size = %d \n",size);
+	}
+
+	// Cleanup heap-allocated part(s) of message
+	free(state.position);
+	free(state.velocity);
 }
 
 int amcdrive_open(servo_vars_t *servos){
     NTCAN_RESULT status;
 
     uint32_t drives[2];
-    drives[0] = 0x20; // Left
-    drives[1] = 0x21; // Right
+    drives[0] = 0x20; // Left motor
+    drives[1] = 0x21; // Right motor
 
     status = amcdrive_open_drives(0, drives, 2,
         REQUEST_TPDO_VELOCITY|REQUEST_TPDO_POSITION|ENABLE_RPDO_CURRENT,
@@ -231,79 +319,6 @@ int amcdrive_open(servo_vars_t *servos){
     status =  amcdrive_update_drives(servos, (int)n_modules);
     somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot update drive states!\n");
 
-
-
     return 0;
 }
 
-int main(int argc, char *argv[]) {
-
-	/// Parse command line args
-	argp_parse(&argp, argc, argv, 0, NULL, NULL);
-
-	/// install signal handler
-	somatic_sighandler_simple_install();
-
-	/// amcdrive setup
-	NTCAN_RESULT status;
-	servo_vars_t servos[2];
-
-	status = amcdrive_open(servos);
-	somatic_hard_assert(status == NTCAN_SUCCESS, "amcdrive initialization failed\n");
-
-	/// Create channels if requested
-	if (opt_create == 1) {
-		somatic_create_channel(opt_cmd_chan, 10, amciod_cmd_channel_size);
-		somatic_create_channel(opt_state_chan, 10, amciod_state_channel_size);
-	}
-
-	/// Ach channels for amcdrived
-	ach_channel_t *motor_cmd_channel = somatic_open_channel(opt_cmd_chan);
-	ach_channel_t *motor_state_channel = somatic_open_channel(opt_state_chan);
-
-
-	if (opt_verbosity) {
-		fprintf(stderr, "\n* JSD *\n");
-		fprintf(stderr, "Verbosity:    %d\n", opt_verbosity);
-		fprintf(stderr, "command channel:      %s\n", opt_cmd_chan);
-		fprintf(stderr, "state channel:      %s\n", opt_state_chan);
-		fprintf(stderr, "-------\n");
-	}
-
-
-	/** \par Main loop
-	 *
-	 *  Listen on the motor command channel, and issue an amcdrive command for
-	 *  each incoming message.  When an acknowledgment is received from
-	 *  the module group, post it on the state channel.
-	 *
-	 *  TODO: In addition, set a blocking timeout, and when it expires issue a
-	 *  state update request to the modules and update the state channel
-	 */
-	int ach_result;
-	size_t msg_size = 128;
-
-	while (!somatic_sig_received) {
-		/// read current state from state channel
-
-		Somatic__MotorCmd *cmd = somatic_motorcmd_receive(motor_cmd_channel, &ach_result, msg_size, NULL, &protobuf_c_system_allocator);
-		somatic_hard_assert(ach_result == ACH_OK, "Ach wait failure!\n");
-
-		if (opt_verbosity)
-			somatic_motorcmd_print(cmd);
-
-		/// Issue command, and update state
-		int r = amcdrive_execute_and_update(servos, cmd, motor_state_channel);
-
-		/// Cleanup
-		somatic__motor_cmd__free_unpacked( cmd, &protobuf_c_system_allocator );
-
-	}
-
-
-	somatic_close_channel(motor_cmd_channel);
-	somatic_close_channel(motor_state_channel);
-
-
-	return 0;
-}
