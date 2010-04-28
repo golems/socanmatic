@@ -49,6 +49,7 @@ static unsigned int  amciod_state_channel_size = AMCIOD_STATE_CHANNEL_SIZE;
 
 static int opt_create = 0;
 static int opt_verbosity = 0;
+static double opt_frequency = 30.0; // refresh at 30 hz
 static size_t n_modules = 2;
 
 static struct argp_option options[] = {
@@ -127,6 +128,7 @@ static int parse_opt(int key, char *arg, struct argp_state *state) {
  * Function Declaration
  */
 void amcdrive_execute_and_update(servo_vars_t *, Somatic__MotorCmd *, ach_channel_t *);
+void amcdrive_update_state(servo_vars_t *, ach_channel_t *);
 int amcdrive_open(servo_vars_t *);
 
 /**
@@ -139,6 +141,12 @@ int main(int argc, char *argv[]) {
 
 	/// install signal handler
 	somatic_sighandler_simple_install();
+
+	/// Set the wait time based on specificed frequency
+	struct timespec wait_time = {
+	    .tv_sec = 0,
+	    .tv_nsec = (long int)((1.0/opt_frequency) * 1e9)
+	};
 
 	/// amcdrive setup
 	NTCAN_RESULT status;
@@ -159,7 +167,7 @@ int main(int argc, char *argv[]) {
 
 
 	if (opt_verbosity) {
-		fprintf(stderr, "\n* JSD *\n");
+		fprintf(stderr, "\n* AMCIOD *\n");
 		fprintf(stderr, "Verbosity:    %d\n", opt_verbosity);
 		fprintf(stderr, "command channel:      %s\n", opt_cmd_chan);
 		fprintf(stderr, "state channel:      %s\n", opt_state_chan);
@@ -180,33 +188,51 @@ int main(int argc, char *argv[]) {
 
 	//  used "size_t size = somatic__motorstate__get_packed_size(msg);"  to find the size after packing a message
 
+	/// wait for SIGINT
 	while (!somatic_sig_received) {
+		struct timespec abstime = somatic_timespec_future(wait_time);
+
 		/// read current state from state channel
+		Somatic__MotorCmd *cmd = somatic_motorcmd_receive(motor_cmd_channel, &ach_result, AMCIOD_CMD_CHANNEL_SIZE, &abstime, &protobuf_c_system_allocator);
+		somatic_hard_assert(ach_result == ACH_OK || ach_result == ACH_TIMEOUT, "Ach wait failure on cmd receive!\n");
 
-		Somatic__MotorCmd *cmd = somatic_motorcmd_receive(motor_cmd_channel, &ach_result, AMCIOD_CMD_CHANNEL_SIZE, NULL, &protobuf_c_system_allocator);
-		somatic_hard_assert(ach_result == ACH_OK, "Ach wait failure!\n");
+		if (ach_result == ACH_TIMEOUT) {
+		    //if (verbosity) { printf("timeout!!\n");}
+		    amcdrive_update_state(servos, motor_state_channel);
+		}
+		else {
+		    if (opt_verbosity) {
+			    somatic_motorcmd_print(cmd);
+		    }
 
-		if (opt_verbosity) {
-			somatic_motorcmd_print(cmd);
+		    /// Issue command, and update state
+		    amcdrive_execute_and_update(servos, cmd, motor_state_channel);
+		    /// Cleanup
+		    somatic__motor_cmd__free_unpacked( cmd, &protobuf_c_system_allocator );
 		}
 
-		/// Issue command, and update state
-		amcdrive_execute_and_update(servos, cmd, motor_state_channel);
-
-		/// Cleanup
-		somatic__motor_cmd__free_unpacked( cmd, &protobuf_c_system_allocator );
-
+		if (opt_verbosity) {
+			printf("pos: %f %f [rad]\n", COUNT_TO_RAD(servos[0].pos_c), COUNT_TO_RAD(servos[1].pos_c));
+			printf("vel: %f %f [rad/s]\n", COUNT_TO_RAD(servos[0].vel_cps), COUNT_TO_RAD(servos[1].vel_cps));
+		}
 	}
 
+	/// Close channels
 	somatic_close_channel(motor_cmd_channel);
 	somatic_close_channel(motor_state_channel);
+
+	/// Stop motors
+    //usleep(500000);
+    status = amcdrive_set_current(&servos[0], 0.0);
+    somatic_hard_assert(status == NTCAN_SUCCESS, "zero out 0\n");
+    status = amcdrive_set_current(&servos[1], 0.0);
+    somatic_hard_assert(status == NTCAN_SUCCESS, "zero out 1\n");
 
 	return 0;
 }
 
 void amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, ach_channel_t *state_chan)
 {
-
 	NTCAN_RESULT status;
 
 	// amcdrive daemon currently accepts only current command
@@ -226,8 +252,8 @@ void amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, a
 			fprintf(stdout, "%lf::", msg->values->data[i]);
 		fprintf(stdout, "]\n");
 
-		size_t size = somatic__motor_cmd__get_packed_size(msg);
-		printf("\tmotor_cmd packed size = %d \n",size);
+		//size_t size = somatic__motor_cmd__get_packed_size(msg);
+		//printf("\tmotor_cmd packed size = %d \n",size);
 	}
 
 	// Torque-to-current conversion
@@ -244,17 +270,35 @@ void amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, a
 	status = amcdrive_set_current(&servos[1], motorRightCurrent);
     somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot set current (Right)!\n");
 
+    // Update states
+    amcdrive_update_state(servos, state_chan);
+
+}
+
+void amcdrive_update_state(servo_vars_t *servos, ach_channel_t *state_chan)
+{
+	NTCAN_RESULT status;
+
 	// Update amcdrive state
 	status =  amcdrive_update_drives(servos, (int)n_modules);
-    somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot update drive states!\n");
+	somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot update drive states!\n");
+
+	/* Kasemsit:
+	 * I don't know why amcdrive_update_drives() gives me correct position (counts)
+	 * but wrong velocity (counts/s). I did measure the velocity and position manually and compare to
+	 * what amcdrive_update_drives() gave me, I found that even though the position is accurate,
+	 * the velocity is off by a factor of 2. Can someone point me out why?
+	 */
+	servos[0].vel_cps *= 2.0;
+	servos[1].vel_cps *= 2.0;
 
 	double position[2], velocity[2];
-	position[0] = COUNT_TO_RAD(servos[0].position);
-	position[1] = COUNT_TO_RAD(servos[1].position);
+	position[0] = COUNT_TO_RAD(servos[0].pos_c);
+	position[1] = COUNT_TO_RAD(servos[1].pos_c);
 	velocity[0] = COUNT_TO_RAD(servos[0].vel_cps);
 	velocity[1] = COUNT_TO_RAD(servos[1].vel_cps);
 
-    /**
+	/**
 	 * Package a state message, and send/publish to state channel
 	 */
 	Somatic__MotorState state;
@@ -264,14 +308,14 @@ void amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, a
 	state.has_status = 0; // what do we want to do with this?
 	state.status = SOMATIC__MOTOR_STATUS__MOTOR_OK;
 
-	// Set Position
+	// Set Position [rad]
 	state.position = SOMATIC_NEW(Somatic__Vector);
 	somatic__vector__init(state.position);
 
 	state.position->data = position;
 	state.position->n_data = n_modules;
 
-	// Set Velocity
+	// Set Velocity [rad/s]
 	state.velocity = SOMATIC_NEW(Somatic__Vector);
 	somatic__vector__init(state.velocity);
 
@@ -282,11 +326,9 @@ void amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, a
 	status = somatic_motorstate_publish(&state, state_chan);
 	somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot update publish states!\n");
 
-	// Print state channel size
-	if (opt_verbosity) {
-		size_t size = somatic__motor_state__get_packed_size(&state);
-		printf("\tmotor_state packed size = %d \n",size);
-	}
+	// // Print state channel size
+	// size_t size = somatic__motor_state__get_packed_size(&state);
+	// printf("\tmotor_state packed size = %d \n",size);
 
 	// Cleanup heap-allocated part(s) of message
 	free(state.position);
@@ -314,10 +356,6 @@ int amcdrive_open(servo_vars_t *servos){
 
     status = amcdrive_set_current(&servos[1], 0.0);
     somatic_hard_assert(status == NTCAN_SUCCESS, "zero out 1\n");
-
-    // Update amcdrive state
-    status =  amcdrive_update_drives(servos, (int)n_modules);
-    somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot update drive states!\n");
 
     return 0;
 }

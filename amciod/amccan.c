@@ -108,6 +108,7 @@ static int pdo_is_tpdo( int pdo ) {
   return AMCCAN_TPDO_1 <= pdo && AMCCAN_TPDO_USER >= pdo;
 }
 
+// Set Control Word
 NTCAN_RESULT amccan_dl_control( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t node,
                                    amccan_control_state_t state ) {
   return canOpenSDOWriteWait_dl_u16( h, rcmd, node,
@@ -116,6 +117,7 @@ NTCAN_RESULT amccan_dl_control( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t node,
                                      state );
 }
 
+// Set Mode of Operation
 NTCAN_RESULT amccan_dl_op_mode( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t node,
                                 amccan_op_mode_t value ) {
   return canOpenSDOWriteWait_dl_u16( h, rcmd, node,

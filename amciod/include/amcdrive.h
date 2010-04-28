@@ -11,18 +11,18 @@ extern "C" {
 typedef struct {
     NTCAN_HANDLE handle;
     
-    uint canopen_id; // CANopen identifier
-    int8_t current_sign; // Flip current?
-    int8_t error_state; // Is the dirve currently in a state of error?
+    uint canopen_id; 		// CANopen identifier
+    int8_t current_sign; 	// Flip current?
+    int8_t error_state; 	// Is the dirve currently in a state of error?
     
-    int16_t k_i;    // feedback position interp
-    uint32_t k_s;    // switch freq
-    uint16_t k_p;    // max rated current
-    int32_t raw_position; // raw position in counts as reported by the drive
-    double position; // offset position in counts as a double precision float to avoid wraparound
-    double vel_cps;  //velocity in counts per second
-    double i_ref; // target current
-    double i_act; // actual current
+    int16_t k_i;    		// feedback position interp
+    uint32_t k_s;    		// switch freq
+    uint16_t k_p;    		// max rated current
+    int32_t raw_position; 	// raw position in counts as reported by the drive
+    double pos_c;   		// offset position in counts as a double precision float to avoid wraparound
+    double vel_cps;  		// velocity in counts per second
+    double i_ref; 			// target current
+    double i_act; 			// actual current
 
     // PDO->COB mappings
     uint16_t rpdo_position;
@@ -33,9 +33,6 @@ typedef struct {
     uint16_t tpdo_velocity;
     uint16_t tpdo_current;
 
-    int fresh_position;
-    int fresh_velocity;
-    int fresh_current;
 } servo_vars_t;
 
 #define ENABLE_RPDO_POSITION 0x01

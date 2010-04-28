@@ -444,8 +444,8 @@ NTCAN_RESULT amcdrive_update_drives(servo_vars_t *drives, int count) {
                     memcpy(&d->raw_position, &canMsg->data[2], sizeof(int32_t));
                     int32_t position_delta = d->raw_position - old_position; // This handles wraparound correctly
                     position_delta *= d->current_sign; // Anything that depends on position probably wants it to travel in the same direction as velocity... just sayin'
-                    d->position += position_delta;
-                    d->fresh_position = 1;
+                    d->pos_c += position_delta;
+
                 }
                 else if (d->tpdo_velocity == canMsg->id) {
                     int32_t velocity = 0;
@@ -454,14 +454,14 @@ NTCAN_RESULT amcdrive_update_drives(servo_vars_t *drives, int count) {
 
                     d->vel_cps = amccan_decode_ds1(velocity, d->k_i, d->k_s);
                     d->vel_cps *= d->current_sign; // Report velocity in same direction as current
-                    d->fresh_velocity = 1;
+
                 }
                 else if (d->tpdo_current == canMsg->id) {
                     int16_t current;
                     memcpy(&current, &canMsg->data[2], sizeof(int16_t));
                     d->i_act = amccan_decode_dc1(current, d->k_p);
                     d->i_act *= d->current_sign;
-                    d->fresh_current = 1;
+
                 }
                 break;
             }
@@ -488,3 +488,15 @@ NTCAN_RESULT amcdrive_set_current(servo_vars_t *drive, double amps) {
         amcdrive_rpdo_cw_i16(handle, drive->rpdo_current, dc2_current));
 }
 
+void amcdrive_print_info(NTCAN_HANDLE handle, uint id) {
+
+	/* TODO: Print something....  */
+
+	uint8_t rcmd;
+    uint16_t k_p;
+
+    // Print: Maximum Peak Current 20D8.0Ch
+    canOpenSDOWriteWait_ul_u16(handle, &rcmd, &k_p, id, AMCCAN_INDEX_BOARD_INFO, AMCCAN_SUBINDEX_MAX_PEAK_CURRENT);
+    printf("Maximum Peak Current (20D8.0Ch) = %u [PBC]\n", k_p);
+
+}
