@@ -269,14 +269,6 @@ int16_t amccan_encode_ds1( double amps, uint16_t k_i, uint32_t k_s ) {
   return r;
 }
 
-NTCAN_RESULT amccan_position_set( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t node,
-                                  int32_t pos ) {
-  return canOpenSDOWriteWait_dl_i32( h, rcmd, node,
-                                     AMCCAN_INDEX_POS_LIMIT,
-                                     AMCCAN_SUBINDEX_POS_LIMIT_MEASURED,
-                                     node );
-}
-
 NTCAN_RESULT amccan_pdo_current( NTCAN_HANDLE h, uint16_t cob_id, double amps,
                                  uint16_t k_i, uint32_t k_s ) {
   CMSG msg;

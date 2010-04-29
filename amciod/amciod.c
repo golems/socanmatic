@@ -212,8 +212,9 @@ int main(int argc, char *argv[]) {
 		}
 
 		if (opt_verbosity) {
-			printf("pos: %f %f [rad]\n", COUNT_TO_RAD(servos[0].pos_c), COUNT_TO_RAD(servos[1].pos_c));
-			printf("vel: %f %f [rad/s]\n", COUNT_TO_RAD(servos[0].vel_cps), COUNT_TO_RAD(servos[1].vel_cps));
+			//printf("pos: %f  %f [rad]\t vel: %f  %f [rad/s]\n", COUNT_TO_RAD(servos[0].pos_c), COUNT_TO_RAD(servos[1].pos_c), COUNT_TO_RAD(servos[0].vel_cps), COUNT_TO_RAD(servos[1].vel_cps));
+			printf("pos: %f  %f [cnt]\t", servos[0].pos_c, servos[1].pos_c);
+			printf("vel: %f  %f [rad/s]\n", COUNT_TO_RAD(servos[0].vel_cps), COUNT_TO_RAD(servos[1].vel_cps));
 		}
 	}
 
@@ -356,6 +357,17 @@ int amcdrive_open(servo_vars_t *servos){
 
     status = amcdrive_set_current(&servos[1], 0.0);
     somatic_hard_assert(status == NTCAN_SUCCESS, "zero out 1\n");
+
+    ///
+
+
+
+
+    uint8_t rcmd;
+    amcdrive_reset_position( servos[0].handle, &rcmd, drives[0]);
+    amcdrive_reset_position( servos[0].handle, &rcmd, drives[1]);
+
+
 
     return 0;
 }

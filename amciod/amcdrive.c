@@ -440,11 +440,11 @@ NTCAN_RESULT amcdrive_update_drives(servo_vars_t *drives, int count) {
             servo_vars_t *d = &drives[i];
             if (d->canopen_id == drive_id) {
                 if (d->tpdo_position == canMsg->id) {
-                    int32_t old_position = d->raw_position;
-                    memcpy(&d->raw_position, &canMsg->data[2], sizeof(int32_t));
-                    int32_t position_delta = d->raw_position - old_position; // This handles wraparound correctly
-                    position_delta *= d->current_sign; // Anything that depends on position probably wants it to travel in the same direction as velocity... just sayin'
-                    d->pos_c += position_delta;
+                    int32_t position;
+                    memcpy(&position, &canMsg->data[2], sizeof(int32_t));
+                    position = ctohl(position);
+
+                    d->pos_c = (d->current_sign) * position;
 
                 }
                 else if (d->tpdo_velocity == canMsg->id) {
@@ -486,6 +486,44 @@ NTCAN_RESULT amcdrive_set_current(servo_vars_t *drive, double amps) {
     
     return try_ntcan("set_current", 
         amcdrive_rpdo_cw_i16(handle, drive->rpdo_current, dc2_current));
+}
+
+/*
+ * Set the current measured position to zero
+ */
+NTCAN_RESULT amcdrive_reset_position( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t node) {
+
+	// TODO: add ability to reset the current measured position to any value 'pos'
+
+	NTCAN_RESULT ntr;
+
+	int32_t pos = 0;
+
+	// Set Position Limit 2039.01h
+	ntr = canOpenSDOWriteWait_dl_i32( h, rcmd, node, AMCCAN_INDEX_POS_LIMIT, AMCCAN_SUBINDEX_POS_LIMIT_MEASURED, pos );
+	if( NTCAN_SUCCESS != ntr ) return ntr;
+
+	int i= 0;
+	for (i = 0; i < 10; i++){	// Kasemsit: I do loop 10 times to make sure the position is actually reset.
+
+		// Set Digital Input Mask: Load Measured Position 2058.08h
+		ntr = canOpenSDOWriteWait_dl_u16( h, rcmd, node, 0x2058, 0x08, 0x1 );
+		if( NTCAN_SUCCESS != ntr ) return ntr;
+
+		// Reset Digital Input Mask: Load Measured Position 2058.08h
+		ntr = canOpenSDOWriteWait_dl_u16( h, rcmd, node, 0x2058, 0x08, 0x0 );
+		if( NTCAN_SUCCESS != ntr ) return ntr;
+
+		// Set Digital Input Mask: Load Target Position Command 2058.09h
+		ntr = canOpenSDOWriteWait_dl_u16( h, rcmd, node, 0x2058, 0x09, 0x1 );
+		if( NTCAN_SUCCESS != ntr ) return ntr;
+
+		// Reset Digital Input Mask: Load Target Position Command 2058.09h
+		ntr = canOpenSDOWriteWait_dl_u16( h, rcmd, node, 0x2058, 0x09, 0x0 );
+		if( NTCAN_SUCCESS != ntr ) return ntr;
+	}
+
+    return 0;
 }
 
 void amcdrive_print_info(NTCAN_HANDLE handle, uint id) {

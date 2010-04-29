@@ -212,12 +212,6 @@ double amccan_decode_ds1( int32_t i, uint16_t k_i, uint32_t k_s );
  \return value in amps*/
 double amccan_decode_dc1( int32_t i_dc1, uint32_t k_p );
 
-
-/** Sets position of the drive.
- */
-NTCAN_RESULT amccan_position_set( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t node,
-                                  int32_t pos );
-
 /** Sets drive to current control and sets the current. */
 NTCAN_RESULT amccan_pdo_current( NTCAN_HANDLE h, uint16_t cob_id, double amps,
                                  uint16_t k_i, uint32_t k_s );

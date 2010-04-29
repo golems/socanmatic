@@ -18,7 +18,7 @@ typedef struct {
     int16_t k_i;    		// feedback position interp
     uint32_t k_s;    		// switch freq
     uint16_t k_p;    		// max rated current
-    int32_t raw_position; 	// raw position in counts as reported by the drive
+
     double pos_c;   		// offset position in counts as a double precision float to avoid wraparound
     double vel_cps;  		// velocity in counts per second
     double i_ref; 			// target current
@@ -49,7 +49,15 @@ NTCAN_RESULT amcdrive_init_drives(NTCAN_HANDLE network, uint *identifiers, uint 
 NTCAN_RESULT amcdrive_open_drives(uint network, uint *identifiers, uint count, uint pdos, uint update_freq, servo_vars_t *drive_infos);
 NTCAN_RESULT amcdrive_update_drives(servo_vars_t *drives, int count);
 
+/*
+ * Send current command to motor
+ */
 NTCAN_RESULT amcdrive_set_current(servo_vars_t *drive, double amps);
+
+/*
+ * Set the current measured position to zero
+ */
+NTCAN_RESULT amcdrive_reset_position( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t node);
 
 NTCAN_RESULT amcdrive_start_drive(servo_vars_t *drive);
 NTCAN_RESULT amcdrive_stop_drive(servo_vars_t *drive);
