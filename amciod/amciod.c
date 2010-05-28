@@ -16,7 +16,7 @@
  *
  *  NOTE:
  *  amciod reads state message in rad, rad/s
- *            write cmd message in N.m
+ *            write cmd message in Ampere
  *
  */
 
@@ -257,9 +257,8 @@ void amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, a
 		//printf("\tmotor_cmd packed size = %d \n",size);
 	}
 
-	// Torque-to-current conversion
-	double motorLeftCurrent = msg->values->data[0]/KT_LEFT;
-	double motorRightCurrent = msg->values->data[1]/KT_RIGHT;
+	double motorLeftCurrent = msg->values->data[0];
+	double motorRightCurrent = msg->values->data[1];
 	
 	// Current limit
     motorLeftCurrent = min(MAX_CURRENT, max(-MAX_CURRENT, motorLeftCurrent));

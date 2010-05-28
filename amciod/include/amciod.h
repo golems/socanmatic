@@ -57,10 +57,6 @@
 #define ENCODER_COUNT 4000
 #define GEAR_REDUCTION (15/1)
 
-// Torque-current ratio for left and right wheels
-#define KT_LEFT  1.01149307; // N.m/A (Left motor)
-#define KT_RIGHT 1.0195995;  // N.m/A (Right motor)
-
 #define COUNT_TO_RAD(count) \
   ( (count) * 2 * M_PI / (ENCODER_COUNT * GEAR_REDUCTION ) )
 
