@@ -20,20 +20,6 @@
  *
  */
 
-#include <argp.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdarg.h>
-#include <stdint.h>
-
-#include <somatic.h>
-#include <ach.h>
-
-#include <somatic/util.h>
-#include <somatic.pb-c.h>
-#include <somatic/msg/motor.h>
-
 #include "include/amccan.h"
 #include "include/amcdrive.h"
 #include "include/amciod.h"
@@ -50,50 +36,78 @@ static unsigned int  amciod_state_channel_size = AMCIOD_STATE_CHANNEL_SIZE;
 static int opt_create = 0;
 static int opt_verbosity = 0;
 static double opt_frequency = 30.0; // refresh at 30 hz
-static size_t n_modules = 2;
+static size_t n_buses = 0;			// number of bus
+static size_t n_modules = 0;		// number of amc modules
+static unsigned int opt_bus_id = 0; // amc bus id
+static uint32_t opt_mod_id[2];		// amc module id
+
+static size_t max_n_buses = 1;		// TODO: Currently cannot accept more than 1 bus
+static size_t max_n_modules = 2;	// maximum number of drives
 
 static struct argp_option options[] = {
-    {
-        .name = "verbose",
-        .key = 'v',
-        .arg = NULL,
-        .flags = 0,
-        .doc = "Causes verbose output"
-    },
-    {
-        .name = "cmd-chan",
-        .key = 'c',
-        .arg = "amciod_cmd_channel",
-        .flags = 0,
-        .doc = "ach channel to send amcdrive commands to"
-    },
-    {
-		.name = "state-chan",
-		.key = 's',
-		.arg = "amciod_state_channel",
-		.flags = 0,
-		.doc = "ach channel to listen for commands on"
-    },
-    {
-        .name = "Create",
-        .key = 'C',
-        .arg = NULL,
-        .flags = 0,
-        .doc = "Create channels with specified names (off by default)"
-    },
-    {
-        .name = NULL,
-        .key = 0,
-        .arg = NULL,
-        .flags = 0,
-        .doc = NULL
-    } 
+		{
+				.name = "cmd-chan",
+				.key = 'c',
+				.arg = "amciod-cmd",
+				.flags = 0,
+				.doc = "ACH channel to send amcdrive commands to"
+		},
+		{
+				.name = "state-chan",
+				.key = 's',
+				.arg = "amciod-state",
+				.flags = 0,
+				.doc = "ACH channel to listen for commands on"
+		},
+		{
+				.name = "verbose",
+				.key = 'v',
+				.arg = NULL,
+				.flags = 0,
+				.doc = "Causes verbose output"
+		},
+		{
+				.name = "Create",
+				.key = 'C',
+				.arg = NULL,
+				.flags = 0,
+				.doc = "Create channels with specified names (off by default)"
+		},
+		{
+				.name = "frequency",
+				.key = 'f',
+				.arg = "freq",
+				.flags = 0,
+				.doc = "Refresh rate on state channel when no commands are received"
+		},
+		{
+				.name = "module",
+				.key = 'm',
+				.arg = "module_id",
+				.flags = 0,
+				.doc = "Define a module ID for a motor index (e.g. 0x20)"
+		},
+		{
+				.name = "bus",
+				.key = 'b',
+				.arg = "CAN_bus",
+				.flags = 0,
+				.doc = "Define a CAN bus for a module"
+		},
+		{
+				.name = NULL,
+				.key = 0,
+				.arg = NULL,
+				.flags = 0,
+				.doc = NULL
+		}
 };
+
 
 /// argp parsing function
 static int parse_opt( int key, char *arg, struct argp_state *state);
 /// argp program version
-const char *argp_program_version = "amciod 0.0.1";
+const char *argp_program_version = "amciod 0.2";
 /// argp program arguments documention
 static char args_doc[] = "";
 /// argp program doc line
@@ -103,6 +117,16 @@ static struct argp argp = {options, parse_opt, args_doc, doc, NULL, NULL, NULL }
 
 static int parse_opt(int key, char *arg, struct argp_state *state) {
 	(void) state; // ignore unused parameter
+
+	if (n_buses > max_n_buses) {
+		fprintf(stderr, "ERROR: Accept only one -b parameters.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (n_modules > max_n_modules) {
+		fprintf(stderr, "ERROR: Accept only two -m parameters.\n");
+		exit(EXIT_FAILURE);
+	}
 
 	switch (key) {
 
@@ -118,8 +142,20 @@ static int parse_opt(int key, char *arg, struct argp_state *state) {
 	case 'C':
 	    opt_create = 1;
 	    break;
-	case 0:
+	case 'f':
+		opt_frequency = atof(arg);
 		break;
+	case 'b':
+		opt_bus_id = atoi(arg);		// accept only one bus id
+		n_buses++;
+		break;
+	case 'm':
+		opt_mod_id[n_modules] = atoi(arg);	// Add an AMC module id to the list
+		n_modules++;
+		break;
+	default:
+		return ARGP_ERR_UNKNOWN;
+
 	}
 	return 0;
 }
@@ -139,6 +175,17 @@ int main(int argc, char *argv[]) {
 	/// Parse command line args
 	argp_parse(&argp, argc, argv, 0, NULL, NULL);
 
+	/// Argument check
+	if (n_buses < max_n_buses) {
+		fprintf(stderr, "ERROR: Please specify bus ID (e.g. -b 0).\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (n_modules < max_n_modules) {
+		fprintf(stderr, "ERROR: Please specify two motor IDs (e.g. -m 32 -m 33).\n");
+		exit(EXIT_FAILURE);
+	}
+
 	/// install signal handler
 	somatic_sighandler_simple_install();
 
@@ -151,6 +198,8 @@ int main(int argc, char *argv[]) {
 	/// amcdrive setup
 	NTCAN_RESULT status;
 	servo_vars_t servos[2];
+
+	printf("n_module = %d\n", n_modules);
 
 	status = amcdrive_open(servos);
 	somatic_hard_assert(status == NTCAN_SUCCESS, "amcdrive initialization failed\n");
@@ -338,11 +387,7 @@ void amcdrive_update_state(servo_vars_t *servos, ach_channel_t *state_chan)
 int amcdrive_open(servo_vars_t *servos){
     NTCAN_RESULT status;
 
-    uint32_t drives[2];
-    drives[0] = 0x20; // Left motor
-    drives[1] = 0x21; // Right motor
-
-    status = amcdrive_open_drives(0, drives, 2,
+    status = amcdrive_open_drives(opt_bus_id, opt_mod_id, n_modules,
         REQUEST_TPDO_VELOCITY|REQUEST_TPDO_POSITION|ENABLE_RPDO_CURRENT,
         1000, servos);
     if (status != NTCAN_SUCCESS) {
@@ -357,16 +402,10 @@ int amcdrive_open(servo_vars_t *servos){
     status = amcdrive_set_current(&servos[1], 0.0);
     somatic_hard_assert(status == NTCAN_SUCCESS, "zero out 1\n");
 
-    ///
-
-
-
-
+    /// set amc position to zero
     uint8_t rcmd;
-    amcdrive_reset_position( servos[0].handle, &rcmd, drives[0]);
-    amcdrive_reset_position( servos[0].handle, &rcmd, drives[1]);
-
-
+    amcdrive_reset_position( servos[0].handle, &rcmd, opt_mod_id[0]);
+    amcdrive_reset_position( servos[0].handle, &rcmd, opt_mod_id[1]);
 
     return 0;
 }

@@ -44,6 +44,20 @@
 #ifndef AMCIOD_H_
 #define AMCIOD_H_
 
+#include <argp.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdarg.h>
+#include <stdint.h>
+
+#include <somatic.h>
+#include <ach.h>
+
+#include <somatic/util.h>
+#include <somatic.pb-c.h>
+#include <somatic/msg/motor.h>
+
 #include <math.h>
 
 // Default channel constants
