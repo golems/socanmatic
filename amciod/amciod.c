@@ -150,8 +150,7 @@ static int parse_opt(int key, char *arg, struct argp_state *state) {
 		n_buses++;
 		break;
 	case 'm':
-		opt_mod_id[n_modules] = atoi(arg);	// Add an AMC module id to the list
-		n_modules++;
+		opt_mod_id[n_modules++] = strtoul(arg, NULL, 16);	// Add an AMC module id to the list
 		break;
 	default:
 		return ARGP_ERR_UNKNOWN;
@@ -177,12 +176,12 @@ int main(int argc, char *argv[]) {
 
 	/// Argument check
 	if (n_buses < max_n_buses) {
-		fprintf(stderr, "ERROR: Please specify bus ID (e.g. -b 0).\n");
+		fprintf(stderr, "ERROR: Please specify bus ID (e.g. -b 1).\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (n_modules < max_n_modules) {
-		fprintf(stderr, "ERROR: Please specify two motor IDs (e.g. -m 32 -m 33).\n");
+		fprintf(stderr, "ERROR: Please specify two motor IDs (e.g. -m 20 -m 21).\n");
 		exit(EXIT_FAILURE);
 	}
 
