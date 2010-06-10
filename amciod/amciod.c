@@ -331,15 +331,6 @@ void amcdrive_update_state(servo_vars_t *servos, ach_channel_t *state_chan)
 	status =  amcdrive_update_drives(servos, (int)n_modules);
 	somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot update drive states!\n");
 
-	/* Kasemsit:
-	 * I don't know why amcdrive_update_drives() gives me correct position (counts)
-	 * but wrong velocity (counts/s). I did measure the velocity and position manually and compare to
-	 * what amcdrive_update_drives() gave me, I found that even though the position is accurate,
-	 * the velocity is off by a factor of 2. Can someone point me out why?
-	 */
-	servos[0].vel_cps *= 2.0;
-	servos[1].vel_cps *= 2.0;
-
 	double position[2], velocity[2];
 	position[0] = COUNT_TO_RAD(servos[0].pos_c);
 	position[1] = COUNT_TO_RAD(servos[1].pos_c);
