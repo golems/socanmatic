@@ -288,7 +288,7 @@ NTCAN_RESULT amccan_pdo_current( NTCAN_HANDLE h, uint16_t cob_id, double amps,
 }
 
 uint32_t amcccan_decode_pbf( uint32_t pbf  ) {
-  return pbf / (2 << 16 );
+  return pbf / (1 << 16 );
 }
 
 NTCAN_RESULT amccan_dl_timer1( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t node,
