@@ -1,5 +1,0 @@
-\files: 
-amcdrived.c - a daemon providing an ach interface to power cube modules
-amcdrived.h
-amcdrived_commander.c - a shell tool for talking to the can network through amcdrived
-
