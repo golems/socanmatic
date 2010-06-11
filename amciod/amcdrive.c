@@ -103,42 +103,42 @@ static NTCAN_RESULT amcdrive_enable_pdos(NTCAN_HANDLE handle, uint8_t id, uint p
     dprintf("rpdo_position: %d\n", (pdos & ENABLE_RPDO_POSITION) == 0);
     status = try_ntcan_dl("rpdo_position", &rcmd,
         amccan_dl_pdo_id(handle, &rcmd, id, AMCCAN_RPDO_3, 
-            drive_info->rpdo_position, (pdos & ENABLE_RPDO_POSITION) == 0, 0));
+            drive_info->rpdo_position, (uint32_t)((pdos & ENABLE_RPDO_POSITION) == 0), 0));
     if (status != NTCAN_SUCCESS)
         return status;
     
     dprintf("rpdo_velocity: %d\n", (pdos & ENABLE_RPDO_VELOCITY) == 0);
     status = try_ntcan_dl("rpdo_velocity", &rcmd,
         amccan_dl_pdo_id(handle, &rcmd, id, AMCCAN_RPDO_4, 
-            drive_info->rpdo_velocity, (pdos & ENABLE_RPDO_VELOCITY) == 0, 0));
+            drive_info->rpdo_velocity, (uint32_t)((pdos & ENABLE_RPDO_VELOCITY) == 0), 0));
     if (status != NTCAN_SUCCESS)
         return status;
     
     dprintf("rpdo_current: %d\n", (pdos & ENABLE_RPDO_CURRENT) == 0);
     status = try_ntcan_dl("rpdo_current", &rcmd,
         amccan_dl_pdo_id(handle, &rcmd, id, AMCCAN_RPDO_5, 
-            drive_info->rpdo_current, (pdos & ENABLE_RPDO_CURRENT) == 0, 0));
+            drive_info->rpdo_current, (uint32_t)((pdos & ENABLE_RPDO_CURRENT) == 0), 0));
     if (status != NTCAN_SUCCESS)
         return status;
     
     dprintf("tpdo_position: %d\n", (pdos & REQUEST_TPDO_POSITION) == 0);
     status = try_ntcan_dl("tpdo_position", &rcmd,
         amccan_dl_pdo_id(handle, &rcmd, id, AMCCAN_TPDO_3, 
-            drive_info->tpdo_position, (pdos & REQUEST_TPDO_POSITION) == 0, 0));
+            drive_info->tpdo_position, (uint32_t)((pdos & REQUEST_TPDO_POSITION) == 0), 0));
     if (status != NTCAN_SUCCESS)
         return status;
     
     dprintf("tpdo_velocity: %d\n", (pdos & REQUEST_TPDO_VELOCITY) == 0);
     status = try_ntcan_dl("tpdo_velocity", &rcmd,
         amccan_dl_pdo_id(handle, &rcmd, id, AMCCAN_TPDO_4, 
-            drive_info->tpdo_velocity, (pdos & REQUEST_TPDO_VELOCITY) == 0, 0));
+            drive_info->tpdo_velocity, (uint32_t)((pdos & REQUEST_TPDO_VELOCITY) == 0), 0));
     if (status != NTCAN_SUCCESS)
         return status;
     
     dprintf("tpdo_current: %d\n", (pdos & REQUEST_TPDO_CURRENT) == 0);
     status = try_ntcan_dl("tpdo_current", &rcmd,
         amccan_dl_pdo_id(handle, &rcmd, id, AMCCAN_TPDO_5, 
-            drive_info->tpdo_current, (pdos & REQUEST_TPDO_CURRENT) == 0, 0));
+            drive_info->tpdo_current, (uint32_t)((pdos & REQUEST_TPDO_CURRENT) == 0), 0));
     if (status != NTCAN_SUCCESS)
         return status;
     
