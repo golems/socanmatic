@@ -2,20 +2,22 @@
 #define _AMCDRIVE_H_
 
 #include <ntcan.h>
+#include <ntcanopen.h>
+#include <assert.h>
 #include "byteorder.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+//#ifdef __cplusplus
+//extern "C" {
+//#endif
 
 typedef struct {
     NTCAN_HANDLE handle;
     
-    uint canopen_id; 		// CANopen identifier
+    uint8_t canopen_id; 		// CANopen identifier
     int8_t current_sign; 	// Flip current?
     int8_t error_state; 	// Is the dirve currently in a state of error?
     
-    int16_t k_i;    		// feedback position interp
+    uint16_t k_i;    		// feedback position interp
     uint32_t k_s;    		// switch freq
     uint16_t k_p;    		// max rated current
 
@@ -43,10 +45,10 @@ typedef struct {
 #define REQUEST_TPDO_VELOCITY 0x20
 #define REQUEST_TPDO_CURRENT  0x40
 
-NTCAN_RESULT amcdrive_init_drive(NTCAN_HANDLE network, uint identifier, uint pdos, uint update_freq, servo_vars_t *drive_info);
-NTCAN_RESULT amcdrive_init_drives(NTCAN_HANDLE network, uint *identifiers, uint count, uint pdos, uint update_freq, servo_vars_t *drive_infos);
+NTCAN_RESULT amcdrive_init_drive(NTCAN_HANDLE network, uint8_t identifier, uint pdos, uint update_freq, servo_vars_t *drive_info);
+NTCAN_RESULT amcdrive_init_drives(NTCAN_HANDLE network, uint8_t *identifiers, uint count, uint pdos, uint update_freq, servo_vars_t *drive_infos);
 
-NTCAN_RESULT amcdrive_open_drives(uint network, uint *identifiers, uint count, uint pdos, uint update_freq, servo_vars_t *drive_infos);
+NTCAN_RESULT amcdrive_open_drives(int32_t network, uint8_t *identifiers, uint count, uint pdos, uint update_freq, servo_vars_t *drive_infos);
 NTCAN_RESULT amcdrive_update_drives(servo_vars_t *drives, int count);
 
 /*
@@ -62,8 +64,8 @@ NTCAN_RESULT amcdrive_reset_position( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t nod
 NTCAN_RESULT amcdrive_start_drive(servo_vars_t *drive);
 NTCAN_RESULT amcdrive_stop_drive(servo_vars_t *drive);
 
-#ifdef __cplusplus
-}
-#endif
+//#ifdef __cplusplus
+//}
+//#endif
 
 #endif

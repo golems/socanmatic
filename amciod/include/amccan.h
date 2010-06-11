@@ -32,12 +32,14 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+#ifndef _AMCCAN_H_
+#define _AMCCAN_H_
 
 #include <ntcan.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+//#ifdef __cplusplus
+//extern "C" {
+//#endif
 
 /**
  * \file amccan.h
@@ -173,15 +175,15 @@ NTCAN_RESULT amccan_dl_pdo_id( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t node, amcc
                                uint16_t id, int disable, int rtr );
 
 /// sets the transmission type of a node
-NTCAN_RESULT amccan_dl_pdo_trans( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t node, amccan_pdo_t pdo,
-                                  amccan_pdo_trans_t trans, int sync_interval );
+//NTCAN_RESULT amccan_dl_pdo_trans( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t node, amccan_pdo_t pdo,
+//                                  amccan_pdo_trans_t trans, uint8_t sync_interval );
 
 /** sets up a pdo mapping.
 
     Must map pdos in numerical order.
  */
 NTCAN_RESULT amccan_dl_pdo_map( NTCAN_HANDLE, uint8_t *rcmd, uint8_t node, amccan_pdo_t pdo,
-                                int mapping_obj, uint16_t index, uint8_t subindex,
+                                uint8_t mapping_obj, uint16_t index, uint8_t subindex,
                                 uint8_t len );
 
 /** Sets timer 1
@@ -219,7 +221,8 @@ NTCAN_RESULT amccan_pdo_current( NTCAN_HANDLE h, uint16_t cob_id, double amps,
 /** Returns switching frequency of the drive in kHz */
 uint32_t amcccan_decode_pbf( uint32_t pbf );
 
-#ifdef __cplusplus
-}
-#endif
+//#ifdef __cplusplus
+//}
+//#endif
 
+#endif

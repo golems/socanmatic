@@ -100,9 +100,9 @@ static int pdo_is_valid( int pdo ) {
   return AMCCAN_RPDO_1 <= pdo && AMCCAN_TPDO_USER >= pdo;
 }
 
-static int pdo_is_rpdo( int pdo ) {
-  return AMCCAN_RPDO_1 <= pdo && AMCCAN_RPDO_23 >= pdo;
-}
+//static int pdo_is_rpdo( int pdo ) {
+//  return AMCCAN_RPDO_1 <= pdo && AMCCAN_RPDO_23 >= pdo;
+//}
 
 static int pdo_is_tpdo( int pdo ) {
   return AMCCAN_TPDO_1 <= pdo && AMCCAN_TPDO_USER >= pdo;
@@ -145,7 +145,7 @@ NTCAN_RESULT amccan_dl_pdo_id( NTCAN_HANDLE h, uint8_t *rcmd,
 NTCAN_RESULT amccan_dl_pdo_trans( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t node,
                                   amccan_pdo_t pdo,
                                   amccan_pdo_trans_t trans,
-                                  int sync_interval) {
+                                  uint sync_interval) {
   assert( pdo_is_valid( pdo ) );
   if( AMCCAN_PDO_TRANS_SYNC_CYC == trans ) {
     trans += sync_interval - 1;
@@ -182,7 +182,7 @@ static int pdo_is_user_mappable( amccan_pdo_t pdo ) {
 
 NTCAN_RESULT amccan_dl_pdo_map( NTCAN_HANDLE h, uint8_t *rcmd,
                                 uint8_t node, amccan_pdo_t pdo,
-                                int mapping_obj,
+                                uint8_t mapping_obj,
                                 uint16_t index, uint8_t subindex,
                                 uint8_t len ) {
   assert( pdo_is_valid( pdo ) );
@@ -198,6 +198,7 @@ NTCAN_RESULT amccan_dl_pdo_map( NTCAN_HANDLE h, uint8_t *rcmd,
                                     pdo_map_index[pdo],
                                     mapping_obj,
                                     u );
+  // Something is wierd with the function call
   if( NTCAN_SUCCESS != ntr ) return ntr;
   ntr = canOpenSDOWriteWait_dl_u32( h, rcmd, node,
                                     pdo_map_index[pdo],
@@ -258,34 +259,34 @@ double amccan_decode_dc1( int32_t i_dc1, uint32_t k_p ) {
 }
 
 
-int16_t amccan_encode_ds1( double amps, uint16_t k_i, uint32_t k_s ) {
+int32_t amccan_encode_ds1( double amps, uint16_t k_i, uint32_t k_s ) {
   //printf("Encoding: %f amps, %d k_i, %d k_s\n", amps, k_i, k_s );
   double k_i_d = k_i, k_s_d = k_s;
   double i =  (amps * ( (1 << 17)) / (k_i_d * k_s_d ) );
-  int32_t r = i;
-  if( r >= INT16_MAX ) r = INT16_MAX;
-  else if ( r <= INT16_MIN) r = INT16_MIN;
+  int32_t r = (int32_t)i;
+  if( r >= INT32_MAX ) r = INT32_MAX;
+  else if ( r <= INT32_MIN) r = INT32_MIN;
 
   return r;
 }
 
-NTCAN_RESULT amccan_pdo_current( NTCAN_HANDLE h, uint16_t cob_id, double amps,
-                                 uint16_t k_i, uint32_t k_s ) {
-  CMSG msg;
-  int32_t enc_amps = amccan_encode_ds1( amps, k_i, k_s );
-  //printf("Setting current: %f, code: %d\n", amps, enc_amps );
-  msg.id = cob_id;
-  // control word
-  msg.data[0] = 0x0f;
-  msg.data[1] = 0x00;
-  // current
-  msg.data[2] = enc_amps & 0xff;
-  msg.data[3] = (enc_amps >> 8) & 0xff;
-  msg.len = 4;
-  int num = 1;
-  //printf("p: Sending Message [%x] %.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x \n\r", msg.id, msg.data[0], msg.data[1], msg.data[2], msg.data[3], msg.data[4], msg.data[5], msg.data[6], msg.data[7]);
-  return canWrite( h, &msg, &num, NULL );
-}
+//NTCAN_RESULT amccan_pdo_current( NTCAN_HANDLE h, uint16_t cob_id, double amps,
+//                                 uint16_t k_i, uint32_t k_s ) {
+//  CMSG msg;
+//  int32_t enc_amps = amccan_encode_ds1( amps, k_i, k_s );
+//  //printf("Setting current: %f, code: %d\n", amps, enc_amps );
+//  msg.id = cob_id;
+//  // control word
+//  msg.data[0] = 0x0f;
+//  msg.data[1] = 0x00;
+//  // current
+//  msg.data[2] = enc_amps & 0xff;
+//  msg.data[3] = (enc_amps >> 8) & 0xff;
+//  msg.len = 4;
+//  int num = 1;
+//  //printf("p: Sending Message [%x] %.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x \n\r", msg.id, msg.data[0], msg.data[1], msg.data[2], msg.data[3], msg.data[4], msg.data[5], msg.data[6], msg.data[7]);
+//  return canWrite( h, &msg, &num, NULL );
+//}
 
 uint32_t amcccan_decode_pbf( uint32_t pbf  ) {
   return pbf / (1 << 16 );

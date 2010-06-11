@@ -38,8 +38,8 @@ static int opt_verbosity = 0;
 static double opt_frequency = 30.0; // refresh at 30 hz
 static size_t n_buses = 0;			// number of bus
 static size_t n_modules = 0;		// number of amc modules
-static unsigned int opt_bus_id = 0; // amc bus id
-static uint32_t opt_mod_id[2];		// amc module id
+static int32_t opt_bus_id = 0; // amc bus id
+static uint8_t opt_mod_id[2];		// amc module id
 
 static size_t max_n_buses = 1;		// TODO: Currently cannot accept more than 1 bus
 static size_t max_n_modules = 2;	// maximum number of drives
@@ -128,6 +128,7 @@ static int parse_opt(int key, char *arg, struct argp_state *state) {
 		exit(EXIT_FAILURE);
 	}
 
+	long int mod;
 	switch (key) {
 
 	case 'c':
@@ -150,7 +151,9 @@ static int parse_opt(int key, char *arg, struct argp_state *state) {
 		n_buses++;
 		break;
 	case 'm':
-		opt_mod_id[n_modules++] = strtoul(arg, NULL, 16);	// Add an AMC module id to the list
+		mod = strtol(arg, NULL, 16); // Add an AMC module id to the list
+		assert(mod < UINT8_MAX);
+		opt_mod_id[n_modules++] = (uint8_t) mod;
 		break;
 	default:
 		return ARGP_ERR_UNKNOWN;
