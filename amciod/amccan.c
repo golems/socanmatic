@@ -104,7 +104,7 @@ static int pdo_is_valid( int pdo ) {
 //  return AMCCAN_RPDO_1 <= pdo && AMCCAN_RPDO_23 >= pdo;
 //}
 
-static int pdo_is_tpdo( int pdo ) {
+static int pdo_is_tpdo( uint32_t pdo ) {
   return AMCCAN_TPDO_1 <= pdo && AMCCAN_TPDO_USER >= pdo;
 }
 
@@ -128,7 +128,7 @@ NTCAN_RESULT amccan_dl_op_mode( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t node,
 
 NTCAN_RESULT amccan_dl_pdo_id( NTCAN_HANDLE h, uint8_t *rcmd,
                             uint8_t node, amccan_pdo_t pdo,
-                            uint16_t id, int disable, int rtr ) {
+                            uint16_t id, uint32_t disable, uint32_t rtr ) {
   assert( 0x181 <= id );
   assert( 0x57F >= id );
   assert( pdo_is_valid(pdo) );
@@ -145,7 +145,7 @@ NTCAN_RESULT amccan_dl_pdo_id( NTCAN_HANDLE h, uint8_t *rcmd,
 NTCAN_RESULT amccan_dl_pdo_trans( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t node,
                                   amccan_pdo_t pdo,
                                   amccan_pdo_trans_t trans,
-                                  uint sync_interval) {
+                                  uint32_t sync_interval) {
   assert( pdo_is_valid( pdo ) );
   if( AMCCAN_PDO_TRANS_SYNC_CYC == trans ) {
     trans += sync_interval - 1;
@@ -189,9 +189,9 @@ NTCAN_RESULT amccan_dl_pdo_map( NTCAN_HANDLE h, uint8_t *rcmd,
   assert( pdo_is_user_mappable( pdo ) );
   assert( mapping_obj >= 1 && mapping_obj <= 8 );
   uint32_t u = len;
-  u |= subindex << 8;
-  u |= (index & 0xFF) << 16 ;
-  u |= (index >> 8 ) << 24 ;
+  u |= (uint32_t)(subindex << 8);
+  u |= (uint32_t)((index & 0xFF) << 16);
+  u |= (uint32_t)((index >> 8 ) << 24);
 
   NTCAN_RESULT ntr;
   ntr = canOpenSDOWriteWait_dl_u32( h, rcmd, node,
@@ -208,7 +208,7 @@ NTCAN_RESULT amccan_dl_pdo_map( NTCAN_HANDLE h, uint8_t *rcmd,
 }
 
 NTCAN_RESULT amccan_dl_timer( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t node, int timer,
-                               uint32_t cycle_time, int *pdos,
+                               uint32_t cycle_time, uint32_t *pdos,
                                int pdo_len ) {
   uint16_t index_cycle, index_tpdos;
   uint8_t subindex_cycle, subindex_tpdos;
@@ -234,7 +234,7 @@ NTCAN_RESULT amccan_dl_timer( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t node, int t
     int i;
     for( i = 0; i < pdo_len; i ++ ) {
       assert( pdo_is_tpdo( pdos[i] ) );
-      tpdos |= 1 << (pdos[i] - AMCCAN_TPDO_1);
+      tpdos |= (uint32_t)(1 << (pdos[i] - AMCCAN_TPDO_1));
     }
   }
   NTCAN_RESULT ntr;
@@ -293,7 +293,7 @@ uint32_t amcccan_decode_pbf( uint32_t pbf  ) {
 }
 
 NTCAN_RESULT amccan_dl_timer1( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t node,
-                               uint32_t cycle_time, int *pdos,
+                               uint32_t cycle_time, uint32_t *pdos,
                                int pdo_len ) {
   uint32_t tpdos = 0;
   assert( pdo_len < AMCCAN_TPDO_USER );
@@ -301,7 +301,7 @@ NTCAN_RESULT amccan_dl_timer1( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t node,
     int i;
     for( i = 0; i < pdo_len; i ++ ) {
       assert( pdo_is_tpdo( pdos[i] ) );
-      tpdos |= 1 << (pdos[i] - AMCCAN_TPDO_1);
+      tpdos |= (uint32_t)(1 << (pdos[i] - AMCCAN_TPDO_1));
     }
   }
   NTCAN_RESULT ntr;

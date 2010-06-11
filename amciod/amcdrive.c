@@ -187,7 +187,7 @@ NTCAN_RESULT amcdrive_enable_async_timer(NTCAN_HANDLE handle, uint8_t id, uint u
         return status;
     
     uint cycle_time = update_freq <= 1000 ? 1000 / update_freq : 1;
-    int tpdos[] = { AMCCAN_TPDO_3, AMCCAN_TPDO_4, AMCCAN_TPDO_5 };
+    uint32_t tpdos[] = { AMCCAN_TPDO_3, AMCCAN_TPDO_4, AMCCAN_TPDO_5 };
     status = try_ntcan_dl("enable_timer", &rcmd,
         amccan_dl_timer1(handle, &rcmd, id, cycle_time, tpdos, 3));
     

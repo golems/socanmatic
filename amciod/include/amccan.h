@@ -149,6 +149,11 @@ typedef enum {
   AMCCAN_PDO_TRANS_ASYNC 			= 0xFE
 } amccan_pdo_trans_t;
 
+NTCAN_RESULT amccan_dl_pdo_trans( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t node,
+                                  amccan_pdo_t pdo,
+                                  amccan_pdo_trans_t trans,
+                                  uint32_t sync_interval);
+
 /** sets the control word.
 
     This function blocks till a response is received or we have a
@@ -172,7 +177,7 @@ NTCAN_RESULT amccan_dl_op_mode( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t node,
 /** sets pdo cob-id
  */
 NTCAN_RESULT amccan_dl_pdo_id( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t node, amccan_pdo_t pdo,
-                               uint16_t id, int disable, int rtr );
+                               uint16_t id, uint32_t disable, uint32_t rtr );
 
 /// sets the transmission type of a node
 //NTCAN_RESULT amccan_dl_pdo_trans( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t node, amccan_pdo_t pdo,
@@ -193,7 +198,7 @@ NTCAN_RESULT amccan_dl_pdo_map( NTCAN_HANDLE, uint8_t *rcmd, uint8_t node, amcca
     \param timer to use (1 or 2)
  */
 NTCAN_RESULT amccan_dl_timer( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t node, int timer,
-                               uint32_t cycle_time, int *pdos, int pdo_len );
+                               uint32_t cycle_time, uint32_t *pdos, int pdo_len );
 
 /** Set timer 1
     \param cycle_time Cycle time of timer 1 in milliseconds
@@ -201,7 +206,7 @@ NTCAN_RESULT amccan_dl_timer( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t node, int t
     \param pdo_len length of parameter pdos array
  */
 NTCAN_RESULT amccan_dl_timer1( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t node,
-                               uint32_t cycle_time, int *pdos,
+                               uint32_t cycle_time, uint32_t *pdos,
                                int pdo_len );
 
 /** Decodes a velocity value received from the drive.
