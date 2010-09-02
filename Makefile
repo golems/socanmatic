@@ -8,7 +8,7 @@ VERSION := 20100421
 BINFILES := amciod
 
 # Library files
-SHAREDLIBS := amcdrive 
+SHAREDLIBS := amcdrive
 
 
 LC_ALL := ascii
@@ -26,7 +26,7 @@ default: $(LIBFILES) $(BINFILES)
 $(call LINKLIB, amcdrive, amccan.o amcdrive.o)
 
 ## BUILDING BINARIES: call with $(call LINKBIN, name_of_binary, object files, shared libs, static libs)
-$(call LINKBIN, amciod, amciod.o amcdrive.o amccan.o, ntcan ntcanopen somatic ach protobuf-c stdc++ rt blas lapack)
+$(call LINKBIN, amciod, amciod.o amcdrive.o amccan.o, ntcan ntcanopen amino somatic ach protobuf-c stdc++ rt blas lapack)
 
 .PHONY: default clean
 
