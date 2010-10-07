@@ -112,7 +112,7 @@ typedef enum {										/* From p241 */
 #define AMCCAN_SUBINDEX_POS_LIMIT_MEASURED 	0x01
 
 
-
+/// PDO's : see TABLE 1.33 p28 in reference manual
 typedef enum {
   AMCCAN_RPDO_1 = 0,
   AMCCAN_RPDO_2,
@@ -121,8 +121,8 @@ typedef enum {
   AMCCAN_RPDO_5,
   AMCCAN_RPDO_21,
   AMCCAN_RPDO_22,
-  AMCCAN_RPDO_24,
   AMCCAN_RPDO_23,
+  AMCCAN_RPDO_24,
   AMCCAN_TPDO_1,
   AMCCAN_TPDO_3,
   AMCCAN_TPDO_4,

@@ -8,16 +8,10 @@
  */
 
 /** \mainpage
- *  \brief Daemon to control a CAN network using motor and state messages
- *  from an ACH channel
+ *  \brief amciod is an ACH front-end daemon to communicate with two AMC drives over CAN network.
+ *  It reads motor command messages from an ACH channel and publishes the current states of the motors to another ACH channel.
  *
- *  amciod is an ACH front-end to amcdrive, the library for communicating with amcdrives
- *  on a CAN network.
- *
- *  NOTE:
- *  amciod reads state message in rad, rad/s
- *            write cmd message in Ampere
- *
+ *  NOTE: The daemon reads state message in [rad, rad/s], and writes command message in [Ampere].
  */
 
 #include "include/amccan.h"
@@ -38,11 +32,8 @@ static int opt_verbosity = 0;
 static double opt_frequency = 30.0; // refresh at 30 hz
 static size_t n_buses = 0;			// number of bus
 static size_t n_modules = 0;		// number of amc modules
-static int32_t opt_bus_id = 0; // amc bus id
+static int32_t opt_bus_id = 0; 		// amc bus id
 static uint8_t opt_mod_id[2];		// amc module id
-
-static size_t max_n_buses = 1;		// TODO: Currently cannot accept more than 1 bus
-static size_t max_n_modules = 2;	// maximum number of drives
 
 static struct argp_option options[] = {
 		{
@@ -118,15 +109,8 @@ static struct argp argp = {options, parse_opt, args_doc, doc, NULL, NULL, NULL }
 static int parse_opt(int key, char *arg, struct argp_state *state) {
 	(void) state; // ignore unused parameter
 
-	if (n_buses > max_n_buses) {
-		fprintf(stderr, "ERROR: Accept only one -b parameters.\n");
-		exit(EXIT_FAILURE);
-	}
-
-	if (n_modules > max_n_modules) {
-		fprintf(stderr, "ERROR: Accept only two -m parameters.\n");
-		exit(EXIT_FAILURE);
-	}
+	if (n_buses > 1) {   fprintf(stderr, "ERROR: Accept only one -b parameters.\n");  exit(1); }
+	if (n_modules > 2) { fprintf(stderr, "ERROR: Accept only two -m parameters.\n");  exit(1); }
 
 	long int mod;
 	switch (key) {
@@ -157,20 +141,136 @@ static int parse_opt(int key, char *arg, struct argp_state *state) {
 		break;
 	default:
 		return ARGP_ERR_UNKNOWN;
-
 	}
 	return 0;
 }
 
-/**
- * Function Declaration
- */
-void amcdrive_execute_and_update(servo_vars_t *, Somatic__MotorCmd *, ach_channel_t *);
-void amcdrive_update_state(servo_vars_t *, ach_channel_t *);
-int amcdrive_open(servo_vars_t *);
+void amcdrive_update_state(servo_vars_t *servos, ach_channel_t *state_chan)
+{
+
+	NTCAN_RESULT status;
+
+	// Update amcdrive state
+	status =  amcdrive_update_drives(servos, (int)n_modules);
+	somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot update drive states!\n");
+
+	double position[2] = { COUNT_TO_RAD(servos[0].act_pos), COUNT_TO_RAD(servos[1].act_pos) };
+	double velocity[2] = { COUNT_TO_RAD(servos[0].act_vel), COUNT_TO_RAD(servos[1].act_vel) };
+	int statusword[2]  = { servos[0].status, servos[1].status };
+
+	/**
+	 * Package a state message, and send/publish to state channel
+	 */
+	Somatic__MotorState state;
+	somatic__motor_state__init(&state);
+
+	// Set Status
+	state.has_status = 0; // what do we want to do with this?
+	state.status = SOMATIC__MOTOR_STATUS__MOTOR_OK;
+
+	// Set Position [rad]
+	state.position = SOMATIC_NEW(Somatic__Vector);
+	somatic__vector__init(state.position);
+
+	state.position->data = position;
+	state.position->n_data = n_modules;
+
+	// Set Velocity [rad/s]
+	state.velocity = SOMATIC_NEW(Somatic__Vector);
+	somatic__vector__init(state.velocity);
+
+	state.velocity->data = velocity;
+	state.velocity->n_data = n_modules;
+
+	// Set Status Word
+	state.statusword = SOMATIC_NEW(Somatic__Ivector);
+	somatic__ivector__init(state.statusword);
+
+	state.statusword->data = statusword;
+	state.statusword->n_data = n_modules;
+
+	// Publish state
+	status = somatic_motorstate_publish(&state, state_chan);
+	somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot update publish states!\n");
+
+	// // Print state channel size
+	// size_t size = somatic__motor_state__get_packed_size(&state);
+	// printf("\tmotor_state packed size = %d \n",size);
+
+	// Cleanup heap-allocated part(s) of message
+	free(state.position);
+	free(state.velocity);
+	free(state.statusword);
+}
+
+void amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, ach_channel_t *state_chan)
+{
+	NTCAN_RESULT status;
+
+	// amcdrive daemon currently accepts only current command
+	if (msg->param != SOMATIC__MOTOR_PARAM__MOTOR_CURRENT) {
+		fprintf(stdout, "ERROR: Accept only current command.\n");
+		exit(0);
+	}
+
+    /**
+	 * Receive command message from the command channel, and send to amcdrive
+	 */
+
+	// Print motor commands received from the command channel
+	if (opt_verbosity) {
+		size_t i;
+		for (i = 0; i < msg->values->n_data; ++i)
+			fprintf(stdout, "%lf::", msg->values->data[i]);
+		fprintf(stdout, "]\n");
+
+		//size_t size = somatic__motor_cmd__get_packed_size(msg);
+		//printf("\tmotor_cmd packed size = %d \n",size);
+	}
+
+	double motorLeftCurrent = msg->values->data[0];
+	double motorRightCurrent = msg->values->data[1];
+
+	// Current limit
+    motorLeftCurrent = min(MAX_CURRENT, max(-MAX_CURRENT, motorLeftCurrent));
+    motorRightCurrent = min(MAX_CURRENT, max(-MAX_CURRENT, motorRightCurrent));
+
+	// Send current to amcdrive
+	status = amcdrive_set_current(&servos[0], motorLeftCurrent);
+	somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot set current (Left)!\n");
+	status = amcdrive_set_current(&servos[1], motorRightCurrent);
+    somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot set current (Right)!\n");
+
+    // Update states
+    amcdrive_update_state(servos, state_chan);
+
+}
 
 /**
- * Generate the amcdrive calls requested by the specified motor command message, and update the state
+ * \brief
+ */
+int amcdrive_open(servo_vars_t *servos){
+
+     NTCAN_RESULT status = amcdrive_open_drives(opt_bus_id, opt_mod_id, n_modules,
+        REQUEST_TPDO_VELOCITY|REQUEST_TPDO_POSITION|ENABLE_RPDO_CURRENT|REQUEST_TPDO_STATUSWORD,
+        1000, servos);
+    if (status != NTCAN_SUCCESS) {
+        perror("amcdrive_open_drives");
+        return status;
+    }
+    servos[1].current_sign = -1;
+
+    status = amcdrive_set_current(&servos[0], 0.0);
+    somatic_hard_assert(status == NTCAN_SUCCESS, "zero out 0\n");
+
+    status = amcdrive_set_current(&servos[1], 0.0);
+    somatic_hard_assert(status == NTCAN_SUCCESS, "zero out 1\n");
+
+    return 0;
+}
+
+/**
+ * \brief Generate the amcdrive calls requested by the specified motor command message, and update the state
  */
 int main(int argc, char *argv[]) {
 
@@ -178,15 +278,8 @@ int main(int argc, char *argv[]) {
 	argp_parse(&argp, argc, argv, 0, NULL, NULL);
 
 	/// Argument check
-	if (n_buses < max_n_buses) {
-		fprintf(stderr, "ERROR: Please specify bus ID (e.g. -b 1).\n");
-		exit(EXIT_FAILURE);
-	}
-
-	if (n_modules < max_n_modules) {
-		fprintf(stderr, "ERROR: Please specify two motor IDs (e.g. -m 20 -m 21).\n");
-		exit(EXIT_FAILURE);
-	}
+	if (n_buses < 1) { 	 fprintf(stderr, "ERROR: Must specify bus ID (e.g. -b 1).\n"); 	exit(1); }
+	if (n_modules < 2) { fprintf(stderr, "ERROR: Must specify two motor IDs (e.g. -m 20 -m 21).\n"); exit(EXIT_FAILURE); }
 
 	/// install signal handler
 	somatic_sighandler_simple_install();
@@ -198,12 +291,15 @@ int main(int argc, char *argv[]) {
 	};
 
 	/// amcdrive setup
-	NTCAN_RESULT status;
 	servo_vars_t servos[2];
+	NTCAN_RESULT status = amcdrive_open(servos);
 
-	printf("n_module = %d\n", n_modules);
+	if (opt_verbosity) {
+		fprintf(stderr, "AMC drives opened\n");
+		fprintf(stderr, "    n_module = %d\n", n_modules);
+		fprintf(stderr, "    module id = 0x%x  0x%x\n", servos[0].canopen_id, servos[1].canopen_id);
+	}
 
-	status = amcdrive_open(servos);
 	somatic_hard_assert(status == NTCAN_SUCCESS, "amcdrive initialization failed\n");
 
 	/// Create channels if requested
@@ -248,7 +344,6 @@ int main(int argc, char *argv[]) {
 		somatic_hard_assert(ach_result == ACH_OK || ach_result == ACH_TIMEOUT, "Ach wait failure on cmd receive!\n");
 
 		if (ach_result == ACH_TIMEOUT) {
-		    //if (verbosity) { printf("timeout!!\n");}
 		    amcdrive_update_state(servos, motor_state_channel);
 		}
 		else {
@@ -263,9 +358,9 @@ int main(int argc, char *argv[]) {
 		}
 
 		if (opt_verbosity) {
-			//printf("pos: %f  %f [rad]\t vel: %f  %f [rad/s]\n", COUNT_TO_RAD(servos[0].pos_c), COUNT_TO_RAD(servos[1].pos_c), COUNT_TO_RAD(servos[0].vel_cps), COUNT_TO_RAD(servos[1].vel_cps));
-			printf("pos: %f  %f [cnt]\t", servos[0].pos_c, servos[1].pos_c);
-			printf("vel: %f  %f [rad/s]\n", COUNT_TO_RAD(servos[0].vel_cps), COUNT_TO_RAD(servos[1].vel_cps));
+			printf("pos: %.0f  %.0f [cnt]\t", servos[0].act_pos, servos[1].act_pos);
+			printf("vel: %.3f  %.3f [rad/s]\t", COUNT_TO_RAD(servos[0].act_vel), COUNT_TO_RAD(servos[1].act_vel));
+			printf("status: 0x%x  0x%x\n", servos[0].status, servos[1].status);
 		}
 	}
 
@@ -274,7 +369,6 @@ int main(int argc, char *argv[]) {
 	somatic_close_channel(motor_state_channel);
 
 	/// Stop motors
-    //usleep(500000);
     status = amcdrive_set_current(&servos[0], 0.0);
     somatic_hard_assert(status == NTCAN_SUCCESS, "zero out 0\n");
     status = amcdrive_set_current(&servos[1], 0.0);
@@ -283,123 +377,5 @@ int main(int argc, char *argv[]) {
 	return 0;
 }
 
-void amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, ach_channel_t *state_chan)
-{
-	NTCAN_RESULT status;
 
-	// amcdrive daemon currently accepts only current command
-	if (msg->param != SOMATIC__MOTOR_PARAM__MOTOR_CURRENT) {
-		fprintf(stdout, "ERROR: Accept only current command.\n");
-		exit(0);
-	}
-
-    /**
-	 * Receive command message from the command channel, and send to amcdrive
-	 */
-
-	// Print motor commands received from the command channel
-	if (opt_verbosity) {
-		size_t i;
-		for (i = 0; i < msg->values->n_data; ++i)
-			fprintf(stdout, "%lf::", msg->values->data[i]);
-		fprintf(stdout, "]\n");
-
-		//size_t size = somatic__motor_cmd__get_packed_size(msg);
-		//printf("\tmotor_cmd packed size = %d \n",size);
-	}
-
-	double motorLeftCurrent = msg->values->data[0];
-	double motorRightCurrent = msg->values->data[1];
-	
-	// Current limit
-    motorLeftCurrent = min(MAX_CURRENT, max(-MAX_CURRENT, motorLeftCurrent));
-    motorRightCurrent = min(MAX_CURRENT, max(-MAX_CURRENT, motorRightCurrent));
-
-	// Send current to amcdrive
-	status = amcdrive_set_current(&servos[0], motorLeftCurrent);
-	somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot set current (Left)!\n");
-	status = amcdrive_set_current(&servos[1], motorRightCurrent);
-    somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot set current (Right)!\n");
-
-    // Update states
-    amcdrive_update_state(servos, state_chan);
-
-}
-
-void amcdrive_update_state(servo_vars_t *servos, ach_channel_t *state_chan)
-{
-	NTCAN_RESULT status;
-
-	// Update amcdrive state
-	status =  amcdrive_update_drives(servos, (int)n_modules);
-	somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot update drive states!\n");
-
-	double position[2], velocity[2];
-	position[0] = COUNT_TO_RAD(servos[0].pos_c);
-	position[1] = COUNT_TO_RAD(servos[1].pos_c);
-	velocity[0] = COUNT_TO_RAD(servos[0].vel_cps);
-	velocity[1] = COUNT_TO_RAD(servos[1].vel_cps);
-
-	/**
-	 * Package a state message, and send/publish to state channel
-	 */
-	Somatic__MotorState state;
-	somatic__motor_state__init(&state);
-
-	// Set Status
-	state.has_status = 0; // what do we want to do with this?
-	state.status = SOMATIC__MOTOR_STATUS__MOTOR_OK;
-
-	// Set Position [rad]
-	state.position = SOMATIC_NEW(Somatic__Vector);
-	somatic__vector__init(state.position);
-
-	state.position->data = position;
-	state.position->n_data = n_modules;
-
-	// Set Velocity [rad/s]
-	state.velocity = SOMATIC_NEW(Somatic__Vector);
-	somatic__vector__init(state.velocity);
-
-	state.velocity->data = velocity;
-	state.velocity->n_data = n_modules;
-
-	// Publish state
-	status = somatic_motorstate_publish(&state, state_chan);
-	somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot update publish states!\n");
-
-	// // Print state channel size
-	// size_t size = somatic__motor_state__get_packed_size(&state);
-	// printf("\tmotor_state packed size = %d \n",size);
-
-	// Cleanup heap-allocated part(s) of message
-	free(state.position);
-	free(state.velocity);
-}
-
-int amcdrive_open(servo_vars_t *servos){
-    NTCAN_RESULT status;
-
-    status = amcdrive_open_drives(opt_bus_id, opt_mod_id, n_modules,
-        REQUEST_TPDO_VELOCITY|REQUEST_TPDO_POSITION|ENABLE_RPDO_CURRENT,
-        1000, servos);
-    if (status != NTCAN_SUCCESS) {
-        perror("amcdrive_open_drives");
-        return status;
-    }
-    servos[1].current_sign = -1;
-
-    status = amcdrive_set_current(&servos[0], 0.0);
-    somatic_hard_assert(status == NTCAN_SUCCESS, "zero out 0\n");
-
-    status = amcdrive_set_current(&servos[1], 0.0);
-    somatic_hard_assert(status == NTCAN_SUCCESS, "zero out 1\n");
-
-    /// set amc position to zero
-    uint8_t rcmd;
-    amcdrive_reset_position( servos[0].handle, &rcmd, opt_mod_id[0]);
-    amcdrive_reset_position( servos[0].handle, &rcmd, opt_mod_id[1]);
-
-    return 0;
-}
 
