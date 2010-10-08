@@ -22,7 +22,7 @@ typedef struct {
     double act_pos;   		// Actual position in counts (we use double instead of int to avoid wraparound)
     double act_vel;  		// Actual velocity in counts per second
     double act_cur; 		// Actual current
-    uint16_t status;		// Status word of the drive
+    int16_t status;			// Status word of the drive
 
     // PDO->COB mappings
     uint16_t rpdo_position;

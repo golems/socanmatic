@@ -125,8 +125,8 @@ static int parse_opt(int key, char *arg, struct argp_state *state) {
 		opt_verbosity++;
 		break;
 	case 'C':
-	    opt_create = 1;
-	    break;
+		opt_create = 1;
+		break;
 	case 'f':
 		opt_frequency = atof(arg);
 		break;
@@ -154,53 +154,61 @@ void amcdrive_update_state(servo_vars_t *servos, ach_channel_t *state_chan)
 	status =  amcdrive_update_drives(servos, (int)n_modules);
 	somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot update drive states!\n");
 
-	double position[2] = { COUNT_TO_RAD(servos[0].act_pos), COUNT_TO_RAD(servos[1].act_pos) };
-	double velocity[2] = { COUNT_TO_RAD(servos[0].act_vel), COUNT_TO_RAD(servos[1].act_vel) };
-	int statusword[2]  = { servos[0].status, servos[1].status };
+	double pos_vals[2] = { COUNT_TO_RAD(servos[0].act_pos), COUNT_TO_RAD(servos[1].act_pos) };
+	double vel_vals[2] = { COUNT_TO_RAD(servos[0].act_vel), COUNT_TO_RAD(servos[1].act_vel) };
+	int16_t statusword_vals[2];
+	statusword_vals[0] = servos[0].status;
+	statusword_vals[1] = servos[1].status;
 
 	/**
 	 * Package a state message, and send/publish to state channel
 	 */
 	Somatic__MotorState state;
+	memset(&state, 0, sizeof(state) );
 	somatic__motor_state__init(&state);
 
-	// Set Status
-	state.has_status = 0; // what do we want to do with this?
+	// Status
+	state.has_status = 1;
 	state.status = SOMATIC__MOTOR_STATUS__MOTOR_OK;
 
-	// Set Position [rad]
-	state.position = SOMATIC_NEW(Somatic__Vector);
+	// Position
+	Somatic__Vector position;
+	state.position = &position;
 	somatic__vector__init(state.position);
-
-	state.position->data = position;
+	state.position->data = pos_vals;
 	state.position->n_data = n_modules;
 
-	// Set Velocity [rad/s]
-	state.velocity = SOMATIC_NEW(Somatic__Vector);
+	// Velocity
+	Somatic__Vector velocity;
+	state.velocity = &velocity;
 	somatic__vector__init(state.velocity);
 
-	state.velocity->data = velocity;
+	state.velocity->data = vel_vals;
 	state.velocity->n_data = n_modules;
 
-	// Set Status Word
-	state.statusword = SOMATIC_NEW(Somatic__Ivector);
+	// Status word
+	Somatic__Ivector statusword;
+	state.statusword = &statusword;
 	somatic__ivector__init(state.statusword);
-
-	state.statusword->data = statusword;
+	state.statusword->data = SOMATIC_NEW_AR(int64_t, n_modules);
+	state.statusword->data[0] = (int64_t)statusword_vals[0];
+	state.statusword->data[1] = (int64_t)statusword_vals[1];
 	state.statusword->n_data = n_modules;
 
-	// Publish state
-	status = somatic_motorstate_publish(&state, state_chan);
-	somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot update publish states!\n");
+	//	printf("-----\n");
+	//	printf("%d \t %d\n", statusword_vals[0], statusword_vals[1]);
+	//	printf("%lld \t %lld\n", state.statusword->data[0], state.statusword->data[1]);
 
 	// // Print state channel size
-	// size_t size = somatic__motor_state__get_packed_size(&state);
-	// printf("\tmotor_state packed size = %d \n",size);
+	//	 size_t size = somatic__motor_state__get_packed_size(&state);
+	//	 printf("\tmotor_state packed size = %d \n",size);
 
-	// Cleanup heap-allocated part(s) of message
-	free(state.position);
-	free(state.velocity);
-	free(state.statusword);
+	int r = SOMATIC_PACK_SEND( state_chan, somatic__motor_state, &state );
+	aa_hard_assert( r == ACH_OK, "Couldn't send state message\n");
+
+	// Clean up
+	free(state.statusword->data);
+
 }
 
 void amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, ach_channel_t *state_chan)
@@ -213,7 +221,7 @@ void amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, a
 		exit(0);
 	}
 
-    /**
+	/**
 	 * Receive command message from the command channel, and send to amcdrive
 	 */
 
@@ -232,17 +240,17 @@ void amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, a
 	double motorRightCurrent = msg->values->data[1];
 
 	// Current limit
-    motorLeftCurrent = min(MAX_CURRENT, max(-MAX_CURRENT, motorLeftCurrent));
-    motorRightCurrent = min(MAX_CURRENT, max(-MAX_CURRENT, motorRightCurrent));
+	motorLeftCurrent = min(MAX_CURRENT, max(-MAX_CURRENT, motorLeftCurrent));
+	motorRightCurrent = min(MAX_CURRENT, max(-MAX_CURRENT, motorRightCurrent));
 
 	// Send current to amcdrive
 	status = amcdrive_set_current(&servos[0], motorLeftCurrent);
-	somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot set current (Left)!\n");
+	aa_hard_assert( status == NTCAN_SUCCESS, "Cannot set current (Left)!\n");
 	status = amcdrive_set_current(&servos[1], motorRightCurrent);
-    somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot set current (Right)!\n");
+	aa_hard_assert( status == NTCAN_SUCCESS, "Cannot set current (Right)!\n");
 
-    // Update states
-    amcdrive_update_state(servos, state_chan);
+	// Update states
+	amcdrive_update_state(servos, state_chan);
 
 }
 
@@ -251,22 +259,22 @@ void amcdrive_execute_and_update(servo_vars_t *servos, Somatic__MotorCmd *msg, a
  */
 int amcdrive_open(servo_vars_t *servos){
 
-     NTCAN_RESULT status = amcdrive_open_drives(opt_bus_id, opt_mod_id, n_modules,
-        REQUEST_TPDO_VELOCITY|REQUEST_TPDO_POSITION|ENABLE_RPDO_CURRENT|REQUEST_TPDO_STATUSWORD,
-        1000, servos);
-    if (status != NTCAN_SUCCESS) {
-        perror("amcdrive_open_drives");
-        return status;
-    }
-    servos[1].current_sign = -1;
+	NTCAN_RESULT r = amcdrive_open_drives(opt_bus_id, opt_mod_id, n_modules,
+			REQUEST_TPDO_VELOCITY|REQUEST_TPDO_POSITION|ENABLE_RPDO_CURRENT|REQUEST_TPDO_STATUSWORD,
+			1000, servos);
+	if (r != NTCAN_SUCCESS) {
+		perror("amcdrive_open_drives");
+		return r;
+	}
+	servos[1].current_sign = -1;
 
-    status = amcdrive_set_current(&servos[0], 0.0);
-    somatic_hard_assert(status == NTCAN_SUCCESS, "zero out 0\n");
+	r = amcdrive_set_current(&servos[0], 0.0);
+	aa_hard_assert(r == NTCAN_SUCCESS, "amcdrive_set_current error: %i\n", r);
 
-    status = amcdrive_set_current(&servos[1], 0.0);
-    somatic_hard_assert(status == NTCAN_SUCCESS, "zero out 1\n");
+	r = amcdrive_set_current(&servos[1], 0.0);
+	aa_hard_assert(r == NTCAN_SUCCESS, "amcdrive_set_current error: %i\n", r);
 
-    return 0;
+	return 0;
 }
 
 /**
@@ -277,87 +285,82 @@ int main(int argc, char *argv[]) {
 	/// Parse command line args
 	argp_parse(&argp, argc, argv, 0, NULL, NULL);
 
-	/// Argument check
-	if (n_buses < 1) { 	 fprintf(stderr, "ERROR: Must specify bus ID (e.g. -b 1).\n"); 	exit(1); }
-	if (n_modules < 2) { fprintf(stderr, "ERROR: Must specify two motor IDs (e.g. -m 20 -m 21).\n"); exit(EXIT_FAILURE); }
-
-	/// install signal handler
+	/// Install signal handler
 	somatic_sighandler_simple_install();
+
+	/// AMC drive init
+	servo_vars_t servos[2];
+	int r = amcdrive_open(servos);
+	aa_hard_assert(r == NTCAN_SUCCESS,  "AMC initialization failed. Error number: %i\n", r);
+
+	/// Create channel if requested
+	if (opt_create == 1) {
+		{
+			ach_create_attr_t attr;
+			ach_create_attr_init(&attr);
+			r = ach_create( (char*)opt_cmd_chan, 10, amciod_cmd_channel_size, &attr );
+			r |= ach_create( (char*)opt_state_chan, 10, amciod_state_channel_size, &attr );
+		}
+		aa_hard_assert(r == ACH_OK,
+				"ERROR: Ach failure %s on creating AMC channel (%s, line %d)\n",
+				ach_result_to_string((ach_status_t)r), __FILE__, __LINE__);
+	}
+
+	/// Ach channels for amciod
+	ach_channel_t cmd_chan, state_chan;
+	r  = ach_open( &cmd_chan, opt_cmd_chan, NULL );
+	r |= ach_open( &state_chan, opt_state_chan, NULL );
+	ach_flush(&cmd_chan);
 
 	/// Set the wait time based on specificed frequency
 	struct timespec wait_time = {
-	    .tv_sec = 0,
-	    .tv_nsec = (long int)((1.0/opt_frequency) * 1e9)
+			.tv_sec = 0,
+			.tv_nsec = (long int)((1.0/opt_frequency) * 1e9)
 	};
-
-	/// amcdrive setup
-	servo_vars_t servos[2];
-	NTCAN_RESULT status = amcdrive_open(servos);
-
-	if (opt_verbosity) {
-		fprintf(stderr, "AMC drives opened\n");
-		fprintf(stderr, "    n_module = %d\n", n_modules);
-		fprintf(stderr, "    module id = 0x%x  0x%x\n", servos[0].canopen_id, servos[1].canopen_id);
-	}
-
-	somatic_hard_assert(status == NTCAN_SUCCESS, "amcdrive initialization failed\n");
-
-	/// Create channels if requested
-	if (opt_create == 1) {
-		somatic_create_channel(opt_cmd_chan, 10, amciod_cmd_channel_size);
-		somatic_create_channel(opt_state_chan, 10, amciod_state_channel_size);
-	}
-
-	/// Ach channels for amcdrived
-	ach_channel_t *motor_cmd_channel = somatic_open_channel(opt_cmd_chan);
-	ach_channel_t *motor_state_channel = somatic_open_channel(opt_state_chan);
-
 
 	if (opt_verbosity) {
 		fprintf(stderr, "\n* AMCIOD *\n");
 		fprintf(stderr, "Verbosity:    %d\n", opt_verbosity);
 		fprintf(stderr, "command channel:      %s\n", opt_cmd_chan);
 		fprintf(stderr, "state channel:      %s\n", opt_state_chan);
+		fprintf(stderr, "n_module = %d\n", n_modules);
+		fprintf(stderr, "module id = 0x%x  0x%x\n", servos[0].canopen_id, servos[1].canopen_id);
 		fprintf(stderr, "-------\n");
 	}
-
 
 	/** \par Main loop
 	 *
 	 *  Listen on the motor command channel, and issue an amcdrive command for
 	 *  each incoming message.  When an acknowledgment is received from
 	 *  the module group, post it on the state channel.
-	 *
-	 *  TODO: In addition, set a blocking timeout, and when it expires issue a
-	 *  state update request to the modules and update the state channel
 	 */
-	int ach_result;
-
-	//  used "size_t size = somatic__motorstate__get_packed_size(msg);"  to find the size after packing a message
-
-	/// wait for SIGINT
 	while (!somatic_sig_received) {
-		struct timespec abstime = somatic_timespec_future(wait_time);
+
+		// returns the absolute time when receive should give up waiting
+		struct timespec abstime = aa_tm_future(wait_time);
 
 		/// read current state from state channel
-		Somatic__MotorCmd *cmd = somatic_motorcmd_receive(motor_cmd_channel, &ach_result, AMCIOD_CMD_CHANNEL_SIZE, &abstime, &protobuf_c_system_allocator);
-		somatic_hard_assert(ach_result == ACH_OK || ach_result == ACH_TIMEOUT, "Ach wait failure on cmd receive!\n");
+		Somatic__MotorCmd *cmd =
+				SOMATIC_WAIT_LAST_UNPACK( r, somatic__motor_cmd,
+						&protobuf_c_system_allocator,
+						1024, &cmd_chan, &abstime );
 
-		if (ach_result == ACH_TIMEOUT) {
-		    amcdrive_update_state(servos, motor_state_channel);
+		aa_hard_assert(r == ACH_OK || r == ACH_TIMEOUT,
+				"Ach wait failure %s on cmd receive (%s, line %d)\n",
+				ach_result_to_string(r),
+				__FILE__, __LINE__);
+
+		if (r == ACH_TIMEOUT) 	{
+			amcdrive_update_state(servos, &state_chan);
 		}
 		else {
-		    if (opt_verbosity) {
-			    somatic_motorcmd_print(cmd);
-		    }
-
-		    /// Issue command, and update state
-		    amcdrive_execute_and_update(servos, cmd, motor_state_channel);
-		    /// Cleanup
-		    somatic__motor_cmd__free_unpacked( cmd, &protobuf_c_system_allocator );
+			/// Issue command, and update state
+			amcdrive_execute_and_update(servos, cmd, &state_chan);
+			/// Cleanup
+			somatic__motor_cmd__free_unpacked( cmd, &protobuf_c_system_allocator );
 		}
 
-		if (opt_verbosity) {
+		if (opt_verbosity) 	{
 			printf("pos: %.0f  %.0f [cnt]\t", servos[0].act_pos, servos[1].act_pos);
 			printf("vel: %.3f  %.3f [rad/s]\t", COUNT_TO_RAD(servos[0].act_vel), COUNT_TO_RAD(servos[1].act_vel));
 			printf("status: 0x%x  0x%x\n", servos[0].status, servos[1].status);
@@ -365,14 +368,14 @@ int main(int argc, char *argv[]) {
 	}
 
 	/// Close channels
-	somatic_close_channel(motor_cmd_channel);
-	somatic_close_channel(motor_state_channel);
+	ach_close(&cmd_chan);
+	ach_close(&state_chan);
 
 	/// Stop motors
-    status = amcdrive_set_current(&servos[0], 0.0);
-    somatic_hard_assert(status == NTCAN_SUCCESS, "zero out 0\n");
-    status = amcdrive_set_current(&servos[1], 0.0);
-    somatic_hard_assert(status == NTCAN_SUCCESS, "zero out 1\n");
+	r = amcdrive_set_current(&servos[0], 0.0);
+	aa_hard_assert(r == NTCAN_SUCCESS, "amcdrive_set_current error: %i\n", r);
+	r = amcdrive_set_current(&servos[1], 0.0);
+	aa_hard_assert(r == NTCAN_SUCCESS, "amcdrive_set_current error: %i\n", r);
 
 	return 0;
 }

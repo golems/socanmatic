@@ -64,10 +64,9 @@
 #define AMCIOD_CMD_CHANNEL_NAME "amciod-cmd"
 #define AMCIOD_STATE_CHANNEL_NAME "amciod-state"
 #define AMCIOD_CMD_CHANNEL_SIZE 22
-#define AMCIOD_STATE_CHANNEL_SIZE 56
+#define AMCIOD_STATE_CHANNEL_SIZE 50
 
 #define MAX_CURRENT 50        // Max motor current (Amps)
-
 #define ENCODER_COUNT 4000
 #define GEAR_REDUCTION (15/1)
 
