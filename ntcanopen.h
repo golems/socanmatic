@@ -293,6 +293,13 @@ extern "C" {
                                              uint8_t node,
                                              uint16_t index, uint8_t subindex );
 
+/** Performs an SDO upload of a int32_t and waits for the response.
+ */
+    NTCAN_RESULT canOpenSDOWriteWait_ul_i32( NTCAN_HANDLE h, uint8_t *rcmd,
+                                             int32_t *value,
+                                             uint8_t node,
+                                             uint16_t index, uint8_t subindex );
+
 /// writes the sdo to stdout
     void canOpenDumpSDO( const sdo_msg_t *sdo );
 

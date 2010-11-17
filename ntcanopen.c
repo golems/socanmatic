@@ -228,6 +228,18 @@ NTCAN_RESULT canOpenSDOWriteWait_ul_u32( NTCAN_HANDLE h, uint8_t *rcmd,
     return ntr;
 }
 
+NTCAN_RESULT canOpenSDOWriteWait_ul_i32( NTCAN_HANDLE h, uint8_t *rcmd,
+                                         int32_t *value, uint8_t node,
+                                         uint16_t index, uint8_t subindex ){
+    NTCAN_RESULT ntr;
+    sdo_msg_t msg, rmsg;
+    put_sdo_ul_args( &msg, node, index, subindex );
+    ntr = canOpenSDOWriteWait( h, &msg, &rmsg );
+    if( rcmd ) *rcmd = rmsg.command;
+    if( value ) *value = canOpenGet_int32( &rmsg );
+    return ntr;
+}
+
 void canOpenDumpSDO( const sdo_msg_t *sdo ) {
     printf( "%02x.%02x[%04x.%02x] ", sdo->node, sdo->command, sdo->index, sdo->subindex);
     int i;
