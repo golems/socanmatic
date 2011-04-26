@@ -156,9 +156,10 @@ void amcdrive_update_state(servo_vars_t *servos, ach_channel_t *state_chan)
 
 	double pos_vals[2] = { COUNT_TO_RAD(servos[0].act_pos), COUNT_TO_RAD(servos[1].act_pos) };
 	double vel_vals[2] = { COUNT_TO_RAD(servos[0].act_vel), COUNT_TO_RAD(servos[1].act_vel) };
-	int16_t statusword_vals[2];
-	statusword_vals[0] = servos[0].status;
-	statusword_vals[1] = servos[1].status;
+	double cur_vals[2] = { 0.0, 0.0 };  // To be correct!!
+//	int16_t statusword_vals[2];
+//	statusword_vals[0] = servos[0].status;
+//	statusword_vals[1] = servos[1].status;
 
 	/**
 	 * Package a state message, and send/publish to state channel
@@ -186,14 +187,22 @@ void amcdrive_update_state(servo_vars_t *servos, ach_channel_t *state_chan)
 	state.velocity->data = vel_vals;
 	state.velocity->n_data = n_modules;
 
+	// Current
+	Somatic__Vector current;
+	state.current = &current;
+	somatic__vector__init(state.current);
+
+	state.current->data = cur_vals;
+	state.current->n_data = n_modules;
+
 	// Status word
-	Somatic__Ivector statusword;
-	state.statusword = &statusword;
-	somatic__ivector__init(state.statusword);
-	state.statusword->data = SOMATIC_NEW_AR(int64_t, n_modules);
-	state.statusword->data[0] = (int64_t)statusword_vals[0];
-	state.statusword->data[1] = (int64_t)statusword_vals[1];
-	state.statusword->n_data = n_modules;
+//	Somatic__Ivector statusword;
+//	state.statusword = &statusword;
+//	somatic__ivector__init(state.statusword);
+//	state.statusword->data = SOMATIC_NEW_AR(int64_t, n_modules);
+//	state.statusword->data[0] = (int64_t)statusword_vals[0];
+//	state.statusword->data[1] = (int64_t)statusword_vals[1];
+//	state.statusword->n_data = n_modules;
 
 	//	printf("-----\n");
 	//	printf("%d \t %d\n", statusword_vals[0], statusword_vals[1]);
@@ -207,7 +216,7 @@ void amcdrive_update_state(servo_vars_t *servos, ach_channel_t *state_chan)
 	aa_hard_assert( r == ACH_OK, "Couldn't send state message\n");
 
 	// Clean up
-	free(state.statusword->data);
+//	free(state.statusword->data);
 
 }
 
