@@ -1,4 +1,4 @@
-/* -*- mode: C; c-basic-offset: 2  -*- */
+/* -*- mode: C; c-basic-offset: 8; indent-tabs-mode: t  -*- */
 /** \file amciod.c
  *
  *  \author Jon Scholz
@@ -14,13 +14,20 @@
  *  NOTE: The daemon reads state message in [rad, rad/s], and writes command message in [Ampere].
  */
 
-#include "include/amccan.h"
-#include "include/amcdrive.h"
-#include "include/amciod.h"
+#include "amccan.h"
+#include "amcdrive.h"
+#include "amciod.h"
+#include <somatic/daemon.h>
 
 /* ---------- */
 /* ARGP Junk  */
 /* ---------- */
+typedef struct {
+    somatic_d_t d;
+    somatic_d_opts_t d_opts;
+} cx_t;
+
+
 //TODO: replace these with vars from parsing args
 static const char *opt_cmd_chan = AMCIOD_CMD_CHANNEL_NAME;
 static const char *opt_state_chan = AMCIOD_STATE_CHANNEL_NAME;
@@ -79,12 +86,13 @@ static struct argp_option options[] = {
 				.doc = "Define a module ID for a motor index (e.g. 0x20)"
 		},
 		{
-				.name = "bus",
-				.key = 'b',
-				.arg = "CAN_bus",
-				.flags = 0,
-				.doc = "Define a CAN bus for a module"
+			.name = "bus",
+			.key = 'b',
+			.arg = "CAN_bus",
+			.flags = 0,
+			.doc = "Define a CAN bus for a module"
 		},
+		SOMATIC_D_ARGP_OPTS,
 		{
 				.name = NULL,
 				.key = 0,
@@ -107,7 +115,7 @@ static char doc[] = "reads somatic messages and sends amcdrive motor commands";
 static struct argp argp = {options, parse_opt, args_doc, doc, NULL, NULL, NULL };
 
 static int parse_opt(int key, char *arg, struct argp_state *state) {
-	(void) state; // ignore unused parameter
+	cx_t *cx = (cx_t*)state->input;
 
 	if (n_buses > 1) {   fprintf(stderr, "ERROR: Accept only one -b parameters.\n");  exit(1); }
 	if (n_modules > 2) { fprintf(stderr, "ERROR: Accept only two -m parameters.\n");  exit(1); }
@@ -139,9 +147,11 @@ static int parse_opt(int key, char *arg, struct argp_state *state) {
 		assert(mod < UINT8_MAX);
 		opt_mod_id[n_modules++] = (uint8_t) mod;
 		break;
-	default:
-		return ARGP_ERR_UNKNOWN;
 	}
+	somatic_d_argp_parse( key, arg, &cx->d_opts );
+
+
+
 	return 0;
 }
 
@@ -275,6 +285,7 @@ int amcdrive_open(servo_vars_t *servos){
 		perror("amcdrive_open_drives");
 		return r;
 	}
+	// FIXME: WTF? -ntd
 	servos[1].current_sign = -1;
 
 	r = amcdrive_set_current(&servos[0], 0.0);
@@ -291,11 +302,18 @@ int amcdrive_open(servo_vars_t *servos){
  */
 int main(int argc, char *argv[]) {
 
-	/// Parse command line args
-	argp_parse(&argp, argc, argv, 0, NULL, NULL);
+	static cx_t cx;
+	memset(&cx,0,sizeof(cx));
+	cx.d_opts.ident = "amciod";
+	cx.d_opts.sched_rt = SOMATIC_D_SCHED_MOTOR;
 
-	/// Install signal handler
-	somatic_sighandler_simple_install();
+	// ------------- INIT --------------------
+
+	/// Parse command line args
+	argp_parse(&argp, argc, argv, 0, NULL, &cx);
+	
+	// init daemon context
+	somatic_d_init(&cx.d, &cx.d_opts);
 
 	/// AMC drive init
 	servo_vars_t servos[2];
@@ -317,8 +335,8 @@ int main(int argc, char *argv[]) {
 
 	/// Ach channels for amciod
 	ach_channel_t cmd_chan, state_chan;
-	r  = ach_open( &cmd_chan, opt_cmd_chan, NULL );
-	r |= ach_open( &state_chan, opt_state_chan, NULL );
+	somatic_d_channel_open(&cx.d, &cmd_chan, opt_cmd_chan, NULL );
+	somatic_d_channel_open(&cx.d, &state_chan, opt_state_chan, NULL );
 	ach_flush(&cmd_chan);
 
 	/// Set the wait time based on specificed frequency
@@ -337,6 +355,8 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "-------\n");
 	}
 
+	// ------------- RUN --------------------
+
 	/** \par Main loop
 	 *
 	 *  Listen on the motor command channel, and issue an amcdrive command for
@@ -344,17 +364,19 @@ int main(int argc, char *argv[]) {
 	 *  the module group, post it on the state channel.
 	 */
 	while (!somatic_sig_received) {
+		// free memory
+		aa_region_release( &cx.d.memreg );
 
 		// returns the absolute time when receive should give up waiting
 		struct timespec abstime = aa_tm_future(wait_time);
 
 		/// read current state from state channel
 		Somatic__MotorCmd *cmd =
-				SOMATIC_WAIT_LAST_UNPACK( r, somatic__motor_cmd,
-						&protobuf_c_system_allocator,
-						1024, &cmd_chan, &abstime );
-
-		aa_hard_assert(r == ACH_OK || r == ACH_TIMEOUT,
+			SOMATIC_D_GET( &r, somatic__motor_cmd, &cx.d,
+				       &cmd_chan, &abstime, 
+				       ACH_O_WAIT | ACH_O_LAST  );
+		
+		aa_hard_assert(r == ACH_OK || r == ACH_TIMEOUT || ACH_MISSED_FRAME == r,
 				"Ach wait failure %s on cmd receive (%s, line %d)\n",
 				ach_result_to_string(r),
 				__FILE__, __LINE__);
@@ -366,7 +388,6 @@ int main(int argc, char *argv[]) {
 			/// Issue command, and update state
 			amcdrive_execute_and_update(servos, cmd, &state_chan);
 			/// Cleanup
-			somatic__motor_cmd__free_unpacked( cmd, &protobuf_c_system_allocator );
 		}
 
 		if (opt_verbosity) 	{
@@ -376,15 +397,19 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	/// Close channels
-	ach_close(&cmd_chan);
-	ach_close(&state_chan);
+	// ------------ DESTROY --------------
 
 	/// Stop motors
 	r = amcdrive_set_current(&servos[0], 0.0);
 	aa_hard_assert(r == NTCAN_SUCCESS, "amcdrive_set_current error: %i\n", r);
 	r = amcdrive_set_current(&servos[1], 0.0);
 	aa_hard_assert(r == NTCAN_SUCCESS, "amcdrive_set_current error: %i\n", r);
+
+	/// Close channels
+	ach_close(&cmd_chan);
+	ach_close(&state_chan);
+
+	somatic_d_destroy(&cx.d);
 
 	return 0;
 }
