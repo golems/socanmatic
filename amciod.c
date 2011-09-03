@@ -1,5 +1,5 @@
 /* -*- mode: C; c-basic-offset: 4; indent-tabs-mode: nil  -*- */
-/* ex: set shiftwidth=4 expandtab: */ 
+/* ex: set shiftwidth=4 expandtab: */
 /** \file amciod.c
  *
  *  \author Jon Scholz
@@ -39,11 +39,11 @@ static unsigned int  amciod_state_channel_size = AMCIOD_STATE_CHANNEL_SIZE;
 
 static int opt_create = 0;
 static int opt_verbosity = 0;
-static double opt_frequency = 30.0; // refresh at 30 hz
-static size_t n_buses = 0;			// number of bus
-static size_t n_modules = 0;		// number of amc modules
-static int32_t opt_bus_id = 0; 		// amc bus id
-static uint8_t opt_mod_id[2];		// amc module id
+static double opt_frequency = 30.0;   // refresh at 30 hz
+static size_t n_buses = 0;            // number of bus
+static size_t n_modules = 0;          // number of amc modules
+static int32_t opt_bus_id = 0;        // amc bus id
+static uint8_t opt_mod_id[2];         // amc module id
 
 static struct argp_option options[] = {
     {
@@ -142,7 +142,7 @@ static int parse_opt(int key, char *arg, struct argp_state *state) {
         opt_frequency = atof(arg);
         break;
     case 'b':
-        opt_bus_id = atoi(arg);		// accept only one bus id
+        opt_bus_id = atoi(arg);      // accept only one bus id
         n_buses++;
         break;
     case 'm':
@@ -158,8 +158,8 @@ static int parse_opt(int key, char *arg, struct argp_state *state) {
     return 0;
 }
 
-void amcdrive_update_state(cx_t *cx, servo_vars_t *servos, 
-			   ach_channel_t *state_chan)
+void amcdrive_update_state( cx_t *cx, servo_vars_t *servos,
+                            ach_channel_t *state_chan)
 {
     // Update amcdrive state
     NTCAN_RESULT status =  amcdrive_update_drives(servos, (int)n_modules);
@@ -174,12 +174,12 @@ void amcdrive_update_state(cx_t *cx, servo_vars_t *servos,
     int r = SOMATIC_PACK_SEND( state_chan, somatic__motor_state, cx->state_msg );
 
     /// check message transmission
-    somatic_d_check( &cx->d, SOMATIC__EVENT__PRIORITIES__CRIT, 
+    somatic_d_check( &cx->d, SOMATIC__EVENT__PRIORITIES__CRIT,
                      SOMATIC__EVENT__CODES__COMM_FAILED_TRANSPORT,
                      ACH_OK == r,
                      "update_state",
                      "ach result: %s", ach_result_to_string(r) );
-	
+
 }
 
 void amcdrive_execute_and_update(cx_t *cx, servo_vars_t *servos, Somatic__MotorCmd *msg, ach_channel_t *state_chan)
@@ -264,7 +264,7 @@ int main(int argc, char *argv[]) {
 
     /// Parse command line args
     argp_parse(&argp, argc, argv, 0, NULL, &cx);
-	
+
     // init daemon context
     somatic_d_init(&cx.d, &cx.d_opts);
 
@@ -334,15 +334,15 @@ int main(int argc, char *argv[]) {
         /// read current state from state channel
         Somatic__MotorCmd *cmd =
             SOMATIC_D_GET( &r, somatic__motor_cmd, &cx.d,
-                           &cmd_chan, &abstime, 
+                           &cmd_chan, &abstime,
                            ACH_O_WAIT | ACH_O_LAST  );
-		
+
         aa_hard_assert(r == ACH_OK || r == ACH_TIMEOUT || ACH_MISSED_FRAME == r,
                        "Ach wait failure %s on cmd receive (%s, line %d)\n",
                        ach_result_to_string(r),
                        __FILE__, __LINE__);
 
-        if (r == ACH_TIMEOUT) 	{
+        if (r == ACH_TIMEOUT) {
             amcdrive_update_state(&cx, servos, &state_chan);
         }
         else {
@@ -351,7 +351,7 @@ int main(int argc, char *argv[]) {
             /// Cleanup
         }
 
-        if (opt_verbosity) 	{
+        if (opt_verbosity) {
             printf("pos: %.0f  %.0f [cnt]\t", servos[0].act_pos, servos[1].act_pos);
             printf("vel: %.3f  %.3f [rad/s]\t", COUNT_TO_RAD(servos[0].act_vel), COUNT_TO_RAD(servos[1].act_vel));
             printf("status: 0x%x  0x%x\n", servos[0].status, servos[1].status);

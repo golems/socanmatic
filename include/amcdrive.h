@@ -1,5 +1,5 @@
 /* -*- mode: C; c-basic-offset: 4; indent-tabs-mode: nil  -*- */
-/* ex: set shiftwidth=4 expandtab: */ 
+/* ex: set shiftwidth=4 expandtab: */
 
 #ifndef _AMCDRIVE_H_
 #define _AMCDRIVE_H_
@@ -12,20 +12,20 @@
 typedef struct {
 
     NTCAN_HANDLE handle;
-    
-    uint8_t canopen_id; 	// CANopen identifier
-    int8_t  current_sign; 	// Flip current?
+
+    uint8_t canopen_id;         // CANopen identifier
+    int8_t  current_sign;       // Flip current?
 
     // Conversion factor (see Appendix A in the manual)
-    uint16_t k_i;    		// Feedback interpolation value
-    uint32_t k_s;    		// Switch frequency of the drive in Hz
-    uint16_t k_p;    		// Maximum rated peak current of the drive in amps
+    uint16_t k_i;               // Feedback interpolation value
+    uint32_t k_s;               // Switch frequency of the drive in Hz
+    uint16_t k_p;               // Maximum rated peak current of the drive in amps
 
     // Read by PDO
-    double act_pos;   		// Actual position in counts (we use double instead of int to avoid wraparound)
-    double act_vel;  		// Actual velocity in counts per second
-    double act_cur; 		// Actual current
-    int16_t status;			// Status word of the drive
+    double act_pos;             // Actual position in counts (we use double instead of int to avoid wraparound)
+    double act_vel;             // Actual velocity in counts per second
+    double act_cur;             // Actual current
+    int16_t status;             // Status word of the drive
 
     // PDO->COB mappings
     uint16_t rpdo_position;

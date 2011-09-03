@@ -1,5 +1,5 @@
 /* -*- mode: C; c-basic-offset: 4; indent-tabs-mode: nil  -*- */
-/* ex: set shiftwidth=4 expandtab: */ 
+/* ex: set shiftwidth=4 expandtab: */
 
 /*
  * Copyright (c) 2009-2010, Georgia Tech Research Corporation
