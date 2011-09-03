@@ -1,3 +1,6 @@
+/* -*- mode: C; c-basic-offset: 4; indent-tabs-mode: nil  -*- */
+/* ex: set shiftwidth=4 expandtab: */ 
+
 #include <stdio.h>
 #include <stdarg.h>
 #include <ntcan.h>
@@ -20,14 +23,14 @@ static uint16_t cob_base = 0x200;
 
 uint16_t uadd(uint16_t a, uint16_t b)
 {
-	assert(a + b < UINT16_MAX);
-	return (uint16_t)(a + b);
+    assert(a + b < UINT16_MAX);
+    return (uint16_t)(a + b);
 }
 
 uint16_t umult(uint16_t a, uint16_t b)
 {
-	assert(a * b < UINT16_MAX);
-	return (uint16_t)(a * b);
+    assert(a * b < UINT16_MAX);
+    return (uint16_t)(a * b);
 }
 
 static NTCAN_RESULT fail(NTCAN_RESULT result, const char *format, ...) {
@@ -59,22 +62,22 @@ static NTCAN_RESULT amcdrive_get_info(NTCAN_HANDLE handle, uint8_t id, servo_var
     uint8_t rcmd;
     
     status = try_ntcan_dl("read max current", &rcmd,
-        canOpenSDOWriteWait_ul_u16(handle, &rcmd, &drive_info->k_p, id,
-            AMCCAN_INDEX_BOARD_INFO, AMCCAN_SUBINDEX_MAX_PEAK_CURRENT));
+                          canOpenSDOWriteWait_ul_u16(handle, &rcmd, &drive_info->k_p, id,
+                                                     AMCCAN_INDEX_BOARD_INFO, AMCCAN_SUBINDEX_MAX_PEAK_CURRENT));
     if (status != NTCAN_SUCCESS)
         return status;
     
     uint32_t switchingFrequencyPBF;
     status = try_ntcan_dl("read switching frequency", &rcmd,
-        canOpenSDOWriteWait_ul_u32(handle, &rcmd, &switchingFrequencyPBF, id,
-            AMCCAN_INDEX_BOARD_INFO, AMCCAN_SUBINDEX_BOARD_SWITCH_FREQ));
+                          canOpenSDOWriteWait_ul_u32(handle, &rcmd, &switchingFrequencyPBF, id,
+                                                     AMCCAN_INDEX_BOARD_INFO, AMCCAN_SUBINDEX_BOARD_SWITCH_FREQ));
     if (status != NTCAN_SUCCESS)
         return status;
     drive_info->k_s = 1000*amcccan_decode_pbf(switchingFrequencyPBF);
     
     status = try_ntcan_dl("read feedback interpolation", &rcmd,
-        canOpenSDOWriteWait_ul_u16(handle, &rcmd, &drive_info->k_i, id,
-            AMCCAN_INDEX_FEEDBACK_PARM, AMCCAN_SUBINDEX_FEEDBACK_POS_INTERP));
+                          canOpenSDOWriteWait_ul_u16(handle, &rcmd, &drive_info->k_i, id,
+                                                     AMCCAN_INDEX_FEEDBACK_PARM, AMCCAN_SUBINDEX_FEEDBACK_POS_INTERP));
     if (status != NTCAN_SUCCESS)
         return status;
     
@@ -95,11 +98,11 @@ static NTCAN_RESULT amcdrive_enable_pdos(NTCAN_HANDLE handle, uint8_t id, uint p
     drive_info->tpdo_current    = uadd(cob_base, uadd(cob_offset, 5));
     drive_info->tpdo_statusword = uadd(cob_base, uadd(cob_offset, 6));
     
-  /*  eprintf(" %x\t%x\t%x\t%x\t%x\t%x\t%x\n",
-    		drive_info->rpdo_position, drive_info->rpdo_velocity, drive_info->rpdo_current,
-    		drive_info->tpdo_position, drive_info->tpdo_velocity, drive_info->tpdo_current,
-    		drive_info->tpdo_statusword);
-  */
+    /*  eprintf(" %x\t%x\t%x\t%x\t%x\t%x\t%x\n",
+        drive_info->rpdo_position, drive_info->rpdo_velocity, drive_info->rpdo_current,
+        drive_info->tpdo_position, drive_info->tpdo_velocity, drive_info->tpdo_current,
+        drive_info->tpdo_statusword);
+    */
 
     // If they requested it, we assume they want it.
     canIdAdd(handle, drive_info->tpdo_position);
@@ -112,22 +115,22 @@ static NTCAN_RESULT amcdrive_enable_pdos(NTCAN_HANDLE handle, uint8_t id, uint p
      */
     dprintf("rpdo_position: %d\n", (pdos & ENABLE_RPDO_POSITION) == 0);
     status = try_ntcan_dl("rpdo_position", &rcmd,
-        amccan_dl_pdo_id(handle, &rcmd, id, AMCCAN_RPDO_3,
-            drive_info->rpdo_position, (uint32_t)((pdos & ENABLE_RPDO_POSITION) == 0), 0));
+                          amccan_dl_pdo_id(handle, &rcmd, id, AMCCAN_RPDO_3,
+                                           drive_info->rpdo_position, (uint32_t)((pdos & ENABLE_RPDO_POSITION) == 0), 0));
     if (status != NTCAN_SUCCESS)
         return status;
     
     dprintf("rpdo_velocity: %d\n", (pdos & ENABLE_RPDO_VELOCITY) == 0);
     status = try_ntcan_dl("rpdo_velocity", &rcmd,
-        amccan_dl_pdo_id(handle, &rcmd, id, AMCCAN_RPDO_4,
-            drive_info->rpdo_velocity, (uint32_t)((pdos & ENABLE_RPDO_VELOCITY) == 0), 0));
+                          amccan_dl_pdo_id(handle, &rcmd, id, AMCCAN_RPDO_4,
+                                           drive_info->rpdo_velocity, (uint32_t)((pdos & ENABLE_RPDO_VELOCITY) == 0), 0));
     if (status != NTCAN_SUCCESS)
         return status;
     
     dprintf("rpdo_current: %d\n", (pdos & ENABLE_RPDO_CURRENT) == 0);
     status = try_ntcan_dl("rpdo_current", &rcmd,
-        amccan_dl_pdo_id(handle, &rcmd, id, AMCCAN_RPDO_5,
-            drive_info->rpdo_current, (uint32_t)((pdos & ENABLE_RPDO_CURRENT) == 0), 0));
+                          amccan_dl_pdo_id(handle, &rcmd, id, AMCCAN_RPDO_5,
+                                           drive_info->rpdo_current, (uint32_t)((pdos & ENABLE_RPDO_CURRENT) == 0), 0));
     if (status != NTCAN_SUCCESS)
         return status;
     
@@ -136,29 +139,29 @@ static NTCAN_RESULT amcdrive_enable_pdos(NTCAN_HANDLE handle, uint8_t id, uint p
      */
     dprintf("tpdo_statusword: %d\n", (pdos & REQUEST_TPDO_STATUSWORD) == 0);
     status = try_ntcan_dl("tpdo_current", &rcmd,
-    		amccan_dl_pdo_id(handle, &rcmd, id, AMCCAN_TPDO_1,
-    				drive_info->tpdo_statusword, (uint32_t)((pdos & REQUEST_TPDO_STATUSWORD) == 0), 0));
+                          amccan_dl_pdo_id(handle, &rcmd, id, AMCCAN_TPDO_1,
+                                           drive_info->tpdo_statusword, (uint32_t)((pdos & REQUEST_TPDO_STATUSWORD) == 0), 0));
     if (status != NTCAN_SUCCESS)
     	return status;
 
     dprintf("tpdo_position: %d\n", (pdos & REQUEST_TPDO_POSITION) == 0);
     status = try_ntcan_dl("tpdo_position", &rcmd,
-        amccan_dl_pdo_id(handle, &rcmd, id, AMCCAN_TPDO_3,
-            drive_info->tpdo_position, (uint32_t)((pdos & REQUEST_TPDO_POSITION) == 0), 0));
+                          amccan_dl_pdo_id(handle, &rcmd, id, AMCCAN_TPDO_3,
+                                           drive_info->tpdo_position, (uint32_t)((pdos & REQUEST_TPDO_POSITION) == 0), 0));
     if (status != NTCAN_SUCCESS)
         return status;
     
     dprintf("tpdo_velocity: %d\n", (pdos & REQUEST_TPDO_VELOCITY) == 0);
     status = try_ntcan_dl("tpdo_velocity", &rcmd,
-        amccan_dl_pdo_id(handle, &rcmd, id, AMCCAN_TPDO_4,
-            drive_info->tpdo_velocity, (uint32_t)((pdos & REQUEST_TPDO_VELOCITY) == 0), 0));
+                          amccan_dl_pdo_id(handle, &rcmd, id, AMCCAN_TPDO_4,
+                                           drive_info->tpdo_velocity, (uint32_t)((pdos & REQUEST_TPDO_VELOCITY) == 0), 0));
     if (status != NTCAN_SUCCESS)
         return status;
     
     dprintf("tpdo_current: %d\n", (pdos & REQUEST_TPDO_CURRENT) == 0);
     status = try_ntcan_dl("tpdo_current", &rcmd,
-    		amccan_dl_pdo_id(handle, &rcmd, id, AMCCAN_TPDO_5,
-    				drive_info->tpdo_current, (uint32_t)((pdos & REQUEST_TPDO_CURRENT) == 0), 0));
+                          amccan_dl_pdo_id(handle, &rcmd, id, AMCCAN_TPDO_5,
+                                           drive_info->tpdo_current, (uint32_t)((pdos & REQUEST_TPDO_CURRENT) == 0), 0));
     if (status != NTCAN_SUCCESS)
     	return status;
 
@@ -172,45 +175,45 @@ NTCAN_RESULT amcdrive_enable_async_timer(NTCAN_HANDLE handle, uint8_t id, uint u
     // Configure PDOs to function in ASYNC mode
     // RPDO
     status = try_ntcan_dl("rpdo_position_set", &rcmd,
-        amccan_dl_pdo_trans(handle, &rcmd, id, 
-            AMCCAN_RPDO_3, AMCCAN_PDO_TRANS_ASYNC, 0));
+                          amccan_dl_pdo_trans(handle, &rcmd, id, 
+                                              AMCCAN_RPDO_3, AMCCAN_PDO_TRANS_ASYNC, 0));
     if (status != NTCAN_SUCCESS)
         return status;
     
     status = try_ntcan_dl("rpdo_velocity_set", &rcmd,
-        amccan_dl_pdo_trans(handle, &rcmd, id, 
-            AMCCAN_RPDO_4, AMCCAN_PDO_TRANS_ASYNC, 0));
+                          amccan_dl_pdo_trans(handle, &rcmd, id, 
+                                              AMCCAN_RPDO_4, AMCCAN_PDO_TRANS_ASYNC, 0));
     if (status != NTCAN_SUCCESS)
         return status;
     
     status = try_ntcan_dl("rpdo_current_set", &rcmd,
-        amccan_dl_pdo_trans(handle, &rcmd, id, 
-            AMCCAN_RPDO_5, AMCCAN_PDO_TRANS_ASYNC, 0));
+                          amccan_dl_pdo_trans(handle, &rcmd, id, 
+                                              AMCCAN_RPDO_5, AMCCAN_PDO_TRANS_ASYNC, 0));
     if (status != NTCAN_SUCCESS)
         return status;
     
     // TPDO
     status = try_ntcan_dl("tpdo_statusword_transmission", &rcmd,
-        amccan_dl_pdo_trans(handle, &rcmd, id,
-            AMCCAN_TPDO_1, AMCCAN_PDO_TRANS_ASYNC, 0));
+                          amccan_dl_pdo_trans(handle, &rcmd, id,
+                                              AMCCAN_TPDO_1, AMCCAN_PDO_TRANS_ASYNC, 0));
     if (status != NTCAN_SUCCESS)
         return status;
 
     status = try_ntcan_dl("tpdo_position_transmission", &rcmd,
-        amccan_dl_pdo_trans(handle, &rcmd, id, 
-            AMCCAN_TPDO_3, AMCCAN_PDO_TRANS_ASYNC, 0));
+                          amccan_dl_pdo_trans(handle, &rcmd, id, 
+                                              AMCCAN_TPDO_3, AMCCAN_PDO_TRANS_ASYNC, 0));
     if (status != NTCAN_SUCCESS)
         return status;
     
     status = try_ntcan_dl("tpdo_velocity_transmission", &rcmd,
-        amccan_dl_pdo_trans(handle, &rcmd, id, 
-            AMCCAN_TPDO_4, AMCCAN_PDO_TRANS_ASYNC, 0));
+                          amccan_dl_pdo_trans(handle, &rcmd, id, 
+                                              AMCCAN_TPDO_4, AMCCAN_PDO_TRANS_ASYNC, 0));
     if (status != NTCAN_SUCCESS)
         return status;
     
     status = try_ntcan_dl("tpdo_current_transmission", &rcmd,
-        amccan_dl_pdo_trans(handle, &rcmd, id, 
-            AMCCAN_TPDO_5, AMCCAN_PDO_TRANS_ASYNC, 0));
+                          amccan_dl_pdo_trans(handle, &rcmd, id, 
+                                              AMCCAN_TPDO_5, AMCCAN_PDO_TRANS_ASYNC, 0));
     if (status != NTCAN_SUCCESS)
         return status;
 
@@ -218,7 +221,7 @@ NTCAN_RESULT amcdrive_enable_async_timer(NTCAN_HANDLE handle, uint8_t id, uint u
     uint32_t tpdos[] = {AMCCAN_TPDO_1 , AMCCAN_TPDO_3, AMCCAN_TPDO_4, AMCCAN_TPDO_5 };
     int tpdos_length = 4;	// length of tpdos[]
     status = try_ntcan_dl("enable_timer", &rcmd,
-        amccan_dl_timer1(handle, &rcmd, id, cycle_time, tpdos, tpdos_length));
+                          amccan_dl_timer1(handle, &rcmd, id, cycle_time, tpdos, tpdos_length));
     
     return status;
 }
@@ -229,57 +232,57 @@ NTCAN_RESULT amcdrive_start(NTCAN_HANDLE handle, uint8_t id) {
    
     // Both of these reset any errors -- requires a transition on CW from 0->1
     status = try_ntcan_dl("control - shutdown", &rcmd,
-    amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_SHUTDOWN));
+                          amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_SHUTDOWN));
     if (status != NTCAN_SUCCESS)
         return status;
  
     status = try_ntcan_dl("control - reset error", &rcmd,
-    amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_RESET_FAULT));
+                          amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_RESET_FAULT));
     if (status != NTCAN_SUCCESS)
         return status;
  
     status = try_ntcan_dl("control - shutdown", &rcmd,
-    amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_SHUTDOWN));
+                          amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_SHUTDOWN));
     if (status != NTCAN_SUCCESS)
         return status;
     
     status = try_ntcan_dl("control - reset error", &rcmd,
-    amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_RESET_FAULT));
+                          amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_RESET_FAULT));
     if (status != NTCAN_SUCCESS)
         return status;
 
     status = try_ntcan_dl("control - shutdown", &rcmd,
-    amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_SHUTDOWN));
+                          amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_SHUTDOWN));
     if (status != NTCAN_SUCCESS)
 	return status;
    
     status = try_ntcan_dl("control - reset error", &rcmd,
-    amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_RESET_FAULT));
+                          amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_RESET_FAULT));
     if (status != NTCAN_SUCCESS)
 	return status;
    
 
     // Put the drive into pre-operational state
     status = try_ntcan("NMT Start",
-        canOpenWriteNMT(handle, id, CANOPEN_NMT_START_REMOTE));
+                       canOpenWriteNMT(handle, id, CANOPEN_NMT_START_REMOTE));
 
     status = try_ntcan_dl("control - shutdown", &rcmd,
-        amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_SHUTDOWN));
+                          amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_SHUTDOWN));
     if (status != NTCAN_SUCCESS)
         return status;
     
     status = try_ntcan_dl("control - switch on", &rcmd,
-        amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_SWITCH_ON));
+                          amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_SWITCH_ON));
     if (status != NTCAN_SUCCESS)
         return status;
     
     status = try_ntcan_dl("current mode", &rcmd,
-        amccan_dl_op_mode( handle, &rcmd, id, AMCCAN_OP_MODE_CURRENT));
+                          amccan_dl_op_mode( handle, &rcmd, id, AMCCAN_OP_MODE_CURRENT));
     if (status != NTCAN_SUCCESS)
         return status;
     
     status = try_ntcan_dl("control - enable",&rcmd,
-        amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_ENABLE_OPERATION));
+                          amccan_dl_control(handle, &rcmd, id, AMCCAN_CONTROL_STATE_ENABLE_OPERATION));
     if (status != NTCAN_SUCCESS)
         return status;
     
@@ -291,7 +294,7 @@ NTCAN_RESULT amcdrive_stop_drive(servo_vars_t *drive) {
     uint8_t rcmd;
 
     status = try_ntcan_dl("control - shutdown", &rcmd,
-        amccan_dl_control(drive->handle, &rcmd, drive->canopen_id, AMCCAN_CONTROL_STATE_SHUTDOWN));
+                          amccan_dl_control(drive->handle, &rcmd, drive->canopen_id, AMCCAN_CONTROL_STATE_SHUTDOWN));
     if (status != NTCAN_SUCCESS)
         return status;
 
@@ -303,17 +306,17 @@ NTCAN_RESULT amcdrive_start_drive(servo_vars_t *drive) {
     uint8_t rcmd;
 
     status = try_ntcan_dl("control - switch on", &rcmd,
-        amccan_dl_control(drive->handle, &rcmd, drive->canopen_id, AMCCAN_CONTROL_STATE_SWITCH_ON));
+                          amccan_dl_control(drive->handle, &rcmd, drive->canopen_id, AMCCAN_CONTROL_STATE_SWITCH_ON));
     if (status != NTCAN_SUCCESS)
         return status;
     
     status = try_ntcan_dl("current mode", &rcmd,
-        amccan_dl_op_mode( drive->handle, &rcmd, drive->canopen_id, AMCCAN_OP_MODE_CURRENT));
+                          amccan_dl_op_mode( drive->handle, &rcmd, drive->canopen_id, AMCCAN_OP_MODE_CURRENT));
     if (status != NTCAN_SUCCESS)
         return status;
     
     status = try_ntcan_dl("control - enable",&rcmd,
-        amccan_dl_control(drive->handle, &rcmd, drive->canopen_id, AMCCAN_CONTROL_STATE_ENABLE_OPERATION));
+                          amccan_dl_control(drive->handle, &rcmd, drive->canopen_id, AMCCAN_CONTROL_STATE_ENABLE_OPERATION));
     if (status != NTCAN_SUCCESS)
         return status;
 
@@ -324,7 +327,7 @@ NTCAN_RESULT amcdrive_reset_drive(NTCAN_HANDLE handle, uint8_t identifier) {
     NTCAN_RESULT status;
 
     status = try_ntcan("reset",
-        canOpenWriteNMT(handle, identifier, CANOPEN_NMT_RESET_NODE));
+                       canOpenWriteNMT(handle, identifier, CANOPEN_NMT_RESET_NODE));
     if (status != NTCAN_SUCCESS)
         return status;
     sleep(3);
@@ -338,7 +341,7 @@ NTCAN_RESULT amcdrive_reset_drives(NTCAN_HANDLE handle, uint8_t *identifiers, ui
     uint i;
     for (i = 0; i < count; i++) {
         status = try_ntcan("reset",
-            canOpenWriteNMT(handle, identifiers[i], CANOPEN_NMT_RESET_NODE));
+                           canOpenWriteNMT(handle, identifiers[i], CANOPEN_NMT_RESET_NODE));
         if (status != NTCAN_SUCCESS)
             return status;
     }
@@ -348,7 +351,7 @@ NTCAN_RESULT amcdrive_reset_drives(NTCAN_HANDLE handle, uint8_t *identifiers, ui
 }
 
 NTCAN_RESULT amcdrive_init_drive(NTCAN_HANDLE handle, uint8_t identifier, uint pdos,
-    uint update_freq, servo_vars_t *drive_info) {
+                                 uint update_freq, servo_vars_t *drive_info) {
     NTCAN_RESULT status;
     
     drive_info->current_sign = 1;
@@ -356,7 +359,7 @@ NTCAN_RESULT amcdrive_init_drive(NTCAN_HANDLE handle, uint8_t identifier, uint p
     drive_info->handle = handle;
     
     status = try_ntcan("add SDO response",
-        canOpenIdAddSDOResponse(handle, identifier));
+                       canOpenIdAddSDOResponse(handle, identifier));
     if (status != NTCAN_SUCCESS)
         goto fail; // Yes, yes, goto is evil, but we don't have proper exceptions.
                    // If you don't think this is what we should be doing, ask me
@@ -364,7 +367,7 @@ NTCAN_RESULT amcdrive_init_drive(NTCAN_HANDLE handle, uint8_t identifier, uint p
 
     // Put the drive into pre-operational state
     status = try_ntcan("pre-op",
-        canOpenWriteNMT(handle, identifier, CANOPEN_NMT_PRE_OP));
+                       canOpenWriteNMT(handle, identifier, CANOPEN_NMT_PRE_OP));
     if (status != NTCAN_SUCCESS)
         goto fail;
     
@@ -421,18 +424,18 @@ NTCAN_RESULT amcdrive_open_drives(int32_t network, uint8_t *identifiers, uint co
     NTCAN_HANDLE handle;
     NTCAN_RESULT status;
     status = try_ntcan("canOpen",
-        canOpen(network,    //net
-                0,          //flags
-                10,         //txqueue
-                128,        //rxqueue
-                1000,       //txtimeout
-                2000,       //rxtimeout
-                &handle));   // handle    
+                       canOpen(network,    //net
+                               0,          //flags
+                               10,         //txqueue
+                               128,        //rxqueue
+                               1000,       //txtimeout
+                               2000,       //rxtimeout
+                               &handle));   // handle    
     if (status != NTCAN_SUCCESS)
         return status;
     
     status = try_ntcan("canSetBaudrate",
-        canSetBaudrate(handle, NTCAN_BAUD_1000));
+                       canSetBaudrate(handle, NTCAN_BAUD_1000));
     if (status != NTCAN_SUCCESS)
         goto fail;
         
@@ -465,62 +468,62 @@ static NTCAN_RESULT amcdrive_rpdo_cw_i32(NTCAN_HANDLE handle, uint16_t rpdo, int
 }
 
 NTCAN_RESULT amcdrive_update_drives(servo_vars_t *drives, int count) {
-	CMSG canMsgs[256]; // We can easily handle more than one message at a time
+    CMSG canMsgs[256]; // We can easily handle more than one message at a time
 
-	int len = 256;
-	int status = canRead(drives[0].handle, canMsgs, &len, NULL);
+    int len = 256;
+    int status = canRead(drives[0].handle, canMsgs, &len, NULL);
 
-	if (status != NTCAN_SUCCESS)
-		return status;
+    if (status != NTCAN_SUCCESS)
+        return status;
 
-	int m;
-	for (m = 0; m < len; m++) {
-		CMSG *canMsg = &canMsgs[m];
-		int32_t drive_id = (canMsg->id - 0x200) / 7;    // This '7' must be the same as appeared in amcdrive_enable_pdos()
+    int m;
+    for (m = 0; m < len; m++) {
+        CMSG *canMsg = &canMsgs[m];
+        int32_t drive_id = (canMsg->id - 0x200) / 7;    // This '7' must be the same as appeared in amcdrive_enable_pdos()
 
-		int i;
-		for (i = 0; i < count; i++) {
+        int i;
+        for (i = 0; i < count; i++) {
 
-			servo_vars_t *d = &drives[i];
-			if (d->canopen_id == drive_id) {
+            servo_vars_t *d = &drives[i];
+            if (d->canopen_id == drive_id) {
 
-				// ACTUAL POSITION
-				if (d->tpdo_position == canMsg->id) {
-					int32_t position;
-					memcpy(&position, &canMsg->data[2], sizeof(int32_t));
-					position = ctohl(position);
-					d->act_pos = (d->current_sign) * position;
-				}
+                // ACTUAL POSITION
+                if (d->tpdo_position == canMsg->id) {
+                    int32_t position;
+                    memcpy(&position, &canMsg->data[2], sizeof(int32_t));
+                    position = ctohl(position);
+                    d->act_pos = (d->current_sign) * position;
+                }
 
-				// ACTUAL VELOCITY
-				else if (d->tpdo_velocity == canMsg->id) {
-					int32_t velocity = 0;
-					memcpy(&velocity, &canMsg->data[2], sizeof(int32_t));
-					velocity = ctohl(velocity);
-					d->act_vel = (d->current_sign) * amccan_decode_ds1(velocity, d->k_i, d->k_s);
-				}
+                // ACTUAL VELOCITY
+                else if (d->tpdo_velocity == canMsg->id) {
+                    int32_t velocity = 0;
+                    memcpy(&velocity, &canMsg->data[2], sizeof(int32_t));
+                    velocity = ctohl(velocity);
+                    d->act_vel = (d->current_sign) * amccan_decode_ds1(velocity, d->k_i, d->k_s);
+                }
 
-				// ACTUAL CURRENT
-				else if (d->tpdo_current == canMsg->id) {
-					int16_t current;
-					memcpy(&current, &canMsg->data[2], sizeof(int16_t));
-					d->act_cur = (d->current_sign) * amccan_decode_dc1(current, d->k_p);
-					// eprintf("current = %f\n", d->i_act);
-				}
+                // ACTUAL CURRENT
+                else if (d->tpdo_current == canMsg->id) {
+                    int16_t current;
+                    memcpy(&current, &canMsg->data[2], sizeof(int16_t));
+                    d->act_cur = (d->current_sign) * amccan_decode_dc1(current, d->k_p);
+                    // eprintf("current = %f\n", d->i_act);
+                }
 
-				// STATUS WORD
-				else if ( d->tpdo_statusword == canMsg->id) {
+                // STATUS WORD
+                else if ( d->tpdo_statusword == canMsg->id) {
 
-					// This Status Word will be the same as reading from 6041h
-					memcpy(&d->status, &canMsg->data[0], sizeof(int16_t));
-					//printf("drive %x, status = %x\n", drive_id, d->status);
-				}
+                    // This Status Word will be the same as reading from 6041h
+                    memcpy(&d->status, &canMsg->data[0], sizeof(int16_t));
+                    //printf("drive %x, status = %x\n", drive_id, d->status);
+                }
 
-				break;
-			}
-		}
-	}
-	return NTCAN_SUCCESS;
+                break;
+            }
+        }
+    }
+    return NTCAN_SUCCESS;
 }
 
 NTCAN_RESULT amcdrive_set_current(servo_vars_t *drive, double amps) {
@@ -537,7 +540,7 @@ NTCAN_RESULT amcdrive_set_current(servo_vars_t *drive, double amps) {
     dprintf("set_dc2_current: %04x\n", i_dc2);
     
     return try_ntcan("set_current", 
-        amcdrive_rpdo_cw_i32(handle, drive->rpdo_current, i_dc2));
+                     amcdrive_rpdo_cw_i32(handle, drive->rpdo_current, i_dc2));
 }
 
 /*
@@ -545,45 +548,45 @@ NTCAN_RESULT amcdrive_set_current(servo_vars_t *drive, double amps) {
  */
 NTCAN_RESULT amcdrive_reset_position( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t node) {
 
-	// TODO: add ability to reset the current measured position to any value 'pos'
+    // TODO: add ability to reset the current measured position to any value 'pos'
 
-	NTCAN_RESULT ntr;
+    NTCAN_RESULT ntr;
 
-	int32_t pos = 0;
+    int32_t pos = 0;
 
-	// Set Position Limit 2039.01h
-	ntr = canOpenSDOWriteWait_dl_i32( h, rcmd, node, AMCCAN_INDEX_POS_LIMIT, AMCCAN_SUBINDEX_POS_LIMIT_MEASURED, pos );
-	if( NTCAN_SUCCESS != ntr ) return ntr;
+    // Set Position Limit 2039.01h
+    ntr = canOpenSDOWriteWait_dl_i32( h, rcmd, node, AMCCAN_INDEX_POS_LIMIT, AMCCAN_SUBINDEX_POS_LIMIT_MEASURED, pos );
+    if( NTCAN_SUCCESS != ntr ) return ntr;
 
-	int i= 0;
-	for (i = 0; i < 10; i++)
-	{	// Kasemsit: I do loop 10 times to make sure the position is actually reset.
+    int i= 0;
+    for (i = 0; i < 10; i++)
+    {	// Kasemsit: I do loop 10 times to make sure the position is actually reset.
 
-		// Set Digital Input Mask: Load Measured Position 2058.08h
-		ntr = canOpenSDOWriteWait_dl_u16( h, rcmd, node, 0x2058, 0x08, 0x1 );
-		if( NTCAN_SUCCESS != ntr ) return ntr;
+        // Set Digital Input Mask: Load Measured Position 2058.08h
+        ntr = canOpenSDOWriteWait_dl_u16( h, rcmd, node, 0x2058, 0x08, 0x1 );
+        if( NTCAN_SUCCESS != ntr ) return ntr;
 
-		// Reset Digital Input Mask: Load Measured Position 2058.08h
-		ntr = canOpenSDOWriteWait_dl_u16( h, rcmd, node, 0x2058, 0x08, 0x0 );
-		if( NTCAN_SUCCESS != ntr ) return ntr;
+        // Reset Digital Input Mask: Load Measured Position 2058.08h
+        ntr = canOpenSDOWriteWait_dl_u16( h, rcmd, node, 0x2058, 0x08, 0x0 );
+        if( NTCAN_SUCCESS != ntr ) return ntr;
 
-		// Set Digital Input Mask: Load Target Position Command 2058.09h
-		ntr = canOpenSDOWriteWait_dl_u16( h, rcmd, node, 0x2058, 0x09, 0x1 );
-		if( NTCAN_SUCCESS != ntr ) return ntr;
+        // Set Digital Input Mask: Load Target Position Command 2058.09h
+        ntr = canOpenSDOWriteWait_dl_u16( h, rcmd, node, 0x2058, 0x09, 0x1 );
+        if( NTCAN_SUCCESS != ntr ) return ntr;
 
-		// Reset Digital Input Mask: Load Target Position Command 2058.09h
-		ntr = canOpenSDOWriteWait_dl_u16( h, rcmd, node, 0x2058, 0x09, 0x0 );
-		if( NTCAN_SUCCESS != ntr ) return ntr;
-	}
+        // Reset Digital Input Mask: Load Target Position Command 2058.09h
+        ntr = canOpenSDOWriteWait_dl_u16( h, rcmd, node, 0x2058, 0x09, 0x0 );
+        if( NTCAN_SUCCESS != ntr ) return ntr;
+    }
 
     return 0;
 }
 
 void amcdrive_print_info(NTCAN_HANDLE handle, uint8_t id) {
 
-	/* TODO: Print something....  */
+    /* TODO: Print something....  */
 
-	uint8_t rcmd;
+    uint8_t rcmd;
     uint16_t k_p;
 
     // Print: Maximum Peak Current 20D8.0Ch

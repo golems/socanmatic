@@ -1,3 +1,6 @@
+/* -*- mode: C; c-basic-offset: 4; indent-tabs-mode: nil  -*- */
+/* ex: set shiftwidth=4 expandtab: */ 
+
 #ifndef _AMCDRIVE_H_
 #define _AMCDRIVE_H_
 
