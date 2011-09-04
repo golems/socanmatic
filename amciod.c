@@ -19,9 +19,6 @@
  *  command message in [Ampere].
  */
 
-
-
-
 #include <argp.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -45,8 +42,6 @@
 // Default channel constants
 #define AMCIOD_CMD_CHANNEL_NAME "amciod-cmd"
 #define AMCIOD_STATE_CHANNEL_NAME "amciod-state"
-#define AMCIOD_CMD_CHANNEL_SIZE 67//22
-#define AMCIOD_STATE_CHANNEL_SIZE 130 //50
 
 #define MAX_CURRENT 50        // Max motor current (Amps)
 #define ENCODER_COUNT 4000
@@ -82,10 +77,7 @@ typedef struct {
 //TODO: replace these with vars from parsing args
 static const char *opt_cmd_chan = AMCIOD_CMD_CHANNEL_NAME;
 static const char *opt_state_chan = AMCIOD_STATE_CHANNEL_NAME;
-static unsigned int  amciod_cmd_channel_size = AMCIOD_CMD_CHANNEL_SIZE;
-static unsigned int  amciod_state_channel_size = AMCIOD_STATE_CHANNEL_SIZE;
 
-static int opt_create = 0;
 static int opt_verbosity = 0;
 static double opt_frequency = 30.0;   // refresh at 30 hz
 static size_t n_buses = 0;            // number of bus
@@ -182,9 +174,6 @@ static int parse_opt(int key, char *arg, struct argp_state *state) {
         break;
     case 'v':
         opt_verbosity++;
-        break;
-    case 'C':
-        opt_create = 1;
         break;
     case 'f':
         opt_frequency = atof(arg);
@@ -321,15 +310,6 @@ int main(int argc, char *argv[]) {
     servo_vars_t servos[2];
     int r = amcdrive_open(servos);
     aa_hard_assert(r == NTCAN_SUCCESS,  "AMC initialization failed. Error number: %i\n", r);
-
-    /// Create channel if requested
-    if (opt_create == 1) {
-        r = ach_create( opt_cmd_chan, 10, amciod_cmd_channel_size, NULL );
-        r |= ach_create( opt_state_chan, 10, amciod_state_channel_size, NULL );
-        aa_hard_assert(r == ACH_OK,
-                       "ERROR: Ach failure %s on creating AMC channel (%s, line %d)\n",
-                       ach_result_to_string((ach_status_t)r), __FILE__, __LINE__);
-    }
 
     /// Ach channels for amciod
     ach_channel_t cmd_chan, state_chan;
