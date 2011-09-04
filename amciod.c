@@ -195,7 +195,7 @@ static int parse_opt(int key, char *arg, struct argp_state *state) {
     return 0;
 }
 
-void amcdrive_update_state( cx_t *cx, servo_vars_t *servos,
+void amciod_update_state( cx_t *cx, servo_vars_t *servos,
                             ach_channel_t *state_chan)
 {
     // Update amcdrive state
@@ -219,7 +219,7 @@ void amcdrive_update_state( cx_t *cx, servo_vars_t *servos,
 
 }
 
-void amcdrive_execute_and_update( cx_t *cx, servo_vars_t *servos,
+void amciod_execute_and_update( cx_t *cx, servo_vars_t *servos,
                                   Somatic__MotorCmd *msg, ach_channel_t *state_chan)
 {
     NTCAN_RESULT status;
@@ -260,14 +260,14 @@ void amcdrive_execute_and_update( cx_t *cx, servo_vars_t *servos,
     aa_hard_assert( status == NTCAN_SUCCESS, "Cannot set current (Right)!\n");
 
     // Update states
-    amcdrive_update_state(cx, servos, state_chan);
+    amciod_update_state(cx, servos, state_chan);
 
 }
 
 /**
  * \brief
  */
-int amcdrive_open(servo_vars_t *servos){
+int amciod_open(servo_vars_t *servos){
 
     NTCAN_RESULT r = amcdrive_open_drives(opt_bus_id, opt_mod_id, n_modules,
                                           REQUEST_TPDO_VELOCITY|REQUEST_TPDO_POSITION|ENABLE_RPDO_CURRENT|REQUEST_TPDO_STATUSWORD,
@@ -308,7 +308,7 @@ int main(int argc, char *argv[]) {
 
     /// AMC drive init
     servo_vars_t servos[2];
-    int r = amcdrive_open(servos);
+    int r = amciod_open(servos);
     aa_hard_assert(r == NTCAN_SUCCESS,  "AMC initialization failed. Error number: %i\n", r);
 
     /// Ach channels for amciod
@@ -372,11 +372,11 @@ int main(int argc, char *argv[]) {
                        __FILE__, __LINE__);
 
         if (r == ACH_TIMEOUT) {
-            amcdrive_update_state(&cx, servos, &state_chan);
+            amciod_update_state(&cx, servos, &state_chan);
         }
         else {
             /// Issue command, and update state
-            amcdrive_execute_and_update(&cx, servos, cmd, &state_chan);
+            amciod_execute_and_update(&cx, servos, cmd, &state_chan);
             /// Cleanup
         }
 
