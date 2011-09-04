@@ -9,16 +9,64 @@
  */
 
 /** \mainpage
- *  \brief amciod is an ACH front-end daemon to communicate with two AMC drives over CAN network.
- *  It reads motor command messages from an ACH channel and publishes the current states of the motors to another ACH channel.
+
+ *  \brief amciod is an ACH front-end daemon to communicate with two
+ *  AMC drives over CAN network.  It reads motor command messages from
+ *  an ACH channel and publishes the current states of the motors to
+ *  another ACH channel.
  *
- *  NOTE: The daemon reads state message in [rad, rad/s], and writes command message in [Ampere].
+ *  NOTE: The daemon reads state message in [rad, rad/s], and writes
+ *  command message in [Ampere].
  */
+
+
+
+
+#include <argp.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdarg.h>
+#include <stdint.h>
+
+#include <somatic.h>
+#include <somatic/daemon.h>
+#include <ach.h>
+
+#include <somatic/util.h>
+#include <somatic.pb-c.h>
+#include <somatic/msg/motor.h>
+
+#include <math.h>
 
 #include "amccan.h"
 #include "amcdrive.h"
-#include "amciod.h"
-#include <somatic/daemon.h>
+
+// Default channel constants
+#define AMCIOD_CMD_CHANNEL_NAME "amciod-cmd"
+#define AMCIOD_STATE_CHANNEL_NAME "amciod-state"
+#define AMCIOD_CMD_CHANNEL_SIZE 67//22
+#define AMCIOD_STATE_CHANNEL_SIZE 130 //50
+
+#define MAX_CURRENT 50        // Max motor current (Amps)
+#define ENCODER_COUNT 4000
+#define GEAR_REDUCTION (15/1)
+
+#define COUNT_TO_RAD(count) \
+  ( (count) * 2 * M_PI / (ENCODER_COUNT * GEAR_REDUCTION ) )
+
+#define RAD_TO_COUNT(rad) \
+  ( (rad) * (ENCODER_COUNT * GEAR_REDUCTION ) / (2 * M_PI) )
+
+#ifndef max
+#define max(a,b)            (((a) > (b)) ? (a) : (b))
+#endif
+#ifndef min
+#define min(a,b)            (((a) < (b)) ? (a) : (b))
+#endif
+
+
+
 
 /* ---------- */
 /* ARGP Junk  */
@@ -182,7 +230,8 @@ void amcdrive_update_state( cx_t *cx, servo_vars_t *servos,
 
 }
 
-void amcdrive_execute_and_update(cx_t *cx, servo_vars_t *servos, Somatic__MotorCmd *msg, ach_channel_t *state_chan)
+void amcdrive_execute_and_update( cx_t *cx, servo_vars_t *servos,
+                                  Somatic__MotorCmd *msg, ach_channel_t *state_chan)
 {
     NTCAN_RESULT status;
 
