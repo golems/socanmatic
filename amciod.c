@@ -40,8 +40,8 @@
 #include "amcdrive.h"
 
 // Default channel constants
-#define AMCIOD_CMD_CHANNEL_NAME "amciod-cmd"
-#define AMCIOD_STATE_CHANNEL_NAME "amciod-state"
+#define AMCIOD_CMD_CHANNEL_NAME "amc-cmd"
+#define AMCIOD_STATE_CHANNEL_NAME "amc-state"
 
 #define MAX_CURRENT 50        // Max motor current (Amps)
 #define ENCODER_COUNT 4000
@@ -69,6 +69,10 @@ typedef struct {
     somatic_d_opts_t d_opts;
     Somatic__MotorState *state_msg;
     struct timespec time;
+
+    struct timespec wait_time;
+    ach_channel_t cmd_chan;
+    ach_channel_t state_chan;
 } cx_t;
 
 static void
@@ -79,7 +83,7 @@ amciod_execute_and_update( cx_t *cx, servo_vars_t *servos,
                            Somatic__MotorCmd *msg, ach_channel_t *state_chan);
 
 static int amciod_open(servo_vars_t *servos);
-static int amciod_run(servo_vars_t *servos);
+static void amciod_run(cx_t *cx, servo_vars_t *servos);
 
 /* ---------- */
 /* ARGP Junk  */
@@ -194,13 +198,13 @@ int main(int argc, char *argv[]) {
                    "AMC initialization failed. Error number: %i\n", r);
 
     /// Ach channels for amciod
-    ach_channel_t cmd_chan, state_chan;
-    somatic_d_channel_open(&cx.d, &cmd_chan, opt_cmd_chan, NULL );
-    somatic_d_channel_open(&cx.d, &state_chan, opt_state_chan, NULL );
-    ach_flush(&cmd_chan);
+    //ach_channel_t cmd_chan, state_chan;
+    somatic_d_channel_open(&cx.d, &cx.cmd_chan, opt_cmd_chan, NULL );
+    somatic_d_channel_open(&cx.d, &cx.state_chan, opt_state_chan, NULL );
+    ach_flush(&cx.cmd_chan);
 
     /// Set the wait time based on specificed frequency
-    struct timespec wait_time = {
+    cx.wait_time = (struct timespec){
         .tv_sec = 0,
         .tv_nsec = (long int)((1.0/opt_frequency) * 1e9)
     };
@@ -229,49 +233,7 @@ int main(int argc, char *argv[]) {
     }
 
     // ------------- RUN --------------------
-
-    /** \par Main loop
-     *
-     *  Listen on the motor command channel, and issue an amcdrive command for
-     *  each incoming message.  When an acknowledgment is received from
-     *  the module group, post it on the state channel.
-     */
-    while (!somatic_sig_received) {
-        // free memory
-        aa_region_release( &cx.d.memreg );
-
-        // returns the absolute time when receive should give up waiting
-        struct timespec abstime = aa_tm_future(wait_time);
-
-        /// read current state from state channel
-        Somatic__MotorCmd *cmd =
-            SOMATIC_D_GET( &r, somatic__motor_cmd, &cx.d,
-                           &cmd_chan, &abstime,
-                           ACH_O_WAIT | ACH_O_LAST  );
-
-        aa_hard_assert(r == ACH_OK || r == ACH_TIMEOUT || ACH_MISSED_FRAME == r,
-                       "Ach wait failure %s on cmd receive (%s, line %d)\n",
-                       ach_result_to_string(r),
-                       __FILE__, __LINE__);
-
-        if (r == ACH_TIMEOUT) {
-            amciod_update_state(&cx, servos, &state_chan);
-        }
-        else {
-            /// Issue command, and update state
-            amciod_execute_and_update(&cx, servos, cmd, &state_chan);
-            /// Cleanup
-        }
-
-        if (opt_verbosity) {
-            printf("pos: %.0f  %.0f [cnt]\t",
-                   servos[0].act_pos, servos[1].act_pos);
-            printf("vel: %.3f  %.3f [rad/s]\t",
-                   COUNT_TO_RAD(servos[0].act_vel),
-                   COUNT_TO_RAD(servos[1].act_vel));
-            printf("status: 0x%x  0x%x\n", servos[0].status, servos[1].status);
-        }
-    }
+    amciod_run( &cx, servos );
 
     // ------------ DESTROY --------------
 
@@ -282,8 +244,8 @@ int main(int argc, char *argv[]) {
     aa_hard_assert(r == NTCAN_SUCCESS, "amcdrive_set_current error: %i\n", r);
 
     /// Close channels
-    ach_close(&cmd_chan);
-    ach_close(&state_chan);
+    ach_close(&cx.cmd_chan);
+    ach_close(&cx.state_chan);
 
     somatic_d_destroy(&cx.d);
 
@@ -340,7 +302,7 @@ static int parse_opt(int key, char *arg, struct argp_state *state) {
  */
 static int amciod_open(servo_vars_t *servos){
 
-    int flags =
+    unsigned flags =
         REQUEST_TPDO_VELOCITY | REQUEST_TPDO_POSITION |
         ENABLE_RPDO_CURRENT | REQUEST_TPDO_STATUSWORD;
     NTCAN_RESULT r = amcdrive_open_drives( opt_bus_id, opt_mod_id, n_modules,
@@ -359,6 +321,61 @@ static int amciod_open(servo_vars_t *servos){
     aa_hard_assert(r == NTCAN_SUCCESS, "amcdrive_set_current error: %i\n", r);
 
     return 0;
+}
+
+
+static void amciod_run(cx_t *cx, servo_vars_t *servos) {
+    /** \par Main loop
+     *
+     *  Listen on the motor command channel, and issue an amcdrive command for
+     *  each incoming message.  When an acknowledgment is received from
+     *  the module group, post it on the state channel.
+     */
+
+    somatic_d_event( &cx->d, SOMATIC__EVENT__PRIORITIES__NOTICE,
+                     SOMATIC__EVENT__CODES__PROC_RUNNING,
+                     NULL, NULL );
+
+    while (!somatic_sig_received) {
+        int r;
+        // free memory
+        aa_region_release( &cx->d.memreg );
+
+        // returns the absolute time when receive should give up waiting
+        struct timespec abstime = aa_tm_future(cx->wait_time);
+
+        /// read current state from state channel
+        Somatic__MotorCmd *cmd =
+            SOMATIC_D_GET( &r, somatic__motor_cmd, &cx->d,
+                           &cx->cmd_chan, &abstime,
+                           ACH_O_WAIT | ACH_O_LAST  );
+
+        aa_hard_assert(r == ACH_OK || r == ACH_TIMEOUT || ACH_MISSED_FRAME == r,
+                       "Ach wait failure %s on cmd receive (%s, line %d)\n",
+                       ach_result_to_string(r),
+                       __FILE__, __LINE__);
+
+        if (r == ACH_TIMEOUT) {
+            amciod_update_state(cx, servos, &cx->state_chan);
+        }
+        else {
+            /// Issue command, and update state
+            amciod_execute_and_update(cx, servos, cmd, &cx->state_chan);
+            /// Cleanup
+        }
+
+        if (opt_verbosity) {
+            printf("pos: %.0f  %.0f [cnt]\t",
+                   servos[0].act_pos, servos[1].act_pos);
+            printf("vel: %.3f  %.3f [rad/s]\t",
+                   COUNT_TO_RAD(servos[0].act_vel),
+                   COUNT_TO_RAD(servos[1].act_vel));
+            printf("status: 0x%x  0x%x\n", servos[0].status, servos[1].status);
+        }
+    }
+    somatic_d_event( &cx->d, SOMATIC__EVENT__PRIORITIES__NOTICE,
+                     SOMATIC__EVENT__CODES__PROC_STOPPING,
+                     NULL, NULL );
 }
 
 static void amciod_update_state( cx_t *cx, servo_vars_t *servos,
