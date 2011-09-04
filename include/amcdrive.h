@@ -49,10 +49,12 @@ typedef struct {
 #define REQUEST_TPDO_CURRENT  0x40
 #define REQUEST_TPDO_STATUSWORD  0x50
 
-NTCAN_RESULT amcdrive_init_drive(NTCAN_HANDLE network, uint8_t identifier, uint pdos, uint update_freq, servo_vars_t *drive_info);
-NTCAN_RESULT amcdrive_init_drives(NTCAN_HANDLE network, uint8_t *identifiers, uint count, uint pdos, uint update_freq, servo_vars_t *drive_infos);
+//NTCAN_RESULT amcdrive_init_drive(NTCAN_HANDLE network, uint8_t identifier, uint pdos, uint update_freq, servo_vars_t *drive_info);
+NTCAN_RESULT amcdrive_init_drive( servo_vars_t *drive_info,  uint pdos, uint update_freq);
+//NTCAN_RESULT amcdrive_init_drives(NTCAN_HANDLE network, uint8_t *identifiers, uint count, uint pdos, uint update_freq, servo_vars_t *drive_infos);
 
-NTCAN_RESULT amcdrive_open_drives(int32_t network, uint8_t *identifiers, uint count, uint pdos, uint update_freq, servo_vars_t *drive_infos);
+NTCAN_RESULT amcdrive_open_drives(int32_t network, uint8_t *identifiers, uint count, /*uint pdos, uint update_freq,*/ servo_vars_t *drive_infos);
+
 NTCAN_RESULT amcdrive_update_drives(servo_vars_t *drives, int count);
 
 /*
@@ -64,6 +66,9 @@ NTCAN_RESULT amcdrive_set_current(servo_vars_t *drive, double amps);
  * Set the current measured position to zero
  */
 NTCAN_RESULT amcdrive_reset_position( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t node);
+
+/** Reset drives */
+NTCAN_RESULT amcdrive_reset_drives(servo_vars_t *drives, size_t count);
 
 NTCAN_RESULT amcdrive_start_drive(servo_vars_t *drive);
 NTCAN_RESULT amcdrive_stop_drive(servo_vars_t *drive);

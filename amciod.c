@@ -99,6 +99,8 @@ static size_t n_buses = 0;            // number of bus
 static size_t n_modules = 0;          // number of amc modules
 static int32_t opt_bus_id = 0;        // amc bus id
 static uint8_t opt_mod_id[2];         // amc module id
+static int opt_query = 0;             // get module info
+static int opt_reset = 0;             // reset drives
 
 static struct argp_option options[] = {
     {
@@ -150,6 +152,20 @@ static struct argp_option options[] = {
         .flags = 0,
         .doc = "Define a CAN bus for a module"
     },
+    {
+        .name = "query",
+        .key = 'Q',
+        .arg = NULL,
+        .flags = 0,
+        .doc = "get info about the module"
+    },
+    {
+        .name = "reset",
+        .key = 'R',
+        .arg = NULL,
+        .flags = 0,
+        .doc = "reset drives"
+    },
     SOMATIC_D_ARGP_OPTS,
     {
         .name = NULL,
@@ -188,66 +204,79 @@ int main(int argc, char *argv[]) {
     /// Parse command line args
     argp_parse(&argp, argc, argv, 0, NULL, &cx);
 
-    // init daemon context
-    somatic_d_init(&cx.d, &cx.d_opts);
-
     /// AMC drive init
     servo_vars_t servos[2];
     int r = amciod_open(servos);
     aa_hard_assert(r == NTCAN_SUCCESS,
                    "AMC initialization failed. Error number: %i\n", r);
 
-    /// Ach channels for amciod
-    //ach_channel_t cmd_chan, state_chan;
-    somatic_d_channel_open(&cx.d, &cx.cmd_chan, opt_cmd_chan, NULL );
-    somatic_d_channel_open(&cx.d, &cx.state_chan, opt_state_chan, NULL );
-    ach_flush(&cx.cmd_chan);
+    // ------------- MODE ----------------------
+    if ( opt_query ) {
+    } else if ( opt_reset ) {
+        printf("reset\n");
+        NTCAN_RESULT status = amcdrive_reset_drives(servos, n_modules);
+        if( NTCAN_SUCCESS != status ) {
+            fprintf(stderr, "CAN error: %s\n", canResultString(status));
+            exit(EXIT_FAILURE);
+        }
+    } else {
 
-    /// Set the wait time based on specificed frequency
-    cx.wait_time = (struct timespec){
-        .tv_sec = 0,
-        .tv_nsec = (long int)((1.0/opt_frequency) * 1e9)
-    };
+        // init daemon context
+        somatic_d_init(&cx.d, &cx.d_opts);
 
-    // init message
-    cx.state_msg = somatic_motor_state_alloc();
-    cx.state_msg->has_status = 1;
-    cx.state_msg->status = SOMATIC__MOTOR_STATUS__MOTOR_OK;
-    {
-        double x[n_modules];
-        memset(x,0,sizeof(x[0])*n_modules);
-        somatic_motor_state_set_position( cx.state_msg, x, n_modules );
-        somatic_motor_state_set_velocity( cx.state_msg, x, n_modules );
-        somatic_motor_state_set_current( cx.state_msg, x, n_modules );
+
+        /// Ach channels for amciod
+        //ach_channel_t cmd_chan, state_chan;
+        somatic_d_channel_open(&cx.d, &cx.cmd_chan, opt_cmd_chan, NULL );
+        somatic_d_channel_open(&cx.d, &cx.state_chan, opt_state_chan, NULL );
+        ach_flush(&cx.cmd_chan);
+
+        /// Set the wait time based on specificed frequency
+        cx.wait_time = (struct timespec){
+            .tv_sec = 0,
+            .tv_nsec = (long int)((1.0/opt_frequency) * 1e9)
+        };
+
+        // init message
+        cx.state_msg = somatic_motor_state_alloc();
+        cx.state_msg->has_status = 1;
+        cx.state_msg->status = SOMATIC__MOTOR_STATUS__MOTOR_OK;
+        {
+            double x[n_modules];
+            memset(x,0,sizeof(x[0])*n_modules);
+            somatic_motor_state_set_position( cx.state_msg, x, n_modules );
+            somatic_motor_state_set_velocity( cx.state_msg, x, n_modules );
+            somatic_motor_state_set_current( cx.state_msg, x, n_modules );
+        }
+
+        if (opt_verbosity) {
+            fprintf(stderr, "\n* AMCIOD *\n");
+            fprintf(stderr, "Verbosity:    %d\n", opt_verbosity);
+            fprintf(stderr, "command channel:      %s\n", opt_cmd_chan);
+            fprintf(stderr, "state channel:      %s\n", opt_state_chan);
+            fprintf(stderr, "n_module = %d\n", n_modules);
+            fprintf(stderr, "module id = 0x%x  0x%x\n",
+                    servos[0].canopen_id, servos[1].canopen_id);
+            fprintf(stderr, "-------\n");
+        }
+
+        // ------------- RUN --------------------
+        amciod_run( &cx, servos );
+
+        // ------------ DESTROY --------------
+        /// Close channels
+        ach_close(&cx.cmd_chan);
+        ach_close(&cx.state_chan);
+
+        /// Stop motors
+        r = amcdrive_set_current(&servos[0], 0.0);
+        aa_hard_assert(r == NTCAN_SUCCESS, "amcdrive_set_current error: %i\n", r);
+        r = amcdrive_set_current(&servos[1], 0.0);
+        aa_hard_assert(r == NTCAN_SUCCESS, "amcdrive_set_current error: %i\n", r);
+
+        somatic_d_destroy(&cx.d);
     }
-
-    if (opt_verbosity) {
-        fprintf(stderr, "\n* AMCIOD *\n");
-        fprintf(stderr, "Verbosity:    %d\n", opt_verbosity);
-        fprintf(stderr, "command channel:      %s\n", opt_cmd_chan);
-        fprintf(stderr, "state channel:      %s\n", opt_state_chan);
-        fprintf(stderr, "n_module = %d\n", n_modules);
-        fprintf(stderr, "module id = 0x%x  0x%x\n",
-                servos[0].canopen_id, servos[1].canopen_id);
-        fprintf(stderr, "-------\n");
-    }
-
-    // ------------- RUN --------------------
-    amciod_run( &cx, servos );
-
-    // ------------ DESTROY --------------
-
-    /// Stop motors
-    r = amcdrive_set_current(&servos[0], 0.0);
-    aa_hard_assert(r == NTCAN_SUCCESS, "amcdrive_set_current error: %i\n", r);
-    r = amcdrive_set_current(&servos[1], 0.0);
-    aa_hard_assert(r == NTCAN_SUCCESS, "amcdrive_set_current error: %i\n", r);
-
-    /// Close channels
-    ach_close(&cx.cmd_chan);
-    ach_close(&cx.state_chan);
-
-    somatic_d_destroy(&cx.d);
+    // FIXME: should put the drives in some shutdown/halted state
 
     return 0;
 }
@@ -279,6 +308,12 @@ static int parse_opt(int key, char *arg, struct argp_state *state) {
     case 'f':
         opt_frequency = atof(arg);
         break;
+    case 'Q':
+        opt_query++;
+        break;
+    case 'R':
+        opt_reset++;
+        break;
     case 'b':
         opt_bus_id = atoi(arg);      // accept only one bus id
         n_buses++;
@@ -302,15 +337,21 @@ static int parse_opt(int key, char *arg, struct argp_state *state) {
  */
 static int amciod_open(servo_vars_t *servos){
 
+    // open drives
     unsigned flags =
         REQUEST_TPDO_VELOCITY | REQUEST_TPDO_POSITION |
         ENABLE_RPDO_CURRENT | REQUEST_TPDO_STATUSWORD;
     NTCAN_RESULT r = amcdrive_open_drives( opt_bus_id, opt_mod_id, n_modules,
-                                           flags, 1000, servos);
+                                           /*flags, 1000,*/ servos);
     if (r != NTCAN_SUCCESS) {
         perror("amcdrive_open_drives");
         return r;
     }
+    // init drives
+    for( size_t i = 0; i < n_modules; i++ ) {
+        amcdrive_init_drive(&servos[i], flags, 1000 );
+    }
+
     // FIXME: WTF? -ntd
     servos[1].current_sign = -1;
 
@@ -377,6 +418,7 @@ static void amciod_run(cx_t *cx, servo_vars_t *servos) {
                      SOMATIC__EVENT__CODES__PROC_STOPPING,
                      NULL, NULL );
 }
+
 
 static void amciod_update_state( cx_t *cx, servo_vars_t *servos,
                             ach_channel_t *state_chan)
