@@ -45,6 +45,7 @@
  */
 
 
+#include <amino.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -185,15 +186,15 @@ static int pdo_is_user_mappable( amccan_pdo_t pdo ) {
 NTCAN_RESULT amccan_dl_pdo_map( NTCAN_HANDLE h, uint8_t *rcmd,
                                 uint8_t node, amccan_pdo_t pdo,
                                 uint8_t mapping_obj,
-                                uint16_t index, uint8_t subindex,
+                                uint16_t idx, uint8_t subindex,
                                 uint8_t len ) {
     assert( pdo_is_valid( pdo ) );
     assert( pdo_is_user_mappable( pdo ) );
     assert( mapping_obj >= 1 && mapping_obj <= 8 );
     uint32_t u = len;
     u |= (uint32_t)(subindex << 8);
-    u |= (uint32_t)((index & 0xFF) << 16);
-    u |= (uint32_t)((index >> 8 ) << 24);
+    u |= (uint32_t)((idx & 0xFF) << 16);
+    u |= (uint32_t)((idx >> 8 ) << 24);
 
     NTCAN_RESULT ntr;
     ntr = canOpenSDOWriteWait_dl_u32( h, rcmd, node,
@@ -314,4 +315,44 @@ NTCAN_RESULT amccan_dl_timer1( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t node,
     ntr = canOpenSDOWriteWait_dl_u32( h, rcmd, node, AMCCAN_INDEX_TIMER1_TPDOS,
                                       AMCCAN_SUBINDEX_TIMER1_TPDOS, tpdos );
     return ntr;
+}
+
+amccan_state_t amccan_decode_state( int16_t statw ) {
+    if( AMCCAN_STATE_OFF_NRDY ==
+        (statw & AMCCAN_STATE_MASK_OFF_NRDY) )
+        return AMCCAN_STATE_OFF_NRDY;
+    if( AMCCAN_STATE_OFF_SW_ON_DISABLE ==
+        (statw & AMCCAN_STATE_MASK_OFF_SW_ON_DISABLE) )
+        return AMCCAN_STATE_OFF_SW_ON_DISABLE;
+    if( AMCCAN_STATE_OFF_RDY ==
+        (statw & AMCCAN_STATE_MASK_OFF_RDY) )
+        return AMCCAN_STATE_OFF_RDY;
+    if( AMCCAN_STATE_ON_OP_DIS ==
+        (statw & AMCCAN_STATE_MASK_ON_OP_DIS) )
+        return AMCCAN_STATE_ON_OP_DIS;
+    if( AMCCAN_STATE_ON_OP_EN ==
+        (statw & AMCCAN_STATE_MASK_ON_OP_EN) )
+        return AMCCAN_STATE_ON_OP_EN;
+    if( AMCCAN_STATE_FAULT ==
+        (statw & AMCCAN_STATE_MASK_FAULT) )
+        return AMCCAN_STATE_FAULT;
+    if( AMCCAN_STATE_ON_QUICK_STOP ==
+        (statw & AMCCAN_STATE_MASK_ON_QUICK_STOP) )
+        return AMCCAN_STATE_ON_QUICK_STOP;
+    return AMCCAN_STATE_UNKNOWN;
+}
+
+const char *amccan_state_string( amccan_state_t state ) {
+    const char *res = "UNKNOWN";
+    switch(state) {
+        AA_ENUM_SYM_CASE(res, AMCCAN_STATE_ON_QUICK_STOP )
+        AA_ENUM_SYM_CASE(res, AMCCAN_STATE_OFF_NRDY )
+        AA_ENUM_SYM_CASE(res, AMCCAN_STATE_OFF_RDY )
+        AA_ENUM_SYM_CASE(res, AMCCAN_STATE_OFF_SW_ON_DISABLE )
+        AA_ENUM_SYM_CASE(res, AMCCAN_STATE_ON_OP_DIS )
+        AA_ENUM_SYM_CASE(res, AMCCAN_STATE_ON_OP_EN )
+        AA_ENUM_SYM_CASE(res, AMCCAN_STATE_FAULT )
+        AA_ENUM_SYM_CASE(res, AMCCAN_STATE_UNKNOWN )
+    }
+    return res;
 }

@@ -492,7 +492,8 @@ NTCAN_RESULT amcdrive_update_drives(servo_vars_t *drives, int count) {
     int m;
     for (m = 0; m < len; m++) {
         CMSG *canMsg = &canMsgs[m];
-        int32_t drive_id = (canMsg->id - 0x200) / 7;    // This '7' must be the same as appeared in amcdrive_enable_pdos()
+        // This '7' must be the same as appeared in amcdrive_enable_pdos()
+        int32_t drive_id = (canMsg->id - 0x200) / 7;
 
         int i;
         for (i = 0; i < count; i++) {
@@ -605,5 +606,35 @@ void amcdrive_print_info(NTCAN_HANDLE handle, uint8_t id) {
     // Print: Maximum Peak Current 20D8.0Ch
     canOpenSDOWriteWait_ul_u16(handle, &rcmd, &k_p, id, AMCCAN_INDEX_BOARD_INFO, AMCCAN_SUBINDEX_MAX_PEAK_CURRENT);
     printf("Maximum Peak Current (20D8.0Ch) = %u [PBC]\n", k_p);
+
+}
+
+void amcdrive_dump_status(FILE *f, int16_t statw) {
+    fprintf(f, "Ready to Switch On:    %d\n",
+            statw & AMCCAN_STATW_READY_ON );
+    fprintf(f, "Switched On:           %d\n",
+            statw & AMCCAN_STATW_SWITCHED_ON );
+    fprintf(f, "Operation Enabled:     %d\n",
+            statw & AMCCAN_STATW_OP_ENABLED);
+    fprintf(f, "Fault:                 %d\n",
+            statw & AMCCAN_STATW_FAULT);
+    fprintf(f, "Voltage Enabled:       %d\n",
+            statw & AMCCAN_STATW_VOLT_ENABLED);
+    fprintf(f, "Quick Stop:            %d\n",
+            statw & AMCCAN_STATW_QUICK_STOP);
+    fprintf(f, "Switch On disabled:    %d\n",
+            statw & AMCCAN_STATW_SW_ON_DISABLED);
+    fprintf(f, "Warning:               %d\n",
+            statw & AMCCAN_STATW_WARNING);
+    fprintf(f, "Manufacture specific:  %d\n",
+            statw & AMCCAN_STATW_MFCTR_SPECIFIC);
+    fprintf(f, "Remote:                %d\n",
+            statw & AMCCAN_STATW_REMOTE);
+    fprintf(f, "Target Reached:        %d\n",
+            statw & AMCCAN_STATW_TARGET_REACHED);
+    fprintf(f, "Internal Limit Active: %d\n",
+            statw & AMCCAN_STATW_INTERNAL_LIMIT);
+    fprintf(f, "Homing Complete:       %d\n",
+            statw & AMCCAN_STATW_HOMING_COMPLETE);
 
 }

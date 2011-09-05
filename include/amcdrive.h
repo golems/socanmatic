@@ -73,4 +73,5 @@ NTCAN_RESULT amcdrive_reset_drives(servo_vars_t *drives, size_t count);
 NTCAN_RESULT amcdrive_start_drive(servo_vars_t *drive);
 NTCAN_RESULT amcdrive_stop_drive(servo_vars_t *drive);
 
+void amcdrive_dump_status(FILE *f, int16_t statw);
 #endif

@@ -26,6 +26,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 
+#include <pthread.h>
 #include <somatic.h>
 #include <somatic/daemon.h>
 #include <ach.h>
@@ -73,17 +74,19 @@ typedef struct {
     struct timespec wait_time;
     ach_channel_t cmd_chan;
     ach_channel_t state_chan;
+
+    servo_vars_t *servos;
+    size_t n_servos;
 } cx_t;
 
 static void
-amciod_update_state( cx_t *cx, servo_vars_t *servos, ach_channel_t *state_chan);
-
-static void
-amciod_execute_and_update( cx_t *cx, servo_vars_t *servos,
-                           Somatic__MotorCmd *msg, ach_channel_t *state_chan);
+amciod_execute( cx_t *cx, servo_vars_t *servos,
+                Somatic__MotorCmd *msg );
 
 static int amciod_open(servo_vars_t *servos);
 static void amciod_run(cx_t *cx, servo_vars_t *servos);
+
+static void *amciod_update_thfun( void *cx );
 
 /* ---------- */
 /* ARGP Junk  */
@@ -205,8 +208,9 @@ int main(int argc, char *argv[]) {
     argp_parse(&argp, argc, argv, 0, NULL, &cx);
 
     /// AMC drive init
-    servo_vars_t servos[2];
-    int r = amciod_open(servos);
+    //servo_vars_t servos[2];
+    cx.servos = AA_NEW0_AR(servo_vars_t,2);
+    int r = amciod_open(cx.servos);
     aa_hard_assert(r == NTCAN_SUCCESS,
                    "AMC initialization failed. Error number: %i\n", r);
 
@@ -214,7 +218,7 @@ int main(int argc, char *argv[]) {
     if ( opt_query ) {
     } else if ( opt_reset ) {
         printf("reset\n");
-        NTCAN_RESULT status = amcdrive_reset_drives(servos, n_modules);
+        NTCAN_RESULT status = amcdrive_reset_drives(cx.servos, n_modules);
         if( NTCAN_SUCCESS != status ) {
             fprintf(stderr, "CAN error: %s\n", canResultString(status));
             exit(EXIT_FAILURE);
@@ -256,12 +260,12 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "state channel:      %s\n", opt_state_chan);
             fprintf(stderr, "n_module = %d\n", n_modules);
             fprintf(stderr, "module id = 0x%x  0x%x\n",
-                    servos[0].canopen_id, servos[1].canopen_id);
+                    cx.servos[0].canopen_id, cx.servos[1].canopen_id);
             fprintf(stderr, "-------\n");
         }
 
         // ------------- RUN --------------------
-        amciod_run( &cx, servos );
+        amciod_run( &cx, cx.servos );
 
         // ------------ DESTROY --------------
         /// Close channels
@@ -269,9 +273,9 @@ int main(int argc, char *argv[]) {
         ach_close(&cx.state_chan);
 
         /// Stop motors
-        r = amcdrive_set_current(&servos[0], 0.0);
+        r = amcdrive_set_current(&cx.servos[0], 0.0);
         aa_hard_assert(r == NTCAN_SUCCESS, "amcdrive_set_current error: %i\n", r);
-        r = amcdrive_set_current(&servos[1], 0.0);
+        r = amcdrive_set_current(&cx.servos[1], 0.0);
         aa_hard_assert(r == NTCAN_SUCCESS, "amcdrive_set_current error: %i\n", r);
 
         somatic_d_destroy(&cx.d);
@@ -366,19 +370,21 @@ static int amciod_open(servo_vars_t *servos){
 
 
 static void amciod_run(cx_t *cx, servo_vars_t *servos) {
-    /** \par Main loop
-     *
-     *  Listen on the motor command channel, and issue an amcdrive command for
-     *  each incoming message.  When an acknowledgment is received from
-     *  the module group, post it on the state channel.
+    /*  Listen on the motor command channel, and issue an amcdrive command for
+     *  each incoming message.
      */
 
+    // start update thread
+    pthread_t update_thread;
+    int r = pthread_create( &update_thread, NULL, amciod_update_thfun, cx );
+    // FIXME: check r
+
+    // now we're running
     somatic_d_event( &cx->d, SOMATIC__EVENT__PRIORITIES__NOTICE,
                      SOMATIC__EVENT__CODES__PROC_RUNNING,
                      NULL, NULL );
-
+    // process commands
     while (!somatic_sig_received) {
-        int r;
         // free memory
         aa_region_release( &cx->d.memreg );
 
@@ -396,58 +402,77 @@ static void amciod_run(cx_t *cx, servo_vars_t *servos) {
                        ach_result_to_string(r),
                        __FILE__, __LINE__);
 
-        if (r == ACH_TIMEOUT) {
-            amciod_update_state(cx, servos, &cx->state_chan);
-        }
-        else {
-            /// Issue command, and update state
-            amciod_execute_and_update(cx, servos, cmd, &cx->state_chan);
-            /// Cleanup
+        if (cmd) {
+            amciod_execute(cx, servos, cmd );
         }
 
         if (opt_verbosity) {
-            printf("pos: %.0f  %.0f [cnt]\t",
-                   servos[0].act_pos, servos[1].act_pos);
-            printf("vel: %.3f  %.3f [rad/s]\t",
-                   COUNT_TO_RAD(servos[0].act_vel),
-                   COUNT_TO_RAD(servos[1].act_vel));
-            printf("status: 0x%x  0x%x\n", servos[0].status, servos[1].status);
+            for( size_t i = 0; opt_verbosity && i < n_modules; i++ ) {
+                printf("%d:\t", i);
+                printf("pos: %.0f [cnt]\t",
+                       servos[i].act_pos);
+                printf("vel: %.3f [rad/s]\t",
+                       COUNT_TO_RAD(servos[i].act_vel));
+                printf("state: %s (0x%x)\n",
+                       amccan_state_string(amccan_decode_state(servos[i].status)),
+                       servos[i].status);
+            }
+        }
+
+        if( opt_verbosity >= 2 ) {
+            for( size_t i = 0; i < n_modules; i++ ) {
+                printf(" -- STATUS %d -- \n", i );
+                amcdrive_dump_status( stdout, servos[i].status );
+            }
         }
     }
+    // now we're stopping
     somatic_d_event( &cx->d, SOMATIC__EVENT__PRIORITIES__NOTICE,
                      SOMATIC__EVENT__CODES__PROC_STOPPING,
                      NULL, NULL );
+    // join update thread
+    pthread_join( update_thread, NULL );
 }
 
+/* Run drive state updates in a separate thread.  Since this can
+ * happen entirely independently of drive commands, it seems
+ * reasonable to use multiple thread here.  However, if we want the
+ * daemon to do things like check limits before issuing commands, we'd
+ * better put things back in one thread.
+ *
+ */
+static void *amciod_update_thfun( void *_cx ) {
+    cx_t *cx = (cx_t*)_cx;
+    while( !somatic_sig_received ) {
+        // Update amcdrive state
+        NTCAN_RESULT status =  amcdrive_update_drives(cx->servos, (int)n_modules);
+        somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot update drive states!\n");
+        for( size_t i = 0; i < n_modules; i++ ) {
+            cx->state_msg->position->data[i] =  COUNT_TO_RAD(cx->servos[i].act_pos);
+            cx->state_msg->velocity->data[i] =  COUNT_TO_RAD(cx->servos[i].act_vel);
+            cx->state_msg->current->data[i] =  0;
+        }
+        somatic_metadata_set_time_now( cx->state_msg->meta );
 
-static void amciod_update_state( cx_t *cx, servo_vars_t *servos,
-                            ach_channel_t *state_chan)
-{
-    // Update amcdrive state
-    NTCAN_RESULT status =  amcdrive_update_drives(servos, (int)n_modules);
-    somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot update drive states!\n");
-    for( size_t i = 0; i < n_modules; i++ ) {
-        cx->state_msg->position->data[i] =  COUNT_TO_RAD(servos[i].act_pos);
-        cx->state_msg->velocity->data[i] =  COUNT_TO_RAD(servos[i].act_vel);
-        cx->state_msg->current->data[i] =  0;
+        // FIXME: check status words here
+
+        int r = SOMATIC_PACK_SEND( &cx->state_chan,
+                                   somatic__motor_state, cx->state_msg );
+
+        /// check message transmission
+        somatic_d_check( &cx->d, SOMATIC__EVENT__PRIORITIES__CRIT,
+                         SOMATIC__EVENT__CODES__COMM_FAILED_TRANSPORT,
+                         ACH_OK == r,
+                         "update_state",
+                         "ach result: %s", ach_result_to_string(r) );
+
+
     }
-    somatic_metadata_set_time_now( cx->state_msg->meta );
-
-    int r = SOMATIC_PACK_SEND( state_chan, somatic__motor_state, cx->state_msg );
-
-    /// check message transmission
-    somatic_d_check( &cx->d, SOMATIC__EVENT__PRIORITIES__CRIT,
-                     SOMATIC__EVENT__CODES__COMM_FAILED_TRANSPORT,
-                     ACH_OK == r,
-                     "update_state",
-                     "ach result: %s", ach_result_to_string(r) );
-
+    return NULL;
 }
 
 static void
-amciod_execute_and_update( cx_t *cx, servo_vars_t *servos,
-                           Somatic__MotorCmd *msg, ach_channel_t *state_chan)
-{
+amciod_execute( cx_t *cx, servo_vars_t *servos, Somatic__MotorCmd *msg ) {
     NTCAN_RESULT status;
 
     // amcdrive daemon currently accepts only current command
@@ -456,15 +481,9 @@ amciod_execute_and_update( cx_t *cx, servo_vars_t *servos,
         exit(0);
     }
 
-    /**
-     * Receive command message from the command channel, and send to amcdrive
-     */
-
     // Print motor commands received from the command channel
-    if (opt_verbosity) {
-        size_t i
-            ;
-        for (i = 0; i < msg->values->n_data; ++i)
+    if (opt_verbosity > 5) {
+        for (size_t i = 0; i < msg->values->n_data; ++i)
             fprintf(stdout, "%lf::", msg->values->data[i]);
         fprintf(stdout, "]\n");
 
@@ -484,8 +503,4 @@ amciod_execute_and_update( cx_t *cx, servo_vars_t *servos,
     aa_hard_assert( status == NTCAN_SUCCESS, "Cannot set current (Left)!\n");
     status = amcdrive_set_current(&servos[1], motorRightCurrent);
     aa_hard_assert( status == NTCAN_SUCCESS, "Cannot set current (Right)!\n");
-
-    // Update states
-    amciod_update_state(cx, servos, state_chan);
-
 }

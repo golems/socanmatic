@@ -76,6 +76,7 @@ typedef enum { /* From p241 */
 } amccan_op_mode_t;
 
 
+
 #define AMCCAN_INDEX_NODE_ID         0x100b
 #define AMCCAN_SUBINDEX_NODE_ID      0x00
 #define AMCCAN_INDEX_IDENTITY        0x1018
@@ -150,6 +151,55 @@ typedef enum {
   AMCCAN_PDO_TRANS_ASYNC_RTR        = 0xFC,
   AMCCAN_PDO_TRANS_ASYNC            = 0xFE
 } amccan_pdo_trans_t;
+
+/// status word bits
+typedef enum {
+    AMCCAN_STATW_READY_ON        = (1<<0),
+    AMCCAN_STATW_SWITCHED_ON     = (1<<1),
+    AMCCAN_STATW_OP_ENABLED      = (1<<2),
+    AMCCAN_STATW_FAULT           = (1<<3),
+    AMCCAN_STATW_VOLT_ENABLED    = (1<<4),
+    AMCCAN_STATW_QUICK_STOP      = (1<<5),
+    AMCCAN_STATW_SW_ON_DISABLED  = (1<<6),
+    AMCCAN_STATW_WARNING         = (1<<7),
+    AMCCAN_STATW_MFCTR_SPECIFIC  = (1<<8),
+    AMCCAN_STATW_REMOTE          = (1<<9),
+    AMCCAN_STATW_TARGET_REACHED  = (1<<10),
+    AMCCAN_STATW_INTERNAL_LIMIT  = (1<<11),
+    AMCCAN_STATW_HOMING_COMPLETE = (1<<12)
+} amccan_statw_t;
+
+/** Canopen State machine.
+ *
+ * Set using the ControWord. Read using the status word.  Values of
+ * the enum are the status word with don't care bits masked out.
+ */
+typedef enum {
+    AMCCAN_STATE_OFF_NRDY = 0x00,
+    AMCCAN_STATE_OFF_SW_ON_DISABLE = 0x40,
+    AMCCAN_STATE_OFF_RDY = 0x21,
+    AMCCAN_STATE_ON_OP_DIS = 0x23,
+    AMCCAN_STATE_ON_OP_EN = 0x27,
+    AMCCAN_STATE_FAULT = 0x08,
+    AMCCAN_STATE_ON_QUICK_STOP = 0x03,
+    AMCCAN_STATE_UNKNOWN = 0xFFFF
+} amccan_state_t;
+
+/** Mask out don't care bits for mapping status_word to drive state
+ *  See table 19, p. 41.
+ */
+typedef enum {
+    AMCCAN_STATE_MASK_OFF_NRDY = 0x4F,
+    AMCCAN_STATE_MASK_OFF_SW_ON_DISABLE = 0x4F,
+    AMCCAN_STATE_MASK_OFF_RDY = 0x6F,
+    AMCCAN_STATE_MASK_ON_OP_DIS = 0x6F,
+    AMCCAN_STATE_MASK_ON_OP_EN = 0x6F,
+    AMCCAN_STATE_MASK_FAULT = 0x4F,
+    AMCCAN_STATE_MASK_ON_QUICK_STOP = 0x6F,
+} amccan_state_mask_t;
+
+amccan_state_t amccan_decode_state( int16_t statw );
+const char *amccan_state_string( amccan_state_t state );
 
 NTCAN_RESULT amccan_dl_pdo_trans( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t node,
                                   amccan_pdo_t pdo,
