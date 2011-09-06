@@ -83,7 +83,7 @@ static void
 amciod_execute( cx_t *cx, servo_vars_t *servos,
                 Somatic__MotorCmd *msg );
 
-static int amciod_open(servo_vars_t *servos);
+static int amciod_start(cx_t *cx, servo_vars_t *servos, size_t n);
 static void amciod_run(cx_t *cx, servo_vars_t *servos);
 
 static void *amciod_update_thfun( void *cx );
@@ -155,13 +155,13 @@ static struct argp_option options[] = {
         .flags = 0,
         .doc = "Define a CAN bus for a module"
     },
-    {
+    /*{
         .name = "query",
         .key = 'Q',
         .arg = NULL,
         .flags = 0,
         .doc = "get info about the module"
-    },
+        },*/
     {
         .name = "reset",
         .key = 'R',
@@ -210,9 +210,13 @@ int main(int argc, char *argv[]) {
     /// AMC drive init
     //servo_vars_t servos[2];
     cx.servos = AA_NEW0_AR(servo_vars_t,2);
-    int r = amciod_open(cx.servos);
-    aa_hard_assert(r == NTCAN_SUCCESS,
-                   "AMC initialization failed. Error number: %i\n", r);
+
+    //int r = amciod_open(cx.servos);
+    NTCAN_RESULT r = amcdrive_open_drives( opt_bus_id, opt_mod_id, n_modules,
+                                           cx.servos);
+
+    somatic_d_require( &cx.d, NTCAN_SUCCESS == r,
+                       "AMC open failed: %i\n", canResultString(r) );
 
     // ------------- MODE ----------------------
     if ( opt_query ) {
@@ -227,7 +231,6 @@ int main(int argc, char *argv[]) {
 
         // init daemon context
         somatic_d_init(&cx.d, &cx.d_opts);
-
 
         /// Ach channels for amciod
         //ach_channel_t cmd_chan, state_chan;
@@ -264,23 +267,29 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "-------\n");
         }
 
+        // start drives
+        amciod_start(&cx, cx.servos, n_modules);
         // ------------- RUN --------------------
         amciod_run( &cx, cx.servos );
 
         // ------------ DESTROY --------------
+
+        /// Stop motors
+        for( size_t i = 0; i < n_modules; i++ ) {
+            r = amcdrive_set_current(&cx.servos[i], 0.0);
+            aa_hard_assert(r == NTCAN_SUCCESS, "amcdrive_set_current error: %i\n", r);
+            r = amcdrive_stop_drive(&cx.servos[i]);
+            aa_hard_assert(r == NTCAN_SUCCESS, "amcdrive_stop error: %i\n", r);
+        }
+
+        //
+
         /// Close channels
         ach_close(&cx.cmd_chan);
         ach_close(&cx.state_chan);
 
-        /// Stop motors
-        r = amcdrive_set_current(&cx.servos[0], 0.0);
-        aa_hard_assert(r == NTCAN_SUCCESS, "amcdrive_set_current error: %i\n", r);
-        r = amcdrive_set_current(&cx.servos[1], 0.0);
-        aa_hard_assert(r == NTCAN_SUCCESS, "amcdrive_set_current error: %i\n", r);
-
         somatic_d_destroy(&cx.d);
     }
-    // FIXME: should put the drives in some shutdown/halted state
 
     return 0;
 }
@@ -336,34 +345,60 @@ static int parse_opt(int key, char *arg, struct argp_state *state) {
 }
 
 
-/**
- * \brief
- */
-static int amciod_open(servo_vars_t *servos){
-
+static int amciod_start(cx_t *cx, servo_vars_t *servos, size_t n){
     // open drives
+    //NTCAN_RESULT r = amcdrive_open_drives( opt_bus_id, opt_mod_id, n_modules,
+    //servos);
+    int r;
     unsigned flags =
         REQUEST_TPDO_VELOCITY | REQUEST_TPDO_POSITION |
         ENABLE_RPDO_CURRENT | REQUEST_TPDO_STATUSWORD;
-    NTCAN_RESULT r = amcdrive_open_drives( opt_bus_id, opt_mod_id, n_modules,
-                                           /*flags, 1000,*/ servos);
-    if (r != NTCAN_SUCCESS) {
-        perror("amcdrive_open_drives");
-        return r;
+
+    // fetch drive vars
+    for( size_t i = 0; i < n; i++ ) {
+        r = amcdrive_init_drive(&servos[i], flags, 1000 );
+        somatic_d_require( &cx->d, NTCAN_SUCCESS == r,
+                           "couldn't init drive: %s", canResultString(r) );
+        r = amcdrive_set_current(&servos[i], 0.0);
+        somatic_d_require( &cx->d, NTCAN_SUCCESS == r,
+                           "couldn't set current: %s", canResultString(r) );
     }
-    // init drives
-    for( size_t i = 0; i < n_modules; i++ ) {
-        amcdrive_init_drive(&servos[i], flags, 1000 );
+
+    // start drives for sure
+    // sometimes it takes a couple tries to actuall reset these damn things
+    int drives_ok = 1;
+    int cnt = 0;
+    do {
+        // update state
+        drives_ok = 1;
+        r = amcdrive_update_drives(servos, n);
+        somatic_d_require( &cx->d, NTCAN_SUCCESS == r,
+                           "amcdrive_update error: %i\n", r);
+        // check state
+        for( size_t i = 0; drives_ok && i < n; i++ ) {
+            if( AMCCAN_STATE_ON_OP_EN !=  amccan_decode_state(servos[i].status) ) {
+                drives_ok = 0;
+                // try to reset again
+                r = amcdrive_start(servos[i].handle, servos[i].canopen_id);
+                somatic_d_require( &cx->d, NTCAN_SUCCESS == r,
+                                   "amcdrive_update error: %i\n", r);
+            }
+        }
+        //printf("cnt: %d\n", cnt);
+        cnt++;
+        somatic_d_require( &cx->d, cnt < 100,
+                           "couldn't enable drives" );
+    } while(!drives_ok);
+
+    // set current
+    for( size_t i = 0; i < n; i++ ) {
+        r = amcdrive_set_current(&servos[i], 0.0);
+        somatic_d_require( &cx->d, NTCAN_SUCCESS == r,
+                           "couldn't set current: %s", canResultString(r) );
     }
 
     // FIXME: WTF? -ntd
     servos[1].current_sign = -1;
-
-    r = amcdrive_set_current(&servos[0], 0.0);
-    aa_hard_assert(r == NTCAN_SUCCESS, "amcdrive_set_current error: %i\n", r);
-
-    r = amcdrive_set_current(&servos[1], 0.0);
-    aa_hard_assert(r == NTCAN_SUCCESS, "amcdrive_set_current error: %i\n", r);
 
     return 0;
 }
@@ -377,12 +412,12 @@ static void amciod_run(cx_t *cx, servo_vars_t *servos) {
     // start update thread
     pthread_t update_thread;
     int r = pthread_create( &update_thread, NULL, amciod_update_thfun, cx );
-    // FIXME: check r
+    somatic_d_require( &cx->d, 0 == r,
+                       "couldn't create feedback thread: %s",
+                       strerror(r) );
 
     // now we're running
-    somatic_d_event( &cx->d, SOMATIC__EVENT__PRIORITIES__NOTICE,
-                     SOMATIC__EVENT__CODES__PROC_RUNNING,
-                     NULL, NULL );
+    somatic_d_state( &cx->d, SOMATIC__EVENT__CODES__PROC_RUNNING );
     // process commands
     while (!somatic_sig_received) {
         // free memory
@@ -427,9 +462,8 @@ static void amciod_run(cx_t *cx, servo_vars_t *servos) {
         }
     }
     // now we're stopping
-    somatic_d_event( &cx->d, SOMATIC__EVENT__PRIORITIES__NOTICE,
-                     SOMATIC__EVENT__CODES__PROC_STOPPING,
-                     NULL, NULL );
+    somatic_d_state( &cx->d, SOMATIC__EVENT__CODES__PROC_STOPPING );
+
     // join update thread
     pthread_join( update_thread, NULL );
 }
@@ -445,7 +479,7 @@ static void *amciod_update_thfun( void *_cx ) {
     cx_t *cx = (cx_t*)_cx;
     while( !somatic_sig_received ) {
         // Update amcdrive state
-        NTCAN_RESULT status =  amcdrive_update_drives(cx->servos, (int)n_modules);
+        NTCAN_RESULT status =  amcdrive_update_drives(cx->servos, n_modules);
         somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot update drive states!\n");
         for( size_t i = 0; i < n_modules; i++ ) {
             cx->state_msg->position->data[i] =  COUNT_TO_RAD(cx->servos[i].act_pos);

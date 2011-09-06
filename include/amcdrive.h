@@ -55,7 +55,7 @@ NTCAN_RESULT amcdrive_init_drive( servo_vars_t *drive_info,  uint pdos, uint upd
 
 NTCAN_RESULT amcdrive_open_drives(int32_t network, uint8_t *identifiers, uint count, /*uint pdos, uint update_freq,*/ servo_vars_t *drive_infos);
 
-NTCAN_RESULT amcdrive_update_drives(servo_vars_t *drives, int count);
+NTCAN_RESULT amcdrive_update_drives(servo_vars_t *drives, size_t count);
 
 /*
  * Send current command to motor
@@ -69,6 +69,7 @@ NTCAN_RESULT amcdrive_reset_position( NTCAN_HANDLE h, uint8_t *rcmd, uint8_t nod
 
 /** Reset drives */
 NTCAN_RESULT amcdrive_reset_drives(servo_vars_t *drives, size_t count);
+NTCAN_RESULT amcdrive_start(NTCAN_HANDLE handle, uint8_t id);
 
 NTCAN_RESULT amcdrive_start_drive(servo_vars_t *drive);
 NTCAN_RESULT amcdrive_stop_drive(servo_vars_t *drive);

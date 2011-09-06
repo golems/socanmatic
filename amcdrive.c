@@ -480,7 +480,7 @@ static NTCAN_RESULT amcdrive_rpdo_cw_i32(NTCAN_HANDLE handle, uint16_t rpdo, int
     return try_ntcan("amcdrive_rpdo", canWrite(handle, &canMsg, &count, NULL));
 }
 
-NTCAN_RESULT amcdrive_update_drives(servo_vars_t *drives, int count) {
+NTCAN_RESULT amcdrive_update_drives(servo_vars_t *drives, size_t count) {
     CMSG canMsgs[256]; // We can easily handle more than one message at a time
 
     int len = 256;
@@ -495,8 +495,7 @@ NTCAN_RESULT amcdrive_update_drives(servo_vars_t *drives, int count) {
         // This '7' must be the same as appeared in amcdrive_enable_pdos()
         int32_t drive_id = (canMsg->id - 0x200) / 7;
 
-        int i;
-        for (i = 0; i < count; i++) {
+        for (size_t i = 0; i < count; i++) {
 
             servo_vars_t *d = &drives[i];
             if (d->canopen_id == drive_id) {

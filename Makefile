@@ -1,7 +1,7 @@
 # Project Name
 PROJECT := amciod
 
-# Project Version 
+# Project Version
 VERSION := 20100421
 
 # Binary Files
@@ -18,7 +18,7 @@ all: default
 
 CC=g++
 include /usr/share/make-common/common.1.mk
-CFLAGS += -Wall -Wextra -Wpointer-arith --std=gnu99
+CFLAGS += --std=gnu99
 
 default: $(LIBFILES) $(BINFILES)
 
