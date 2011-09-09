@@ -33,6 +33,8 @@
 
 #include <somatic/util.h>
 #include <somatic.pb-c.h>
+#include <unistd.h>
+#include <time.h>
 #include <somatic/msg/motor.h>
 
 #include <math.h>
@@ -346,9 +348,6 @@ static int parse_opt(int key, char *arg, struct argp_state *state) {
 
 
 static int amciod_start(cx_t *cx, servo_vars_t *servos, size_t n){
-    // open drives
-    //NTCAN_RESULT r = amcdrive_open_drives( opt_bus_id, opt_mod_id, n_modules,
-    //servos);
     int r;
     unsigned flags =
         REQUEST_TPDO_VELOCITY | REQUEST_TPDO_POSITION |
@@ -365,10 +364,12 @@ static int amciod_start(cx_t *cx, servo_vars_t *servos, size_t n){
     }
 
     // start drives for sure
-    // sometimes it takes a couple tries to actuall reset these damn things
+    // sometimes it takes a couple tries to actually start these damn things
     int drives_ok = 1;
     int cnt = 0;
     do {
+        // drives take a moment to settle, sleep a bit
+        usleep(1e6 / 10);
         // update state
         drives_ok = 1;
         r = amcdrive_update_drives(servos, n);
@@ -383,13 +384,13 @@ static int amciod_start(cx_t *cx, servo_vars_t *servos, size_t n){
                 somatic_d_require( &cx->d, NTCAN_SUCCESS == r,
                                    "amcdrive_update error: %i\n", r);
             }
+            // reset the prev drive status
+            servos[i].prev_status = servos[i].status;
         }
-        //printf("cnt: %d\n", cnt);
         cnt++;
         somatic_d_require( &cx->d, cnt < 100,
                            "couldn't enable drives" );
     } while(!drives_ok);
-
     // set current
     for( size_t i = 0; i < n; i++ ) {
         r = amcdrive_set_current(&servos[i], 0.0);
@@ -479,8 +480,8 @@ static void *amciod_update_thfun( void *_cx ) {
     cx_t *cx = (cx_t*)_cx;
     while( !somatic_sig_received ) {
         // Update amcdrive state
-        NTCAN_RESULT status =  amcdrive_update_drives(cx->servos, n_modules);
-        somatic_hard_assert( status == NTCAN_SUCCESS, "Cannot update drive states!\n");
+        int r =  amcdrive_update_drives(cx->servos, n_modules);
+        somatic_hard_assert( r == NTCAN_SUCCESS, "Cannot update drive states!\n");
         for( size_t i = 0; i < n_modules; i++ ) {
             cx->state_msg->position->data[i] =  COUNT_TO_RAD(cx->servos[i].act_pos);
             cx->state_msg->velocity->data[i] =  COUNT_TO_RAD(cx->servos[i].act_vel);
@@ -488,19 +489,37 @@ static void *amciod_update_thfun( void *_cx ) {
         }
         somatic_metadata_set_time_now( cx->state_msg->meta );
 
-        // FIXME: check status words here
+        r = SOMATIC_PACK_SEND( &cx->state_chan,
+                               somatic__motor_state, cx->state_msg );
 
-        int r = SOMATIC_PACK_SEND( &cx->state_chan,
-                                   somatic__motor_state, cx->state_msg );
-
-        /// check message transmission
+        /// FIXME: check message transmission
         somatic_d_check( &cx->d, SOMATIC__EVENT__PRIORITIES__CRIT,
                          SOMATIC__EVENT__CODES__COMM_FAILED_TRANSPORT,
                          ACH_OK == r,
                          "update_state",
                          "ach result: %s", ach_result_to_string(r) );
 
-
+        // check status words here
+        for( size_t i = 0; i < n_modules; i ++ ) {
+            int16_t status = cx->servos[i].status;
+            int16_t prev_status = cx->servos[i].prev_status;
+            int state = amccan_decode_state( status );
+            int prev_state = amccan_decode_state( prev_status );
+            if( state != prev_state ) {
+                if( opt_verbosity ) printf("Status Change\n");
+                somatic_d_event( &cx->d, SOMATIC__EVENT__PRIORITIES__NOTICE,
+                                 SOMATIC__EVENT__CODES__UNKNOWN,
+                                 NULL, "drive 0x%x: %s(0x%x) => %s(0x%x)",
+                                 cx->servos[i].canopen_id,
+                                 amccan_state_string(prev_state),
+                                 prev_status,
+                                 amccan_state_string(state),
+                                 status);
+            }
+            // NOTE: now we need to reset the prev_status since we've
+            //   already checked it
+            cx->servos[i].prev_status = status;
+        }
     }
     return NULL;
 }
@@ -516,7 +535,7 @@ amciod_execute( cx_t *cx, servo_vars_t *servos, Somatic__MotorCmd *msg ) {
     }
 
     // Print motor commands received from the command channel
-    if (opt_verbosity > 5) {
+    if (opt_verbosity > 0) {
         for (size_t i = 0; i < msg->values->n_data; ++i)
             fprintf(stdout, "%lf::", msg->values->data[i]);
         fprintf(stdout, "]\n");

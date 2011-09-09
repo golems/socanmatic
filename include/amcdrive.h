@@ -26,6 +26,7 @@ typedef struct {
     double act_vel;             // Actual velocity in counts per second
     double act_cur;             // Actual current
     int16_t status;             // Status word of the drive
+    int16_t prev_status;        // Old Status word of the drive
 
     // PDO->COB mappings
     uint16_t rpdo_position;

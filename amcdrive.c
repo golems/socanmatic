@@ -393,15 +393,19 @@ NTCAN_RESULT amcdrive_init_drive( servo_vars_t *drive_info,
 
     // Fetch motor controller constants (max current, switching frequency, etc)
     status = amcdrive_get_info(handle, identifier, drive_info);
-    if (status != NTCAN_SUCCESS)
+    if (status != NTCAN_SUCCESS) {
+        fprintf(stderr, "get info failed\n");
         goto fail;
+    }
 
     // Enable process data objects:
     //   for RPDO, setting target position, velocity, current
     //   for TPDO, receiving actual position, velocity, current, status word
     status = amcdrive_enable_pdos(handle, identifier, pdos, drive_info);
-    if (status != NTCAN_SUCCESS)
+    if (status != NTCAN_SUCCESS) {
+        fprintf(stderr, "enable pdos failed\n");
         goto fail;
+    }
 
     // Enable the asynchronous transmission of PDOs on a timed basis
     status = amcdrive_enable_async_timer(handle, identifier, update_freq);
@@ -499,7 +503,7 @@ NTCAN_RESULT amcdrive_update_drives(servo_vars_t *drives, size_t count) {
 
             servo_vars_t *d = &drives[i];
             if (d->canopen_id == drive_id) {
-
+                //FIXME: endianness assumptions lurk here
                 // ACTUAL POSITION
                 if (d->tpdo_position == canMsg->id) {
                     int32_t position;
@@ -526,8 +530,8 @@ NTCAN_RESULT amcdrive_update_drives(servo_vars_t *drives, size_t count) {
 
                 // STATUS WORD
                 else if ( d->tpdo_statusword == canMsg->id) {
-
                     // This Status Word will be the same as reading from 6041h
+                    d->prev_status = d->status;
                     memcpy(&d->status, &canMsg->data[0], sizeof(int16_t));
                     //printf("drive %x, status = %x\n", drive_id, d->status);
                 }
