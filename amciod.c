@@ -48,13 +48,10 @@
 
 #define MAX_CURRENT 50        // Max motor current (Amps)
 #define ENCODER_COUNT 4000
-#define GEAR_REDUCTION (15/1)
-
-#define COUNT_TO_RAD(count) \
-  ( (count) * 2 * M_PI / (ENCODER_COUNT * GEAR_REDUCTION ) )
+#define GEAR_RATIO (15.0/1.0)
 
 #define RAD_TO_COUNT(rad) \
-  ( (rad) * (ENCODER_COUNT * GEAR_REDUCTION ) / (2 * M_PI) )
+  ( (rad) * (ENCODER_COUNT * GEAR_RATIO ) / (2 * M_PI) )
 
 #ifndef max
 #define max(a,b)            (((a) > (b)) ? (a) : (b))
@@ -211,7 +208,12 @@ int main(int argc, char *argv[]) {
 
     /// AMC drive init
     //servo_vars_t servos[2];
-    cx.servos = AA_NEW0_AR(servo_vars_t,2);
+    cx.n_servos = n_modules;
+    cx.servos = AA_NEW0_AR(servo_vars_t,cx.n_servos);
+    for( size_t i = 0; i < cx.n_servos; i ++ ) {
+        cx.servos[i].gear_ratio = GEAR_RATIO;
+        cx.servos[i].encoder_count = ENCODER_COUNT;
+    }
 
     //int r = amciod_open(cx.servos);
     NTCAN_RESULT r = amcdrive_open_drives( opt_bus_id, opt_mod_id, n_modules,
@@ -433,12 +435,33 @@ static void amciod_run(cx_t *cx, servo_vars_t *servos) {
                            &cx->cmd_chan, &abstime,
                            ACH_O_WAIT | ACH_O_LAST  );
 
-        aa_hard_assert(r == ACH_OK || r == ACH_TIMEOUT || ACH_MISSED_FRAME == r,
-                       "Ach wait failure %s on cmd receive (%s, line %d)\n",
-                       ach_result_to_string(r),
-                       __FILE__, __LINE__);
+        // check ach return
+        somatic_d_check( &cx->d, SOMATIC__EVENT__PRIORITIES__CRIT,
+                         SOMATIC__EVENT__CODES__COMM_FAILED_TRANSPORT,
+                         ( (ACH_OK == r || ACH_MISSED_FRAME == r) && cmd)
+			 || ACH_TIMEOUT == r,
+                         "amciod-run",
+                         "ach result: %s", ach_result_to_string(r) );
 
-        if (cmd) {
+        // validate message
+        if (cmd &&
+            somatic_d_check_msg(
+                &cx->d,
+                cmd->has_param &&
+                (SOMATIC__MOTOR_PARAM__MOTOR_CURRENT == cmd->param ||
+                 SOMATIC__MOTOR_PARAM__MOTOR_HALT == cmd->param ||
+                 SOMATIC__MOTOR_PARAM__MOTOR_RESET == cmd->param),
+                "motor_cmd", "invalid motor param, set: %d, val: %d",
+                cmd->has_param, cmd->param) &&
+            somatic_d_check_msg(
+                &cx->d,
+                (cmd->values && cmd->values->n_data == cx->n_servos) ||
+                SOMATIC__MOTOR_PARAM__MOTOR_HALT == cmd->param ||
+                SOMATIC__MOTOR_PARAM__MOTOR_RESET == cmd->param,
+                "motor_cmd", "wrong motor count: %d, wanted %d",
+                cmd->values->n_data, cx->n_servos )
+            ){
+            // execute message
             amciod_execute(cx, servos, cmd );
         }
 
@@ -448,7 +471,7 @@ static void amciod_run(cx_t *cx, servo_vars_t *servos) {
                 printf("pos: %.0f [cnt]\t",
                        servos[i].act_pos);
                 printf("vel: %.3f [rad/s]\t",
-                       COUNT_TO_RAD(servos[i].act_vel));
+                       servos[i].act_vel);
                 printf("state: %s (0x%x)\n",
                        amccan_state_string(amccan_decode_state(servos[i].status)),
                        servos[i].status);
@@ -483,8 +506,8 @@ static void *amciod_update_thfun( void *_cx ) {
         int r =  amcdrive_update_drives(cx->servos, n_modules);
         somatic_hard_assert( r == NTCAN_SUCCESS, "Cannot update drive states!\n");
         for( size_t i = 0; i < n_modules; i++ ) {
-            cx->state_msg->position->data[i] =  COUNT_TO_RAD(cx->servos[i].act_pos);
-            cx->state_msg->velocity->data[i] =  COUNT_TO_RAD(cx->servos[i].act_vel);
+            cx->state_msg->position->data[i] =  cx->servos[i].act_pos;
+            cx->state_msg->velocity->data[i] =  cx->servos[i].act_vel;
             cx->state_msg->current->data[i] =  0;
         }
         somatic_metadata_set_time_now( cx->state_msg->meta );
@@ -517,7 +540,8 @@ static void *amciod_update_thfun( void *_cx ) {
                                  status);
             }
             // NOTE: now we need to reset the prev_status since we've
-            //   already checked it
+            //   already checked it and the next CAN message likely
+            //   won't update the status word
             cx->servos[i].prev_status = status;
         }
     }

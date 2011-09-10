@@ -16,6 +16,7 @@ typedef struct {
     uint8_t canopen_id;         // CANopen identifier
     int8_t  current_sign;       // Flip current?
 
+
     // Conversion factor (see Appendix A in the manual)
     uint16_t k_i;               // Feedback interpolation value
     uint32_t k_s;               // Switch frequency of the drive in Hz
@@ -28,7 +29,10 @@ typedef struct {
     int16_t status;             // Status word of the drive
     int16_t prev_status;        // Old Status word of the drive
 
-    // PDO->COB mappings
+    double gear_ratio;          // motor gear ratio
+    double encoder_count;       // motor encoder count
+
+    // COB-IDs for each PDO message
     uint16_t rpdo_position;
     uint16_t rpdo_velocity;
     uint16_t rpdo_current;

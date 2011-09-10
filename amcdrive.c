@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <amino.h>
 #include "include/amccan.h"
 #include "include/amcdrive.h"
 #include "ntcanopen.h"
@@ -88,6 +89,7 @@ amcdrive_get_info(NTCAN_HANDLE handle, uint8_t id, servo_vars_t *drive_info) {
 static NTCAN_RESULT amcdrive_enable_pdos(NTCAN_HANDLE handle, uint8_t id, uint pdos, servo_vars_t *drive_info) {
     NTCAN_RESULT status;
     uint8_t rcmd;
+    // What the heck is the 7 from? -ntd
     uint16_t cob_offset = umult(id, 7);
 
     drive_info->rpdo_position = uadd(cob_base, cob_offset);
@@ -484,6 +486,12 @@ static NTCAN_RESULT amcdrive_rpdo_cw_i32(NTCAN_HANDLE handle, uint16_t rpdo, int
     return try_ntcan("amcdrive_rpdo", canWrite(handle, &canMsg, &count, NULL));
 }
 
+
+double ticks_to_rad( servo_vars_t *s, double ticks ) {
+    return (ticks * s->current_sign * 2 * M_PI) /
+        (s->encoder_count * s->gear_ratio);
+}
+
 NTCAN_RESULT amcdrive_update_drives(servo_vars_t *drives, size_t count) {
     CMSG canMsgs[256]; // We can easily handle more than one message at a time
 
@@ -492,7 +500,8 @@ NTCAN_RESULT amcdrive_update_drives(servo_vars_t *drives, size_t count) {
 
     if (status != NTCAN_SUCCESS)
         return status;
-
+    // FIXME: there is a race condition here where we could miss
+    //        multiple status word updates
     int m;
     for (m = 0; m < len; m++) {
         CMSG *canMsg = &canMsgs[m];
@@ -500,39 +509,35 @@ NTCAN_RESULT amcdrive_update_drives(servo_vars_t *drives, size_t count) {
         int32_t drive_id = (canMsg->id - 0x200) / 7;
 
         for (size_t i = 0; i < count; i++) {
-
             servo_vars_t *d = &drives[i];
             if (d->canopen_id == drive_id) {
-                //FIXME: endianness assumptions lurk here
+
                 // ACTUAL POSITION
                 if (d->tpdo_position == canMsg->id) {
-                    int32_t position;
-                    memcpy(&position, &canMsg->data[2], sizeof(int32_t));
-                    position = ctohl(position);
-                    d->act_pos = (d->current_sign) * position;
+                    int32_t pos0 = aa_endconv_ld_le_i32( &canMsg->data[2] );
+                    d->act_pos = ticks_to_rad(d, pos0);
                 }
 
                 // ACTUAL VELOCITY
                 else if (d->tpdo_velocity == canMsg->id) {
-                    int32_t velocity = 0;
-                    memcpy(&velocity, &canMsg->data[2], sizeof(int32_t));
-                    velocity = ctohl(velocity);
-                    d->act_vel = (d->current_sign) * amccan_decode_ds1(velocity, d->k_i, d->k_s);
+                    int32_t vel0 = aa_endconv_ld_le_i32( &canMsg->data[2] );
+                    double ticks = amccan_decode_ds1(vel0, d->k_i, d->k_s);
+                    d->act_vel = ticks_to_rad(d, ticks);
                 }
 
                 // ACTUAL CURRENT
                 else if (d->tpdo_current == canMsg->id) {
-                    int16_t current;
-                    memcpy(&current, &canMsg->data[2], sizeof(int16_t));
-                    d->act_cur = (d->current_sign) * amccan_decode_dc1(current, d->k_p);
-                    // eprintf("current = %f\n", d->i_act);
+                    int16_t cur0 = aa_endconv_ld_le_i16( &canMsg->data[2] );
+                    d->act_cur = (d->current_sign) *
+                        amccan_decode_dc1(cur0, d->k_p);
                 }
 
                 // STATUS WORD
                 else if ( d->tpdo_statusword == canMsg->id) {
                     // This Status Word will be the same as reading from 6041h
                     d->prev_status = d->status;
-                    memcpy(&d->status, &canMsg->data[0], sizeof(int16_t));
+                    d->status = aa_endconv_ld_le_i16( &canMsg->data[0] );
+                    //memcpy(&d->status, &canMsg->data[0], sizeof(int16_t));
                     //printf("drive %x, status = %x\n", drive_id, d->status);
                 }
 
