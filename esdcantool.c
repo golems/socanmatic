@@ -399,6 +399,7 @@ void ntcan_dump( CMSG *pmsg ) {
         u = pmsg->data[i];
         printf("%02x%s", u, (i < pmsg->len - 1)?":":"" );
     }
+    fflush(stdout);
 }
 
 /** Loop that listens for CAN message and prints to stdout */
