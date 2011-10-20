@@ -1,3 +1,4 @@
+/* -*- mode: C; c-basic-offset: 4 -*- */
 /*
  * Copyright (c) 2008, Georgia Tech Research Corporation
  * All rights reserved.
@@ -56,6 +57,7 @@
 #include <assert.h>
 #include <stdint.h>
 #include <signal.h>
+#include <time.h>
 #include "ntcan.h"
 #include "ntcanopen.h"
 
@@ -190,6 +192,13 @@ static struct argp_option options[] = {
         .flags = 0,
         .doc = "CANopen SDO subindex"
     },
+    {
+        .name = "timestamp",
+        .key = 't',
+        .arg = NULL,
+        .flags = 0,
+        .doc = "timestamp messages"
+    },
     {0}
 };
 
@@ -222,6 +231,8 @@ struct {
     int32_t index;
     int16_t subindex;
 
+    int timestamp;
+
     canopen_nmt_msg_t nmt_msg;
 } args = {
     //.dostatus = 0,
@@ -237,6 +248,7 @@ struct {
     .net = 0,
     .index = -1,
     .subindex = -1,
+    .timestamp = 0,
     .nmt_msg = CANOPEN_NMT_INVAL
 };
 
@@ -439,6 +451,11 @@ void dolisten() {
             }
             ntcan_debug(DEBUG, "read", ntr);
             if( NTCAN_SUCCESS == ntr ) {
+                if( args.timestamp ) {
+                    struct timespec ts;
+                    clock_gettime( CLOCK_REALTIME, &ts );
+                    printf("%lu.%09lds \t", ts.tv_sec, ts.tv_nsec);
+                }
                 ntcan_dump(&msg);
                 printf("\n");
                 fflush(stdout);
@@ -773,6 +790,8 @@ static error_t parse_opt( int key, char *arg, struct argp_state *state) {
     case 'X': args.index = parse_hex();
         break;
     case 'x': args.subindex = parse_hex();
+        break;
+    case 't': args.timestamp = 1;
         break;
     case ARG_BAUD: args.baud_kbps = atoi(arg);
         break;

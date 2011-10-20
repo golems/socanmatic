@@ -16,7 +16,7 @@ include /usr/share/make-common/common.1.mk
 
 all: $(LIBFILES) $(BINFILES)
 
-$(call LINKBIN, esdcantool, esdcantool.o ntcanopen.o, ntcan)
+$(call LINKBIN, esdcantool, esdcantool.o ntcanopen.o, ntcan rt)
 $(call LINKLIB, ntcanopen, ntcanopen.o)
 
 
