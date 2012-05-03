@@ -424,7 +424,7 @@ static void amciod_run(cx_t *cx, servo_vars_t *servos) {
     // process commands
     while (!somatic_sig_received) {
         // free memory
-        aa_region_release( &cx->d.memreg );
+        aa_mem_region_release( &cx->d.memreg );
 
         // returns the absolute time when receive should give up waiting
         struct timespec abstime = aa_tm_future(cx->wait_time);
@@ -439,7 +439,7 @@ static void amciod_run(cx_t *cx, servo_vars_t *servos) {
         somatic_d_check( &cx->d, SOMATIC__EVENT__PRIORITIES__CRIT,
                          SOMATIC__EVENT__CODES__COMM_FAILED_TRANSPORT,
                          ( (ACH_OK == r || ACH_MISSED_FRAME == r) && cmd)
-			 || ACH_TIMEOUT == r,
+                         || ACH_TIMEOUT == r,
                          "amciod-run",
                          "ach result: %s", ach_result_to_string(r) );
 
