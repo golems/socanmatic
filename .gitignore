@@ -16,3 +16,4 @@ config.*
 /libtool
 /ltmain.sh
 /stamp-h1
+/Makefile
