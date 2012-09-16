@@ -35,7 +35,7 @@
 #include <somatic.pb-c.h>
 #include <unistd.h>
 #include <time.h>
-#include <somatic/msg/motor.h>
+#include <somatic/motor.h>
 
 #include <math.h>
 
