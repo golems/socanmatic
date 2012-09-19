@@ -43,9 +43,12 @@
 /**
  * \file ntcanopen.h
  *
- * \brief CANopen implementation using esd's NTCAN API
+ * \brief CANopen implementation using esd's NTCAN API. See the website
+ * http://en.wikipedia.org/wiki/Canopen#Service_Data_Object_.28SDO.29_protocol
+ * for details of service data object (SDO) protocol.
  *
  * \author Neil Dantam
+ * \author Can Erdogan (bug fixes)
  *
  * \bug Deferring implentation of segmented messages
  *
@@ -60,16 +63,23 @@
 extern "C" {
 #endif
 
-/// container struct for SDO requests
-    typedef struct {
-        uint8_t node;      ///< CANopen Node ID
-        uint8_t command;   ///< CANopen command word
-        uint16_t index;    ///< CANopen index
-        uint8_t subindex;  ///< CANopen index
-        uint8_t length;    ///< CANopen length of data
-        uint8_t data[4];   ///< CANopen data section
-    } sdo_msg_t;
+/// The maximum size of the data field in an SDO
+#define MAX_SDO_DATA_LENGTH 4
 
+/// container struct for SDO requests
+typedef struct {
+
+	// Message contents
+    uint8_t command;   ///< CANopen command word, with ccs, reserved, n, e and s fields (see the website)
+    uint16_t index;    ///< CANopen index
+    uint8_t subindex;  ///< CANopen subindex
+    uint8_t data[MAX_SDO_DATA_LENGTH];   ///< CANopen data section
+	
+	// Additional information
+    uint8_t node;      ///< CANopen Node ID
+    uint8_t length;    ///< CANopen length of data, is either set in n (command) or in the data (depends on s)
+	
+ } sdo_msg_t;
 
 
 #define CANOPEN_SDO_REQ_ID(node) (0x600 + (node))

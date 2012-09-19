@@ -46,6 +46,7 @@
  * \brief CANopen implementation using esd's NTCAN API
  *
  * \author Neil Dantam
+ * \author Can Erdogan (bug fixes)
  *
  * \bug AMC servo drives require expedited SDO reads to have a full
  * 8-byte data portion.  We must accomodate.
@@ -64,17 +65,25 @@ extern int verbosity;
 
 void canOpenTranslateSDO( CMSG *dst, const sdo_msg_t *src, const int is_response ) {
     assert( src->length <= 4 );
+
+	// Set the message ID and the length
     dst->id = (is_response ? 0x580 : 0x600 ) + src->node;
-    dst->len = src->length + 4;
+    dst->len = src->length + 4;			// 4 due to "len" (1), "msg_lost" (1) and "reserved" (2) fields
     //dst->len = 8;
+
+	// Set the data
     dst->data[0] = src->command;
     dst->data[1] = src->index & 0xFF;
     dst->data[2] = (src->index >> 8) & 0xFF;
     dst->data[3] = src->subindex;
     memcpy( &(dst->data[4]), &(src->data[0]), src->length );
+
+	// Reset the rest of the data that is not filled
     bzero( &(dst->data[ 4 + src->length ]), 4 - src->length );
 }
 
+// NOTE: Does this translation stand correct if the dst message does not
+// use the entire data?
 void canOpenTranslateCAN( sdo_msg_t *dst, const CMSG *src, const int is_request ) {
     assert( src->len <= 8 );
     dst->node = src->id - (is_request ? 0x600 : 0x580);
@@ -94,10 +103,16 @@ NTCAN_RESULT canOpenIdDeleteSDOResponse( NTCAN_HANDLE h, const uint8_t node ) {
     return canIdDelete(h, CANOPEN_SDO_RESP_ID( node ) ) ;
 }
 
+// TODO: robotiq rejects it when message size is smaller but the msg.len is hardcoded to 8
+// FIXED: The length field of the CMSG is already set correctly in the canOpenTranslateSDO call
 NTCAN_RESULT canOpenWriteSDO( const NTCAN_HANDLE h, const sdo_msg_t *sdomsg ) {
+
+	// Create the can message and set the sdo message in its data field
     CMSG msg;
     canOpenTranslateSDO( &msg, sdomsg, 0);
-    msg.len = 8; // AMC sucks and barfs if msg isn't the full 8 bytes
+    // msg.len = 8; // AMC sucks and barfs if msg isn't the full 8 bytes - see fixed
+
+	// Write the CMSG
     int32_t num = 1;
     return canWrite( h, &msg, &num, NULL );
 }
@@ -129,9 +144,26 @@ NTCAN_RESULT canOpenSDOWriteWait( const NTCAN_HANDLE h, const sdo_msg_t *req,
     return  canOpenWaitSDO( h, resp );
 }
 
+// TODO: the nodatalength (2nd param to canOpenCommand) is set to 0 by default.
+// it should instead use the length parameter in sdo 
+// NOTE: Assumes that the message is expedited. Problem?
+// FIXED: Using the length field in sdo and the maximum defined size, nodatalength
+// is computed.
 static void put_sdo_dl_args( sdo_msg_t *sdo, uint8_t node,
                              uint16_t index, uint8_t subindex ) {
-    sdo->command = canOpenCommand( CANOPEN_EX_DL, 0, 1, 0 );
+
+	// Sanity check for the length of the sdo
+    assert((sdo->length <= MAX_SDO_DATA_LENGTH) && "Infeasible SDO length");
+
+	// Set the various command fields in sdo assuming the message is expedited
+	canopen_command_spec_t ccs = CANOPEN_EX_DL;		// command specification
+	// uint8_t nodata_len = 0;
+	uint8_t nodata_len = MAX_SDO_DATA_LENGTH - sdo->length;
+	uint8_t is_expedited = 1;
+	uint8_t is_len_in_command = 0;
+    sdo->command = canOpenCommand(ccs, nodata_len, is_expedited, is_len_in_command);
+
+	// Set the rest of the information
     sdo->node = node;
     sdo->index = index;
     sdo->subindex = subindex;
@@ -146,14 +178,19 @@ static void put_sdo_ul_args( sdo_msg_t *sdo, uint8_t node,
     sdo->length = 0;
 }
 
+// downloads a 8 byte message - the highest call in this class  
 NTCAN_RESULT canOpenSDOWriteWait_dl_u8( NTCAN_HANDLE h, uint8_t *rcmd,
                                         uint8_t node,
                                         uint16_t index, uint8_t subindex,
                                         uint8_t value) {
+
+	// Prepare the message with the given arguments
     NTCAN_RESULT ntr;
     sdo_msg_t msg, rmsg;
     put_sdo_dl_args( &msg, node, index, subindex );
     canOpenPut_uint8( &msg, value );
+
+	// Send the message and return the result
     ntr = canOpenSDOWriteWait( h, &msg, &rmsg );
     if( rcmd ) *rcmd = rmsg.command;
     return ntr;
@@ -258,21 +295,26 @@ uint8_t canOpenCommand( const canopen_command_spec_t command_spec,
                         const uint8_t nodata_len,
                         const uint8_t is_expedited,
                         const uint8_t is_len_in_cmd ) {
-    uint8_t c = 0;
+
+	// Sanity checks
     assert( nodata_len <= 3 );
     assert(  (is_expedited && is_len_in_cmd) || ! nodata_len );
-    c |= is_len_in_cmd?1:0;
-    c |= (is_expedited?1:0) << 1;
-    c |= (nodata_len & 0x3) << 2;
-    c |= (command_spec & 0x7) << 5;
+
+	// Create the command by setting the ccs, n, e and s fields
+	// NOTE: The reserved field is set to 0 by default.
+    uint8_t c = 0;
+    c |= is_len_in_cmd?1:0;				// s
+    c |= (is_expedited?1:0) << 1;		// e
+    c |= (nodata_len & 0x3) << 2;		// n
+    c |= (command_spec & 0x7) << 5;		// ccs
     return c;
 }
 
-
-void canOpenPut_uint8(sdo_msg_t *s, uint8_t d) {
-    s->length = 1;
-    s->data[0] = d ;
-    bzero( &(s->data[1]), 3);
+// Name change from s to sdo to be same as put_sdo_dl_args
+void canOpenPut_uint8(sdo_msg_t *sdo, uint8_t d) {
+    sdo->length = 1;
+    sdo->data[0] = d ;
+    bzero( &(sdo->data[1]), 3);
 }
 
 uint8_t canOpenGet_uint8(sdo_msg_t *s) {
