@@ -63,8 +63,18 @@
 extern "C" {
 #endif
 
+#include "ntcan.h"
+
 /// The maximum size of the data field in an SDO
 #define MAX_SDO_DATA_LENGTH 4
+
+/// The board info for the AMC can. This channel has to be treated differently 
+/// because the receiver can not deal with variable size SDO packages. We use
+/// the board to check an index (to find out if the message is for the AMC),
+/// and manipulate the SDO accordingly.
+/// TODO This constant is already defined in amccan.h. A common location
+/// should be determined to share these constants.
+#define AMCCAN_INDEX_BOARD_INFO             0x20D8
 
 /// container struct for SDO requests
 typedef struct {
@@ -78,6 +88,7 @@ typedef struct {
 	// Additional information
     uint8_t node;      ///< CANopen Node ID
     uint8_t length;    ///< CANopen length of data, is either set in n (command) or in the data (depends on s)
+	uint8_t is_amc;
 	
  } sdo_msg_t;
 
@@ -264,6 +275,10 @@ typedef struct {
                                             uint8_t node,
                                             uint16_t index, uint8_t subindex,
                                             uint8_t value );
+    NTCAN_RESULT canOpenSDOWriteWait_dl_u8_AMC( NTCAN_HANDLE h, uint8_t *rcmd,
+                                            uint8_t node,
+                                            uint16_t index, uint8_t subindex,
+                                            uint8_t value, uint8_t is_amc);
 
 /** Performs an SDO download of a uint16_t and waits for the response.
  */
@@ -272,6 +287,10 @@ typedef struct {
                                              uint16_t index, uint8_t subindex,
                                              uint16_t value );
 
+    NTCAN_RESULT canOpenSDOWriteWait_dl_u16_AMC( NTCAN_HANDLE h, uint8_t *rcmd,
+                                             uint8_t node,
+                                             uint16_t index, uint8_t subindex,
+                                             uint16_t value, uint8_t is_amc);
 
 /** Performs an SDO download of a uint32_t and waits for the response.
  */
@@ -280,13 +299,23 @@ typedef struct {
                                              uint16_t index, uint8_t subindex,
                                              uint32_t value );
 
+    NTCAN_RESULT canOpenSDOWriteWait_dl_u32_AMC( NTCAN_HANDLE h, uint8_t *rcmd,
+                                             uint8_t node,
+                                             uint16_t index, uint8_t subindex,
+                                             uint32_t value, uint8_t is_amc);
 
 /** Performs an SDO download of a int32_t and waits for the response.
  */
     NTCAN_RESULT canOpenSDOWriteWait_dl_i32( NTCAN_HANDLE h, uint8_t *rcmd,
                                              uint8_t node,
                                              uint16_t index, uint8_t subindex,
-                                             int32_t value );
+                                             int32_t value);
+
+    NTCAN_RESULT canOpenSDOWriteWait_dl_i32_AMC( NTCAN_HANDLE h, uint8_t *rcmd,
+                                             uint8_t node,
+                                             uint16_t index, uint8_t subindex,
+                                             int32_t value, uint8_t is_amc);
+
 
 /** Performs an SDO upload of a uint8_t and waits for the response.
  */
@@ -303,6 +332,12 @@ typedef struct {
                                              uint16_t index, uint8_t subindex );
 
 
+    NTCAN_RESULT canOpenSDOWriteWait_ul_u16_AMC( NTCAN_HANDLE h, uint8_t *rcmd,
+                                             uint16_t *value,
+                                             uint8_t node,
+                                             uint16_t index, uint8_t subindex, uint8_t is_amc);
+
+
 /** Performs an SDO upload of a uint32_t and waits for the response.
  */
     NTCAN_RESULT canOpenSDOWriteWait_ul_u32( NTCAN_HANDLE h, uint8_t *rcmd,
@@ -310,12 +345,22 @@ typedef struct {
                                              uint8_t node,
                                              uint16_t index, uint8_t subindex );
 
+    NTCAN_RESULT canOpenSDOWriteWait_ul_u32_AMC( NTCAN_HANDLE h, uint8_t *rcmd,
+                                             uint32_t *value,
+                                             uint8_t node,
+                                             uint16_t index, uint8_t subindex, uint8_t is_amc);
+
 /** Performs an SDO upload of a int32_t and waits for the response.
  */
     NTCAN_RESULT canOpenSDOWriteWait_ul_i32( NTCAN_HANDLE h, uint8_t *rcmd,
                                              int32_t *value,
                                              uint8_t node,
                                              uint16_t index, uint8_t subindex );
+
+    NTCAN_RESULT canOpenSDOWriteWait_ul_i32_AMC( NTCAN_HANDLE h, uint8_t *rcmd,
+                                             int32_t *value,
+                                             uint8_t node,
+                                             uint16_t index, uint8_t subindex, uint8_t is_amc);
 
 /// writes the sdo to stdout
     void canOpenDumpSDO( const sdo_msg_t *sdo );

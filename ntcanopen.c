@@ -80,6 +80,11 @@ void canOpenTranslateSDO( CMSG *dst, const sdo_msg_t *src, const int is_response
 
 	// Reset the rest of the data that is not filled
     bzero( &(dst->data[ 4 + src->length ]), 4 - src->length );
+	fprintf(stderr, "CMSG data: {");
+	size_t i = 0;
+	for(i = 0; i < 8; i++)
+		fprintf(stderr, "%x\t", dst->data[i]);
+	fprintf(stderr, "}\n");
 }
 
 // NOTE: Does this translation stand correct if the dst message does not
@@ -110,13 +115,18 @@ NTCAN_RESULT canOpenWriteSDO( const NTCAN_HANDLE h, const sdo_msg_t *sdomsg ) {
 	// Create the can message and set the sdo message in its data field
     CMSG msg;
     canOpenTranslateSDO( &msg, sdomsg, 0);
-    // msg.len = 8; // AMC sucks and barfs if msg isn't the full 8 bytes - see fixed
+	if(sdomsg->is_amc == 1)
+    	msg.len = 8; // AMC sucks and barfs if msg isn't the full 8 bytes - see fixed
 
 	// Write the CMSG
     int32_t num = 1;
-    return canWrite( h, &msg, &num, NULL );
+    NTCAN_RESULT writeResult = canWrite( h, &msg, &num, NULL );
+	if(writeResult != NTCAN_SUCCESS)
+		fprintf(stderr, "canOpenWriteSDO: Failed at write\n");
+	return writeResult;
 }
 
+// Waits to read a message
 NTCAN_RESULT canOpenWaitSDO( const NTCAN_HANDLE h, sdo_msg_t *sdomsg ) {
     CMSG msg;
     NTCAN_RESULT ntr;
@@ -127,6 +137,8 @@ NTCAN_RESULT canOpenWaitSDO( const NTCAN_HANDLE h, sdo_msg_t *sdomsg ) {
     }while( msg.id != CANOPEN_SDO_RESP_ID( sdomsg->node ) );
     if( sdomsg )
         canOpenTranslateCAN( sdomsg, &msg, 0 );
+	if(ntr != NTCAN_SUCCESS)
+		fprintf(stderr, "canOpenWaitSDO: Failed at read\n");
     return ntr;
 }
 
@@ -153,16 +165,23 @@ static void put_sdo_dl_args( sdo_msg_t *sdo, uint8_t node,
                              uint16_t index, uint8_t subindex ) {
 
 	// Sanity check for the length of the sdo
-    assert((sdo->length <= MAX_SDO_DATA_LENGTH) && "Infeasible SDO length");
+    if(sdo->is_amc != 1) assert((sdo->length <= MAX_SDO_DATA_LENGTH) && "Infeasible SDO length");
 
 	// Set the various command fields in sdo assuming the message is expedited
 	canopen_command_spec_t ccs = CANOPEN_EX_DL;		// command specification
 	// uint8_t nodata_len = 0;
 	uint8_t nodata_len = MAX_SDO_DATA_LENGTH - sdo->length;
+	fprintf(stderr, "sdo->length: %lu, max: %lu\n", sdo->length, MAX_SDO_DATA_LENGTH);
+	fprintf(stderr, "is_amc: %u\n", sdo->is_amc);
 	uint8_t is_expedited = 1;
-	uint8_t is_len_in_command = 0;
+	// uint8_t is_len_in_command = 0;
+	uint8_t is_len_in_command = 1;
+	
+	if(sdo->is_amc == 1) {
+		is_len_in_command = 0;
+		nodata_len = 0;
+	}
     sdo->command = canOpenCommand(ccs, nodata_len, is_expedited, is_len_in_command);
-
 	// Set the rest of the information
     sdo->node = node;
     sdo->index = index;
@@ -178,17 +197,31 @@ static void put_sdo_ul_args( sdo_msg_t *sdo, uint8_t node,
     sdo->length = 0;
 }
 
-// downloads a 8 byte message - the highest call in this class  
 NTCAN_RESULT canOpenSDOWriteWait_dl_u8( NTCAN_HANDLE h, uint8_t *rcmd,
                                         uint8_t node,
                                         uint16_t index, uint8_t subindex,
                                         uint8_t value) {
+	return canOpenSDOWriteWait_dl_u8_AMC(h, rcmd, node, index, subindex, value, 0);
+}
+
+// downloads a 8 byte message - the highest call in this class  
+NTCAN_RESULT canOpenSDOWriteWait_dl_u8_AMC( NTCAN_HANDLE h, uint8_t *rcmd,
+                                        uint8_t node,
+                                        uint16_t index, uint8_t subindex,
+                                        uint8_t value, uint8_t is_amc) {
+
+	fprintf(stderr, "Hello world!\n"); 
+	printf("Hello world!\n"); fflush(stdout); 
 
 	// Prepare the message with the given arguments
     NTCAN_RESULT ntr;
     sdo_msg_t msg, rmsg;
-    put_sdo_dl_args( &msg, node, index, subindex );
+	msg.is_amc = is_amc;
     canOpenPut_uint8( &msg, value );
+    put_sdo_dl_args( &msg, node, index, subindex );
+
+	// Print the command
+	fprintf(stderr, "canOpenSDOWriteWait_dl_u8: command: %X\n", msg.command);
 
 	// Send the message and return the result
     ntr = canOpenSDOWriteWait( h, &msg, &rmsg );
@@ -200,8 +233,16 @@ NTCAN_RESULT canOpenSDOWriteWait_dl_u16( NTCAN_HANDLE h, uint8_t *rcmd,
                                          uint8_t node,
                                          uint16_t index, uint8_t subindex,
                                          uint16_t value) {
+	return canOpenSDOWriteWait_dl_u16_AMC(h, rcmd, node, index, subindex, value, 0);
+}
+
+NTCAN_RESULT canOpenSDOWriteWait_dl_u16_AMC( NTCAN_HANDLE h, uint8_t *rcmd,
+                                         uint8_t node,
+                                         uint16_t index, uint8_t subindex,
+                                         uint16_t value, uint8_t is_amc) {
     NTCAN_RESULT ntr;
     sdo_msg_t msg, rmsg;
+	msg.is_amc = is_amc;
     put_sdo_dl_args( &msg, node, index, subindex );
     canOpenPut_uint16( &msg, value );
     ntr = canOpenSDOWriteWait( h, &msg, &rmsg );
@@ -213,8 +254,16 @@ NTCAN_RESULT canOpenSDOWriteWait_dl_u32( NTCAN_HANDLE h, uint8_t *rcmd,
                                          uint8_t node,
                                          uint16_t index, uint8_t subindex,
                                          uint32_t value) {
+	return canOpenSDOWriteWait_dl_u32_AMC(h, rcmd, node, index, subindex, value, 0);
+}
+
+NTCAN_RESULT canOpenSDOWriteWait_dl_u32_AMC( NTCAN_HANDLE h, uint8_t *rcmd,
+                                         uint8_t node,
+                                         uint16_t index, uint8_t subindex,
+                                         uint32_t value, uint8_t is_amc) {
     NTCAN_RESULT ntr;
     sdo_msg_t msg, rmsg;
+	msg.is_amc = is_amc;
     put_sdo_dl_args( &msg, node, index, subindex );
     canOpenPut_uint32( &msg, value );
     ntr = canOpenSDOWriteWait( h, &msg, &rmsg );
@@ -222,13 +271,20 @@ NTCAN_RESULT canOpenSDOWriteWait_dl_u32( NTCAN_HANDLE h, uint8_t *rcmd,
     return ntr;
 }
 
-
 NTCAN_RESULT canOpenSDOWriteWait_dl_i32( NTCAN_HANDLE h, uint8_t *rcmd,
                                          uint8_t node,
                                          uint16_t index, uint8_t subindex,
                                          int32_t value) {
+	return canOpenSDOWriteWait_dl_i32_AMC(h, rcmd, node, index, subindex, value, 0);
+}
+
+NTCAN_RESULT canOpenSDOWriteWait_dl_i32_AMC( NTCAN_HANDLE h, uint8_t *rcmd,
+                                         uint8_t node,
+                                         uint16_t index, uint8_t subindex,
+                                         int32_t value, uint8_t is_amc) {
     NTCAN_RESULT ntr;
     sdo_msg_t msg, rmsg;
+	msg.is_amc = is_amc;
     put_sdo_dl_args( &msg, node, index, subindex );
     canOpenPut_int32( &msg, value );
     ntr = canOpenSDOWriteWait( h, &msg, &rmsg );
@@ -248,23 +304,50 @@ NTCAN_RESULT canOpenSDOWriteWait_ul_u8( NTCAN_HANDLE h, uint8_t *rcmd,
     return ntr;
 }
 
+// TODO: AMC fails at this point after allowing variable length data 
 NTCAN_RESULT canOpenSDOWriteWait_ul_u16( NTCAN_HANDLE h, uint8_t *rcmd,
                                          uint16_t *value, uint8_t node,
                                          uint16_t index, uint8_t subindex ){
+	return canOpenSDOWriteWait_ul_u16_AMC(h, rcmd, value, node, index, subindex, 0);
+}
+
+// All bad hacks: blame can erdogan
+NTCAN_RESULT canOpenSDOWriteWait_ul_u16_AMC( NTCAN_HANDLE h, uint8_t *rcmd,
+                                         uint16_t *value, uint8_t node,
+                                         uint16_t index, uint8_t subindex,
+										 uint8_t is_amc ){
+
     NTCAN_RESULT ntr;
     sdo_msg_t msg, rmsg;
+
+	// Set the is_amc flag
+	msg.is_amc = is_amc;
+
+	// Write the data and read the return message
     put_sdo_ul_args( &msg, node, index, subindex );
     ntr = canOpenSDOWriteWait( h, &msg, &rmsg );
+
+	// Read the value from the return message
+	// Note that the rcmd is the first byte of the SDO package. 
     if( rcmd ) *rcmd = rmsg.command;
     if( value ) *value = canOpenGet_uint16( &rmsg );
+
+	fprintf(stderr, "canOpenSDOWriteWait_ul_u16: returning %u for result\n", ntr);
     return ntr;
 }
 
 NTCAN_RESULT canOpenSDOWriteWait_ul_u32( NTCAN_HANDLE h, uint8_t *rcmd,
                                          uint32_t *value, uint8_t node,
                                          uint16_t index, uint8_t subindex ){
+	return canOpenSDOWriteWait_ul_u32_AMC(h, rcmd, value, node, index, subindex, 0);
+}
+
+NTCAN_RESULT canOpenSDOWriteWait_ul_u32_AMC( NTCAN_HANDLE h, uint8_t *rcmd,
+                                         uint32_t *value, uint8_t node,
+                                         uint16_t index, uint8_t subindex, uint8_t is_amc ){
     NTCAN_RESULT ntr;
     sdo_msg_t msg, rmsg;
+	msg.is_amc = is_amc;
     put_sdo_ul_args( &msg, node, index, subindex );
     ntr = canOpenSDOWriteWait( h, &msg, &rmsg );
     if( rcmd ) *rcmd = rmsg.command;
@@ -275,8 +358,15 @@ NTCAN_RESULT canOpenSDOWriteWait_ul_u32( NTCAN_HANDLE h, uint8_t *rcmd,
 NTCAN_RESULT canOpenSDOWriteWait_ul_i32( NTCAN_HANDLE h, uint8_t *rcmd,
                                          int32_t *value, uint8_t node,
                                          uint16_t index, uint8_t subindex ){
+	return canOpenSDOWriteWait_ul_i32_AMC(h, rcmd, value, node, index, subindex, 0);
+}
+
+NTCAN_RESULT canOpenSDOWriteWait_ul_i32_AMC( NTCAN_HANDLE h, uint8_t *rcmd,
+                                         int32_t *value, uint8_t node,
+                                         uint16_t index, uint8_t subindex, uint8_t is_amc){
     NTCAN_RESULT ntr;
     sdo_msg_t msg, rmsg;
+	msg.is_amc = is_amc;
     put_sdo_ul_args( &msg, node, index, subindex );
     ntr = canOpenSDOWriteWait( h, &msg, &rmsg );
     if( rcmd ) *rcmd = rmsg.command;
@@ -295,6 +385,8 @@ uint8_t canOpenCommand( const canopen_command_spec_t command_spec,
                         const uint8_t nodata_len,
                         const uint8_t is_expedited,
                         const uint8_t is_len_in_cmd ) {
+
+    fprintf(stderr, "nodata_len: %lu, is_expedited: %lu, is_len_in_command: %lu\n", nodata_len, is_expedited, is_len_in_cmd);
 
 	// Sanity checks
     assert( nodata_len <= 3 );
