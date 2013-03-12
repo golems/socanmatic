@@ -4,12 +4,12 @@ AM_CPPFLAGS = -I$(top_srcdir)/include
 
 TESTS =
 
-include_HEADERS = ntcanopen.h
+include_HEADERS = include/socia.h
 
-lib_LTLIBRARIES = libntcanopen.la
-bin_PROGRAMS = esdcantool
+lib_LTLIBRARIES = libsocia.la libsocia_socketcan.la
+m4_dnl bin_PROGRAMS = esdcantool
 
-libntcanopen_la_SOURCES = ntcanopen.c
+libsocia_la_SOURCES = src/canopen.c
 
-esdcantool_SOURCES = esdcantool.c
-esdcantool_LDADD = libntcanopen.la
+libsocia_socketcan_la_SOURCES = src/socketcan.c
+

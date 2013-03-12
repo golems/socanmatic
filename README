@@ -1,30 +1,11 @@
+SoCiA -- Socket CAN in Automation
+=================================
 
-INSTALLATION
+CAN Protocol Library for CANopen and CiA.
 
-1. Make sure you have installed ntcan and that your environment knows
-   where it is.  You may have to edit the Makefile (don't worry it's
-   small).
-
-2. Run `make'
-
-3. Run `make install' or `make stow' (if you use stow)
-
-4. Execute `esdcantool'
-
-
-USAGE
-
-Show status of can interface:
-  `esdcantool --canstatus'
-
-Listen to CAN messages:
-  `esdcantool --baud 250 --listen --range='0:800'
-
-Send a CAN message:
-  `esdcantool --write --id=eb -b 1'
-
-Read CANopen SDO 1018.01 on node 1:
-  `esdcantool --readsdo -n 1 -X 1018 -x 1'
-
-Write CANopen SDO 100b.0 on node 1 with 0xabcd:
-  `esdcantool --writesdo -n 1 -X 100b -x 0 -b cd -b ab
+See Also
+--------
+* http://www.can-cia.org/
+* http://www.a-m-c.com/download/manual/AMC_CANopenCommunicationManual.pdf
+  Protocol documenation for AMC servo drives, which implement CiA
+  DS301 and DS402.

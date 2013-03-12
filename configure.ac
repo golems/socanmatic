@@ -2,10 +2,11 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.65])
-AC_INIT([gt-esdcan], [0.20090922], [ntd@gatech.edu])
+AC_INIT([socia], [0.0.1], [ntd@gatech.edu])
 AM_INIT_AUTOMAKE([-Wall])
-AC_CONFIG_SRCDIR([esdcantool.c])
+AC_CONFIG_SRCDIR([include/socia.h])
 AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_MACRO_DIR([m4])
 
 # Checks for programs.
 AC_USE_SYSTEM_EXTENSIONS
@@ -51,24 +52,30 @@ AC_FUNC_REALLOC
 AC_FUNC_STRTOD
 AC_CHECK_FUNCS([ftruncate isascii memmove memset munmap socket strcasecmp strchr strdup strerror strtol])
 AC_SEARCH_LIBS([clock_gettime],[rt])
-AC_SEARCH_LIBS([canOpen],[ntcan])
 
 
 # Enable maximum warnings
 AX_CFLAGS_WARN_ALL
 
-dnl APPEND_FLAG( [FLAG] )
-dnl Check if FLAG is supported, and if so, add it
-AC_DEFUN([APPEND_FLAG],
-         [AX_CHECK_COMPILER_FLAGS([$1], [CFLAGS="$1 $CFLAGS"])])
+dnl The AX_CHECK_COMPILER_FLAGS maco was renamed to AX_CHECK_COMPILE_FLAG
+dnl Checking for both versions
+m4_ifdef([AX_CHECK_COMPILE_FLAG],
+         [AC_DEFUN([APPEND_FLAG],
+                   [AX_CHECK_COMPILE_FLAG([$1], [CFLAGS="$1 $CFLAGS"])])])
 
-APPEND_FLAG([-Wextra])
-APPEND_FLAG([-Wconversion])
-APPEND_FLAG([-Wpointer-arith])
-APPEND_FLAG([-Wfloat-equal])
-APPEND_FLAG([-Wshadow])
-APPEND_FLAG([-Wwrite-strings])
-APPEND_FLAG([-Wc++-compat])
+m4_ifdef([AX_CHECK_COMPILER_FLAGS],
+         [AC_DEFUN([APPEND_FLAG],
+                   [AX_CHECK_COMPILER_FLAGS([$1], [CFLAGS="$1 $CFLAGS"])])])
+
+dnl If we found the flag checking macro, check some flags
+m4_ifdef([APPEND_FLAG],
+         [APPEND_FLAG([-Wextra])
+          APPEND_FLAG([-Wconversion])
+          APPEND_FLAG([-Wpointer-arith])
+          APPEND_FLAG([-Wfloat-equal])
+          APPEND_FLAG([-Wshadow])
+          APPEND_FLAG([-Wwrite-strings])
+          APPEND_FLAG([-Wc++-compat])])
 
 # Doxygen
 DX_HTML_FEATURE(ON)
