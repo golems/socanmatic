@@ -42,5 +42,6 @@
 #define SOCIA_H
 
 #include "socia/canopen.h"
+#include "socia/ds402.h"
 
 #endif //SOCIA_H
