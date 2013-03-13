@@ -59,11 +59,6 @@
  * off-the-wire CAN messages.
  */
 
-/// Produce COB-ID for request to node
-#define SOCIA_SDO_REQ_ID(node) ((canid_t)(0x600 | (node)))
-
-#define SOCIA_SDO_REQ_BASE 0x600
-#define SOCIA_SDO_RESP_BASE 0x580
 
 /// Produce COB-ID for response from node
 
@@ -72,20 +67,10 @@
 extern "C" {
 #endif
 
-/// container struct for SDO requestsnnn
-typedef struct socia_sdo_msg {
-    // Message contents
-    uint8_t command;   ///< CANopen command word, with ccs, reserved, n, e and s fields (see the website)
-    uint16_t index;    ///< CANopen index
-    uint8_t subindex;  ///< CANopen subindex
 
-    // Additional information
-    uint8_t node;      ///< CANopen Node ID
-    uint8_t length;    ///< CANopen length of data, is either set in n (command) or in the data (depends on s)
-
-    uint8_t data[];   ///< CANopen data section
-} socia_sdo_msg_t;
-
+/*********************/
+/* NMT Communication */
+/*********************/
 
 typedef enum socia_nmt_msg {
     SOCIA_NMT_INVAL = -1,
@@ -96,65 +81,85 @@ typedef enum socia_nmt_msg {
     SOCIA_NMT_RESET_COM = 0x82
 } socia_nmt_msg_t;
 
-/// Send an NMT Message
+/**  Send an NMT Message.
+ */
 int socia_send_nmt( int fd, uint8_t node,
 		    socia_nmt_msg_t nmt_msg );
 
-/// store a uint8_t into the socia_sdo_msg_t
-void socia_put_uint8(socia_sdo_msg_t *s, uint8_t d);
 
-/// read a uint8_t in the socia_sdo_msg_t
-void socia_put_uint8(socia_sdo_msg_t *s, uint8_t d);
+/*********/
+/* 8-bit */
+/*********/
+ssize_t socia_sdo_dl_u8( int fd, uint8_t *rcmd,
+			 uint8_t node,
+			 uint16_t index, uint8_t subindex,
+			 uint8_t value );
 
-/// read a uint8_t in the socia_sdo_msg_t
-uint8_t socia_get_uint8(socia_sdo_msg_t *s );
+ssize_t socia_sdo_ul_u8( int fd, uint8_t *rcmd,
+			 uint8_t *value,
+			 uint8_t node,
+			 uint16_t index, uint8_t subindex );
 
-/// store a uint16_t into the socia_sdo_msg_t
-void socia_put_uint16(socia_sdo_msg_t *s, uint16_t d);
+ssize_t socia_sdo_dl_i8( int fd, uint8_t *rcmd,
+			 uint8_t node,
+			 uint16_t index, uint8_t subindex,
+			 int8_t value );
 
-/// read a uint16_t in the socia_sdo_msg_t
-uint16_t socia_get_uint16(socia_sdo_msg_t *s);
+ssize_t socia_sdo_ul_i8( int fd, uint8_t *rcmd,
+			 int8_t *value,
+			 uint8_t node,
+			 uint16_t index, uint8_t subindex );
 
-/// store a int16_t into the socia_sdo_msg_t
-void socia_put_int16(socia_sdo_msg_t *s, int16_t d);
+/**********/
+/* 16-bit */
+/**********/
+ssize_t socia_sdo_dl_u16( int fd, uint8_t *rcmd,
+			  uint8_t node,
+			  uint16_t index, uint8_t subindex,
+			  uint16_t value );
 
-/// read a int16_t in the socia_sdo_msg_t
-int16_t socia_get_int16(socia_sdo_msg_t *s);
+ssize_t socia_sdo_ul_u16( int fd, uint8_t *rcmd,
+			  uint16_t *value,
+			  uint8_t node,
+			  uint16_t index, uint8_t subindex );
 
-/// store a uint32_t into the socia_sdo_msg_t
-void socia_put_uint32(socia_sdo_msg_t *s, uint32_t d);
+ssize_t socia_sdo_dl_i16( int fd, uint8_t *rcmd,
+			  uint8_t node,
+			  uint16_t index, uint8_t subindex,
+			  int16_t value );
 
-/// read a uint32_t in the socia_sdo_msg_t
-uint32_t socia_get_uint32(socia_sdo_msg_t *s);
+ssize_t socia_sdo_ul_i16( int fd, uint8_t *rcmd,
+			  int16_t *value,
+			  uint8_t node,
+			  uint16_t index, uint8_t subindex );
 
-/// store a int32_t into the socia_sdo_msg_t
-void socia_put_int32(socia_sdo_msg_t *s, int32_t d);
+/**********/
+/* 32-bit */
+/**********/
+ssize_t socia_sdo_dl_u32( int fd, uint8_t *rcmd,
+			  uint8_t node,
+			  uint16_t index, uint8_t subindex,
+			  uint32_t value );
 
-/// read a int32_t in the socia_sdo_msg_t
-int32_t socia_get_int32(socia_sdo_msg_t *s);
+ssize_t socia_sdo_ul_u32( int fd, uint8_t *rcmd,
+			  uint32_t *value,
+			  uint8_t node,
+			  uint16_t index, uint8_t subindex );
 
-/// translates an socia_sdo_msg_t struct to a CMSG struct
-void socia_build_can( struct can_frame *dst, const socia_sdo_msg_t *src, const int is_response );
+ssize_t socia_sdo_dl_i32( int fd, uint8_t *rcmd,
+			  uint8_t node,
+			  uint16_t index, uint8_t subindex,
+			  int32_t value );
 
-/// translates a CMSG struct to a socia_sdo_msg_t struct
-void socia_build_sdo( socia_sdo_msg_t *dst, const struct can_frame *src, const int is_request );
-
-typedef enum socia_command_spec {
-    SOCIA_SEG_DL = 0, //segment download
-    SOCIA_EX_DL = 1,  //expedited download (client->server)
-    SOCIA_EX_UL = 2,  //expedited upload (server->client)
-    SOCIA_SEG_UL = 3, //segment upload
-    SOCIA_ABORT = 4
-} socia_command_spec_t;
-
-
-uint8_t socia_command( const socia_command_spec_t command_spec,
-		       const uint8_t nodata_len,
-		       const uint8_t is_expedited, const uint8_t is_len_in_cmd );
+ssize_t socia_sdo_ul_i32( int fd, uint8_t *rcmd,
+			  int32_t *value,
+			  uint8_t node,
+			  uint16_t index, uint8_t subindex );
 
 
-int socia_sdo_query( const int h, const socia_sdo_msg_t *req,
-		     socia_sdo_msg_t *resp );
+
+
+
 
 
 #ifdef __cplusplus

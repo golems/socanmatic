@@ -49,6 +49,10 @@
 
 #include "socia_private.h"
 
+_Bool socia_can_ok( ssize_t r ) {
+    return r >= 0;
+}
+
 ssize_t socia_can_send( int fd, const struct can_frame *f ) {
     ssize_t bytes = 0;
     do {

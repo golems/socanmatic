@@ -41,6 +41,7 @@
 #ifndef SOCIA_PRIVATE_H
 #define SOCIA_PRIVATE_H
 
+_Bool socia_can_ok( ssize_t result );
 ssize_t socia_can_send( int fd, const struct can_frame *f );
 ssize_t socia_can_recv( int fd, struct can_frame *f );
 
