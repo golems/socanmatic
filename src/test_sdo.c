@@ -1,9 +1,10 @@
-
-/* Copyright (c) 2013, Georgia Tech Research Corporation
+/* -*- mode: C; c-basic-offset: 4 -*- */
+/* ex: set shiftwidth=4 tabstop=4 expandtab: */
+/*
+ * Copyright (c) 2008-2013, Georgia Tech Research Corporation
  * All rights reserved.
  *
  * Author(s): Neil T. Dantam <ntd@gatech.edu>
- *
  * Georgia Tech Humanoid Robotics Lab
  * Under Direction of Prof. Mike Stilman <mstilman@cc.gatech.edu>
  *
@@ -39,63 +40,77 @@
  *
  */
 
-#include <unistd.h>
-#include <stdint.h>
-#include <errno.h>
+
+#include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <errno.h>
+#include <stdint.h>
+
+#include <inttypes.h>
+
 /* Assume linux socketcan for now */
 #include <linux/can.h>
 #include <linux/can/raw.h>
 
-
-#include <assert.h>
-#include <string.h>
-
-#include <inttypes.h>
-
 #include "socia.h"
 #include "socia_private.h"
 
-_Bool socia_can_ok( ssize_t r ) {
-    return r >= 0;
+
+void check_sdo_dl( int64_t i, uint8_t length, _Bool is_signed ) {
+    assert( i >= 0 || is_signed );
+
+    socia_sdo_msg_t sdo;
+    // set values
+    socia_sdo_set_ex_dl( &sdo, 0x10, 0x20, 0x30,
+                         i, length );
+    // check values
+    switch(length) {
+    case 4: assert( sdo.data[3] == ((i >> 24) & 0xFF) );
+    case 3: assert( sdo.data[2] == ((i >> 16) & 0xFF) );
+    case 2: assert( sdo.data[1] == ((i >>  8) & 0xFF) );
+    case 1: assert( sdo.data[0] == ((i >>  0) & 0xFF) );
+        break;
+    default: assert(0);
+    }
+    assert( 0x10 == sdo.node );
+    assert( 0x20 == sdo.index );
+    assert( 0x30 == sdo.subindex );
+
+    // check command
+    switch( length ) {
+    case 1: assert( SOCIA_SDO_CMD_DL1 == sdo.command );
+        break;
+    case 2: assert( SOCIA_SDO_CMD_DL2 == sdo.command );
+        break;
+    case 3: assert( SOCIA_SDO_CMD_DL3 == sdo.command );
+        break;
+    case 4: assert( SOCIA_SDO_CMD_DL4 == sdo.command );
+        break;
+    default: assert(0);
+    }
+
+    // extract data
+    int64_t j = socia_sdo_get_data( &sdo, is_signed );
+    assert( j == i );
 }
 
-ssize_t socia_can_send( int fd, const struct can_frame *f ) {
-    ssize_t bytes = 0;
-    do {
-        ssize_t r = write( fd, (uint8_t*)f + bytes, (sizeof(*f) - (size_t)bytes) );
-        if( r < 0 ) {
-            if( EINTR == errno ) {
-                continue;
-            } else {
-                return r;
-            }
-        } else {
-            bytes += r;
-        }
-    } while( bytes < (ssize_t)sizeof(*f) );
 
-    return bytes;
+int main( int argc, char **argv ) {
+    (void) argc; (void) argv;
+
+    check_sdo_dl(  1, 1, 0 );
+    check_sdo_dl(  1, 1, 1 );
+
+    check_sdo_dl( -1, 1, 1 );
+    check_sdo_dl( -1, 4, 1 );
+
+    check_sdo_dl( 0x1234, 2, 0 );
+    check_sdo_dl( 0x1234, 2, 1 );
+
+    return 0;
 }
-
-ssize_t socia_can_recv( int fd, struct can_frame *f ) {
-    ssize_t bytes = 0;
-    do {
-        ssize_t r = read( fd, (uint8_t*)f + bytes, (sizeof(*f) - (size_t)bytes) );
-        if( r < 0 ) {
-            if( EINTR == errno ) {
-                continue;
-            } else {
-                return r;
-            }
-        } else {
-            bytes += r;
-        }
-    } while( bytes < (ssize_t)sizeof(*f) );
-
-    return bytes;
-}
-
 
 /* ex: set shiftwidth=4 tabstop=4 expandtab: */
 /* Local Variables:                          */

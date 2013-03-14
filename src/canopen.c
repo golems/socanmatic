@@ -65,73 +65,17 @@
 #include <linux/can.h>
 #include <linux/can/raw.h>
 
+#include <inttypes.h>
+
 #include "socia.h"
 #include "socia_private.h"
 
 
-/*********************/
-/* SDO Communication */
-/*********************/
-
-#define SOCIA_SDO_REQ_BASE  (0x600)
-#define SOCIA_SDO_RESP_BASE (0x580)
-
-#define SOCIA_SDO_REQ_ID(node)  ((canid_t)((node) + SOCIA_SDO_REQ_BASE))
-#define SOCIA_SDO_RESP_ID(node) ((canid_t)((node) + SOCIA_SDO_RESP_BASE))
-
-typedef enum socia_command_spec {
-    SOCIA_SEG_DL = 0, ///< segment download
-    SOCIA_EX_DL = 1,  ///< expedited download (client->server)
-    SOCIA_EX_UL = 2,  ///< expedited upload (server->client)
-    SOCIA_SEG_UL = 3, ///< segment upload
-    SOCIA_ABORT = 4
-} socia_command_spec_t;
-
-/** Container struct for SDO requests.
- */
-typedef struct socia_sdo_msg {
-    // Message contents
-    uint8_t command;   ///< CANopen command word, with ccs, reserved, n, e and s fields (see the website)
-    uint16_t index;    ///< CANopen index
-    uint8_t subindex;  ///< CANopen subindex
-
-    // Additional information
-    uint8_t node;      ///< CANopen Node ID
-    uint8_t length;    ///< CANopen length of data, is either set in n (command) or in the data (depends on s)
-
-    uint8_t data[4];   ///< CANopen data section
-} socia_sdo_msg_t;
 
 /**********/
 /** DEFS **/
 /**********/
 
-static inline void fill_sdo_data( socia_sdo_msg_t *sdo, uint8_t length, int64_t value ) {
-    /* CANopen is little endian */
-    sdo->length = length;
-    switch(length) {
-    case 4: sdo->data[3] = (uint8_t) ((value >> 24) & 0xff);
-    case 3: sdo->data[2] = (uint8_t) ((value >> 16) & 0xff);
-    case 2: sdo->data[1] = (uint8_t) ((value >> 8) & 0xff);
-    case 1: sdo->data[0] = (uint8_t) ((value >> 0) & 0xff);
-        break;
-    default: assert(0);
-    }
-}
-
-static inline int64_t read_sdo_data( const socia_sdo_msg_t *sdo, _Bool is_signed ) {
-    /* CANopen is little endian */
-    int64_t i = is_signed ? -1 : 0; /* assume two's complement */
-    switch(sdo->length) {
-    case 4: i |= (sdo->data[3] << 24);
-    case 3: i |= (sdo->data[2] << 16);
-    case 2: i |= (sdo->data[1] <<  8);
-    case 1: i |= (sdo->data[0] <<  0);
-        return i;
-    default: assert(0);
-    }
-    assert(0);
-}
 
 /* Float conversion note: Pointer Type puns are bad, use the union trick */
 
@@ -199,47 +143,22 @@ static ssize_t sdo_query( const int fd, const socia_sdo_msg_t *req,
 }
 
 // build command byte for SDO
-static uint8_t sdo_command( socia_command_spec_t command_spec,
-                            uint8_t nodata_len,
-                            uint8_t is_expedited,
-                            uint8_t is_len_in_cmd ) {
+void socia_sdo_set_cmd( socia_sdo_msg_t *sdo,
+                        socia_command_spec_t command_spec,
+                        uint8_t nodata_len,
+                        uint8_t is_expedited,
+                        uint8_t is_len_in_cmd ) {
     // Sanity checks
     assert( nodata_len <= 3 );
     assert(  (is_expedited && is_len_in_cmd) || ! nodata_len );
 
     // Create the command by setting the ccs, n, e and s fields
     // NOTE: The reserved field is set to 0 by default.
-    uint8_t c = 0;
-    c |= (uint8_t) (is_len_in_cmd?0x1:0);                   // s
-    c |= (uint8_t) ((is_expedited?0x1:0) << 1);             // e
-    c |= (uint8_t) ((nodata_len & 0x3) << 2);               // n
-    c |= (uint8_t) ((command_spec & 0x7) << 5);             // ccs
-    return c;
-}
 
-/* precondition: sdo contains message data and length
- *
- * Expedited only
- */
-static ssize_t sdo_dl( int fd,
-                       socia_sdo_msg_t *sdo, socia_sdo_msg_t *resp,
-                       uint8_t node, uint16_t index, uint8_t subindex ) {
-
-    // Build SDO Message
-    uint8_t nodata_len = (uint8_t)(4 - sdo->length);
-    uint8_t is_expedited = 1;
-    uint8_t is_len_in_command = 1;
-    sdo->command = sdo_command( SOCIA_EX_DL, nodata_len, is_expedited, is_len_in_command);
-    // Set the rest of the information
-    sdo->node = node;
-    sdo->index = index;
-    sdo->subindex = subindex;
-
-    // Query
-    ssize_t r = sdo_query( fd, sdo, resp );
-
-    // Result
-    return r;
+    sdo->command  = 0xFF & ( (is_len_in_cmd ? 1 : 0)         |  // s
+                             ((is_expedited ? 1 : 0) << 1)   |  // e
+                             ((nodata_len & 0x3)     << 2)   |  // n
+                             ((command_spec & 0x7)   << 5) );   // ccs
 }
 
 #define DEF_SDO_DL( VAL_TYPE, SUFFIX )                                  \
@@ -248,8 +167,9 @@ static ssize_t sdo_dl( int fd,
                                     uint16_t index, uint8_t subindex,   \
                                     VAL_TYPE value ) {                  \
         socia_sdo_msg_t req, resp;                                      \
-        fill_sdo_data(&req, sizeof(value), value);                      \
-        ssize_t r = sdo_dl( fd, &req, &resp, node, index, subindex );   \
+        socia_sdo_set_ex_dl( &req, node,                                \
+                             index, subindex, value, sizeof(value) );   \
+        ssize_t r = sdo_query( fd, &req, &resp );                       \
         if ( socia_can_ok(r) ) *rcmd = resp.command;                    \
         return r;                                                       \
     }                                                                   \
@@ -273,7 +193,7 @@ static ssize_t sdo_ul( int fd,
                        uint8_t node, uint16_t index, uint8_t subindex ) {
     socia_sdo_msg_t req;
     // Build SDO Message
-    req.command = sdo_command( SOCIA_EX_UL, 0, 1, 0 );
+    socia_sdo_set_cmd( &req, SOCIA_EX_UL, 0, 1, 0 );
     req.node = node;
     req.index = index;
     req.subindex = subindex;
@@ -297,7 +217,7 @@ static ssize_t sdo_ul( int fd,
         r = sdo_ul(fd, &resp, node, index, subindex);                   \
         if( socia_can_ok(r) ) {                                         \
             *rcmd = resp.command;                                       \
-            *value = (VAL_TYPE)read_sdo_data( &resp, IS_SIGNED );       \
+            *value = (VAL_TYPE)socia_sdo_get_data( &resp, IS_SIGNED );  \
         }                                                               \
         return r;                                                       \
     }
