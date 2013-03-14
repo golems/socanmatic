@@ -41,6 +41,10 @@
 #ifndef SOCIA_SDO_H
 #define SOCIA_SDO_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define SOCIA_SDO_REQ_BASE  (0x600)
 #define SOCIA_SDO_RESP_BASE (0x580)
 
@@ -133,4 +137,85 @@ void socia_sdo_set_ex_dl( socia_sdo_msg_t *sdo,
                           uint8_t node, uint16_t index, uint8_t subindex );
 
 
+/*********/
+/* 8-bit */
+/*********/
+ssize_t socia_sdo_dl_u8( int fd, uint8_t *rcmd,
+                         uint8_t node,
+                         uint16_t index, uint8_t subindex,
+                         uint8_t value );
+
+ssize_t socia_sdo_ul_u8( int fd, uint8_t *rcmd,
+                         uint8_t *value,
+                         uint8_t node,
+                         uint16_t index, uint8_t subindex );
+
+ssize_t socia_sdo_dl_i8( int fd, uint8_t *rcmd,
+                         uint8_t node,
+                         uint16_t index, uint8_t subindex,
+                         int8_t value );
+
+ssize_t socia_sdo_ul_i8( int fd, uint8_t *rcmd,
+                         int8_t *value,
+                         uint8_t node,
+                         uint16_t index, uint8_t subindex );
+
+/**********/
+/* 16-bit */
+/**********/
+ssize_t socia_sdo_dl_u16( int fd, uint8_t *rcmd,
+                          uint8_t node,
+                          uint16_t index, uint8_t subindex,
+                          uint16_t value );
+
+ssize_t socia_sdo_ul_u16( int fd, uint8_t *rcmd,
+                          uint16_t *value,
+                          uint8_t node,
+                          uint16_t index, uint8_t subindex );
+
+ssize_t socia_sdo_dl_i16( int fd, uint8_t *rcmd,
+                          uint8_t node,
+                          uint16_t index, uint8_t subindex,
+                          int16_t value );
+
+ssize_t socia_sdo_ul_i16( int fd, uint8_t *rcmd,
+                          int16_t *value,
+                          uint8_t node,
+                          uint16_t index, uint8_t subindex );
+
+/**********/
+/* 32-bit */
+/**********/
+ssize_t socia_sdo_dl_u32( int fd, uint8_t *rcmd,
+                          uint8_t node,
+                          uint16_t index, uint8_t subindex,
+                          uint32_t value );
+
+ssize_t socia_sdo_ul_u32( int fd, uint8_t *rcmd,
+                          uint32_t *value,
+                          uint8_t node,
+                          uint16_t index, uint8_t subindex );
+
+ssize_t socia_sdo_dl_i32( int fd, uint8_t *rcmd,
+                          uint8_t node,
+                          uint16_t index, uint8_t subindex,
+                          int32_t value );
+
+ssize_t socia_sdo_ul_i32( int fd, uint8_t *rcmd,
+                          int32_t *value,
+                          uint8_t node,
+                          uint16_t index, uint8_t subindex );
+
+
+
+
+#ifdef __cplusplus
+}
+#endif
+/* ex: set shiftwidth=4 tabstop=4 expandtab: */
+/* Local Variables:                          */
+/* mode: c                                   */
+/* c-basic-offset: 4                         */
+/* indent-tabs-mode:  nil                    */
+/* End:                                      */
 #endif //SOCIA_H

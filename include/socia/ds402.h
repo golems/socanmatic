@@ -42,6 +42,10 @@
 #ifndef SOCIA_402_H
 #define SOCIA_402_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define SOCIA_402_INDEX_CONTROLWORD     0x6040
 #define SOCIA_402_SUBINDEX_CONTROLWORD  0x00
 
@@ -97,4 +101,15 @@ enum socia_402_op_mode {
     SOCIA_402_OP_MODE_CUSTOM               = 0xff
 } amccan_op_mode_t;
 
+
+#ifdef __cplusplus
+}
+#endif
+
+/* ex: set shiftwidth=4 tabstop=4 expandtab: */
+/* Local Variables:                          */
+/* mode: c                                   */
+/* c-basic-offset: 4                         */
+/* indent-tabs-mode:  nil                    */
+/* End:                                      */
 #endif // SOCIA_402_H

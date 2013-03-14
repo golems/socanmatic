@@ -43,6 +43,11 @@
 #ifndef SOCIA_BYTEORDER_H
 #define SOCIA_BYTEORDER_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 typedef union socia_byte8  {
     int8_t i;
     uint8_t u;
@@ -94,6 +99,9 @@ static inline uint16_t socia_byte_ldle16( void *p ) {
                        (uint16_t)(q[1] << 8) );
 }
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 static inline uint8_t socia_byte_ldle8( void *p ) {
     return ((uint8_t*)p)[0];
@@ -102,5 +110,17 @@ static inline uint8_t socia_byte_ldle8( void *p ) {
 static inline void socia_byte_stle8( void *p, uint8_t u) {
     ((uint8_t*)p)[0] = u;
 }
+
+#ifdef __cplusplus
+}
+#endif
+
+
+/* ex: set shiftwidth=4 tabstop=4 expandtab: */
+/* Local Variables:                          */
+/* mode: c                                   */
+/* c-basic-offset: 4                         */
+/* indent-tabs-mode:  nil                    */
+/* End:                                      */
 
 #endif //SOCIA_BYTEORDER_H

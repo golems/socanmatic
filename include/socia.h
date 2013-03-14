@@ -42,7 +42,7 @@
 #define SOCIA_H
 
 #include "socia/byteorder.h"
-#include "socia/canopen.h"
+#include "socia/nmt.h"
 #include "socia/sdo.h"
 #include "socia/ds402.h"
 

@@ -7,9 +7,9 @@ TESTS = test_sdo
 include_HEADERS = include/socia.h
 pkginclude_HEADERS = 	                \
 	include/socia/byteorder.h       \
-	include/socia/canopen.h         \
-	include/socia/ds402.h           \
-	include/socia/sdo.h
+	include/socia/nmt.h             \
+	include/socia/sdo.h             \
+	include/socia/ds402.h
 
 noinst_HEADERS = include/socia_private.h
 
@@ -18,7 +18,7 @@ m4_dnl bin_PROGRAMS = esdcantool
 
 noinst_PROGRAMS = test_sdo
 
-libsocia_la_SOURCES = src/canopen.c
+libsocia_la_SOURCES = src/sdo.c
 
 libsocia_socketcan_la_SOURCES = src/socketcan.c
 

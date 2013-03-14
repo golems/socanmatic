@@ -39,8 +39,8 @@
  *
  */
 
-#ifndef SOCIA_CANOPEN_H
-#define SOCIA_CANOPEN_H
+#ifndef SOCIA_NMT_H
+#define SOCIA_NMT_H
 
 /**
  * \file socia_canopen.h
@@ -84,78 +84,7 @@ typedef enum socia_nmt_msg {
 /**  Send an NMT Message.
  */
 int socia_send_nmt( int fd, uint8_t node,
-		    socia_nmt_msg_t nmt_msg );
-
-
-/*********/
-/* 8-bit */
-/*********/
-ssize_t socia_sdo_dl_u8( int fd, uint8_t *rcmd,
-			 uint8_t node,
-			 uint16_t index, uint8_t subindex,
-			 uint8_t value );
-
-ssize_t socia_sdo_ul_u8( int fd, uint8_t *rcmd,
-			 uint8_t *value,
-			 uint8_t node,
-			 uint16_t index, uint8_t subindex );
-
-ssize_t socia_sdo_dl_i8( int fd, uint8_t *rcmd,
-			 uint8_t node,
-			 uint16_t index, uint8_t subindex,
-			 int8_t value );
-
-ssize_t socia_sdo_ul_i8( int fd, uint8_t *rcmd,
-			 int8_t *value,
-			 uint8_t node,
-			 uint16_t index, uint8_t subindex );
-
-/**********/
-/* 16-bit */
-/**********/
-ssize_t socia_sdo_dl_u16( int fd, uint8_t *rcmd,
-			  uint8_t node,
-			  uint16_t index, uint8_t subindex,
-			  uint16_t value );
-
-ssize_t socia_sdo_ul_u16( int fd, uint8_t *rcmd,
-			  uint16_t *value,
-			  uint8_t node,
-			  uint16_t index, uint8_t subindex );
-
-ssize_t socia_sdo_dl_i16( int fd, uint8_t *rcmd,
-			  uint8_t node,
-			  uint16_t index, uint8_t subindex,
-			  int16_t value );
-
-ssize_t socia_sdo_ul_i16( int fd, uint8_t *rcmd,
-			  int16_t *value,
-			  uint8_t node,
-			  uint16_t index, uint8_t subindex );
-
-/**********/
-/* 32-bit */
-/**********/
-ssize_t socia_sdo_dl_u32( int fd, uint8_t *rcmd,
-			  uint8_t node,
-			  uint16_t index, uint8_t subindex,
-			  uint32_t value );
-
-ssize_t socia_sdo_ul_u32( int fd, uint8_t *rcmd,
-			  uint32_t *value,
-			  uint8_t node,
-			  uint16_t index, uint8_t subindex );
-
-ssize_t socia_sdo_dl_i32( int fd, uint8_t *rcmd,
-			  uint8_t node,
-			  uint16_t index, uint8_t subindex,
-			  int32_t value );
-
-ssize_t socia_sdo_ul_i32( int fd, uint8_t *rcmd,
-			  int32_t *value,
-			  uint8_t node,
-			  uint16_t index, uint8_t subindex );
-
+                    socia_nmt_msg_t nmt_msg );
 
 
 
@@ -173,4 +102,4 @@ ssize_t socia_sdo_ul_i32( int fd, uint8_t *rcmd,
 /* indent-tabs-mode:  nil                    */
 /* End:                                      */
 
-#endif //SOCIA_CANOPEN_H
+#endif //SOCIA_NMT_H
