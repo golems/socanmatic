@@ -58,6 +58,33 @@
 #include "socia_private.h"
 
 
+void check_sdo_can( socia_sdo_msg_t *sdo ) {
+    struct can_frame can;
+    socia_sdo2can( &can, sdo, 0);
+    assert( can.can_id == SOCIA_SDO_REQ_ID( sdo->node ) );
+    assert( (can.can_id & (uint16_t)~SOCIA_SDO_NODE_MASK) == SOCIA_SDO_REQ_BASE );
+    assert( (can.can_id & SOCIA_SDO_NODE_MASK) == sdo->node );
+    assert( can.data[0] == sdo->command );
+    assert( can.data[1] == (sdo->index & 0xff) );
+    assert( can.data[2] == sdo->index >> 8 );
+    assert( can.data[3] == sdo->subindex );
+    size_t i;
+    for( i = 0; i < sdo->length; i ++ ) {
+        assert( can.data[4+i] == sdo->data[i] );
+    }
+    socia_sdo_msg_t sdo2;
+
+    socia_can2sdo( &sdo2, &can );
+    assert( sdo2.node == sdo->node );
+    assert( sdo2.command == sdo->command );
+    assert( sdo2.index == sdo->index );
+    assert( sdo2.subindex == sdo->subindex );
+    for( i = 0; i < sdo->length; i ++ ) {
+        assert( sdo2.data[i] == sdo->data[i] );
+    }
+    //assert( 0 == memcmp(sdo, &sdo2, sizeof(sdo2)) );
+}
+
 void check_sdo_dl( ) {
 
     socia_sdo_msg_t sdo;
@@ -74,6 +101,7 @@ void check_sdo_dl( ) {
     assert( 0x30 == sdo.subindex );
     assert( SOCIA_SDO_CMD_DL1 == sdo.command );
 
+    check_sdo_can( &sdo );
 
     // 16 bit
     socia_sdo_set_data_u16( &sdo, 0x2211 );
@@ -87,6 +115,7 @@ void check_sdo_dl( ) {
     assert( 0x30 == sdo.subindex );
     assert( SOCIA_SDO_CMD_DL2 == sdo.command );
 
+    check_sdo_can( &sdo );
 
     // 32 bit
     socia_sdo_set_data_u32( &sdo, 0x44332211 );
@@ -100,6 +129,7 @@ void check_sdo_dl( ) {
     assert( 0x30 == sdo.subindex );
     assert( SOCIA_SDO_CMD_DL4 == sdo.command );
 
+    check_sdo_can( &sdo );
 }
 
 static void byteorder(void) {

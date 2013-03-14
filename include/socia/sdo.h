@@ -45,11 +45,13 @@
 extern "C" {
 #endif
 
-#define SOCIA_SDO_REQ_BASE  (0x600)
-#define SOCIA_SDO_RESP_BASE (0x580)
+#define SOCIA_SDO_REQ_BASE  ((uint16_t)0x600)
+#define SOCIA_SDO_RESP_BASE ((uint16_t)0x580)
 
-#define SOCIA_SDO_REQ_ID(node)  ((canid_t)((node) + SOCIA_SDO_REQ_BASE))
-#define SOCIA_SDO_RESP_ID(node) ((canid_t)((node) + SOCIA_SDO_RESP_BASE))
+#define SOCIA_SDO_NODE_MASK ((uint16_t)0x7F)
+
+#define SOCIA_SDO_REQ_ID(node)  ((canid_t)( ((node)&SOCIA_SDO_NODE_MASK) | SOCIA_SDO_REQ_BASE))
+#define SOCIA_SDO_RESP_ID(node) ((canid_t)( ((node)&SOCIA_SDO_NODE_MASK) | SOCIA_SDO_RESP_BASE))
 
 typedef enum socia_command_spec {
     SOCIA_SEG_DL = 0, ///< segment download
@@ -127,6 +129,13 @@ SOCIA_SDO_GEN_GET_DATA( int16_t,  16, i );
 SOCIA_SDO_GEN_GET_DATA( uint32_t, 32, u );
 SOCIA_SDO_GEN_GET_DATA( int32_t,  32, i );
 SOCIA_SDO_GEN_GET_DATA( float,    32, f );
+
+
+/// Create a struct can_frame from a socia_sdo_msg_t
+void socia_sdo2can (struct can_frame *dst, const socia_sdo_msg_t *src, const int is_response );
+
+/// Create a socia_sdo_msg_t from a struct can_frame
+void socia_can2sdo( socia_sdo_msg_t *dst, const struct can_frame *src );
 
 
 /** Set fields of sdo for an expedited download.

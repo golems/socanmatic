@@ -104,10 +104,10 @@ void socia_sdo2can (struct can_frame *dst, const socia_sdo_msg_t *src, const int
 // use the entire data?
 
 // Create a socia_sdo_msg_t from a struct can_frame
-void socia_can2sdo( socia_sdo_msg_t *dst, const struct can_frame *src, const int is_request ) {
+void socia_can2sdo( socia_sdo_msg_t *dst, const struct can_frame *src ) {
     // FIXME: better message validation
     assert( src->can_dlc <= 8 );
-    dst->node = (uint8_t)(src->can_id - (is_request ? SOCIA_SDO_REQ_BASE : SOCIA_SDO_RESP_BASE));
+    dst->node = (uint8_t)(src->can_id & SOCIA_SDO_NODE_MASK);
     dst->length = (uint8_t)(src->can_dlc - 4);
     dst->command = (uint8_t)src->data[0];
     dst->index = (uint16_t)(src->data[1] + (src->data[2] << 8));
@@ -118,7 +118,7 @@ void socia_can2sdo( socia_sdo_msg_t *dst, const struct can_frame *src, const int
 
 // Send and SDO request and wait for the response
 static ssize_t sdo_query( const int fd, const socia_sdo_msg_t *req,
-                      socia_sdo_msg_t *resp ) {
+                          socia_sdo_msg_t *resp ) {
     struct can_frame can;
     // Send Request
     {
@@ -137,7 +137,7 @@ static ssize_t sdo_query( const int fd, const socia_sdo_msg_t *req,
             if( ! socia_can_ok( r ) )
                 return r;
         } while ( can.can_id != (canid_t)SOCIA_SDO_RESP_ID(req->node) );
-        socia_can2sdo( resp, &can, 0 );
+        socia_can2sdo( resp, &can );
         return r;
     }
 }
