@@ -58,56 +58,100 @@
 #include "socia_private.h"
 
 
-void check_sdo_dl( int64_t i, uint8_t length, _Bool is_signed ) {
-    assert( i >= 0 || is_signed );
+void check_sdo_dl( ) {
 
     socia_sdo_msg_t sdo;
+
+    // 8 bit
+    socia_sdo_set_data_u8( &sdo, 0x11 );
+
     // set values
-    socia_sdo_set_ex_dl( &sdo, 0x10, 0x20, 0x30,
-                         i, length );
+    socia_sdo_set_ex_dl( &sdo, 0x10, 0x20, 0x30 );
+
     // check values
-    switch(length) {
-    case 4: assert( sdo.data[3] == ((i >> 24) & 0xFF) );
-    case 3: assert( sdo.data[2] == ((i >> 16) & 0xFF) );
-    case 2: assert( sdo.data[1] == ((i >>  8) & 0xFF) );
-    case 1: assert( sdo.data[0] == ((i >>  0) & 0xFF) );
-        break;
-    default: assert(0);
-    }
     assert( 0x10 == sdo.node );
     assert( 0x20 == sdo.index );
     assert( 0x30 == sdo.subindex );
+    assert( SOCIA_SDO_CMD_DL1 == sdo.command );
 
-    // check command
-    switch( length ) {
-    case 1: assert( SOCIA_SDO_CMD_DL1 == sdo.command );
-        break;
-    case 2: assert( SOCIA_SDO_CMD_DL2 == sdo.command );
-        break;
-    case 3: assert( SOCIA_SDO_CMD_DL3 == sdo.command );
-        break;
-    case 4: assert( SOCIA_SDO_CMD_DL4 == sdo.command );
-        break;
-    default: assert(0);
-    }
 
-    // extract data
-    int64_t j = socia_sdo_get_data( &sdo, is_signed );
-    assert( j == i );
+    // 16 bit
+    socia_sdo_set_data_u16( &sdo, 0x2211 );
+
+    // set values
+    socia_sdo_set_ex_dl( &sdo, 0x10, 0x20, 0x30 );
+
+    // check values
+    assert( 0x10 == sdo.node );
+    assert( 0x20 == sdo.index );
+    assert( 0x30 == sdo.subindex );
+    assert( SOCIA_SDO_CMD_DL2 == sdo.command );
+
+
+    // 32 bit
+    socia_sdo_set_data_u32( &sdo, 0x44332211 );
+
+    // set values
+    socia_sdo_set_ex_dl( &sdo, 0x10, 0x20, 0x30 );
+
+    // check values
+    assert( 0x10 == sdo.node );
+    assert( 0x20 == sdo.index );
+    assert( 0x30 == sdo.subindex );
+    assert( SOCIA_SDO_CMD_DL4 == sdo.command );
+
 }
 
+static void byteorder(void) {
+    uint8_t a[2];
+    uint8_t b[4];
+
+    socia_byte_stle16( a, 0x2211 );
+    socia_byte_stle32( b, 0x44332211 );
+
+    assert( 0x11 == a[0] );
+    assert( 0x22 == a[1] );
+
+    assert( 0x11 == b[0] );
+    assert( 0x22 == b[1] );
+    assert( 0x33 == b[2] );
+    assert( 0x44 == b[3] );
+
+
+    assert( 0x2211 == socia_byte_ldle16(a) );
+    assert( 0x44332211 == socia_byte_ldle32(b) );
+
+    assert( 0x2211 == socia_byte_ldle16(b) );
+
+}
+
+static void sdo_data(void) {
+    socia_sdo_msg_t sdo;
+    socia_sdo_set_data_u16( &sdo, 0x2211 );
+    assert( 2 == sdo.length );
+    assert( 0x11 == sdo.data[0] );
+    assert( 0x22 == sdo.data[1] );
+
+    socia_sdo_set_data_u32( &sdo, 0x00332211 );
+    assert( 4 == sdo.length );
+    assert( 0x11 == sdo.data[0] );
+    assert( 0x22 == sdo.data[1] );
+    assert( 0x33 == sdo.data[2] );
+    assert( 0x00 == sdo.data[3] );
+
+
+    socia_sdo_set_data_i16( &sdo, -42 );
+    assert( 2 == sdo.length );
+    assert( -42 == socia_sdo_get_data_i16( &sdo ) );
+}
 
 int main( int argc, char **argv ) {
     (void) argc; (void) argv;
 
-    check_sdo_dl(  1, 1, 0 );
-    check_sdo_dl(  1, 1, 1 );
+    byteorder();
+    sdo_data();
 
-    check_sdo_dl( -1, 1, 1 );
-    check_sdo_dl( -1, 4, 1 );
-
-    check_sdo_dl( 0x1234, 2, 0 );
-    check_sdo_dl( 0x1234, 2, 1 );
+    check_sdo_dl( );
 
     return 0;
 }

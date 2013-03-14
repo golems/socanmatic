@@ -161,14 +161,34 @@ void socia_sdo_set_cmd( socia_sdo_msg_t *sdo,
                              ((command_spec & 0x7)   << 5) );   // ccs
 }
 
+
+
+void socia_sdo_set_ex_dl( socia_sdo_msg_t *sdo,
+                          uint8_t node, uint16_t index, uint8_t subindex ) {
+
+    /* Set values */
+    sdo->index = index;
+    sdo->subindex = subindex;
+    sdo->node = node;
+
+    /* Set Command */
+    uint8_t nodata_len = (uint8_t)(4 - sdo->length);
+    uint8_t is_expedited = 1;
+    uint8_t is_len_in_command = 1;
+    socia_sdo_set_cmd(sdo, SOCIA_EX_DL, nodata_len, is_expedited, is_len_in_command);
+}
+
+
+
 #define DEF_SDO_DL( VAL_TYPE, SUFFIX )                                  \
     ssize_t socia_sdo_dl_ ## SUFFIX( int fd, uint8_t *rcmd,             \
                                     uint8_t node,                       \
                                     uint16_t index, uint8_t subindex,   \
                                     VAL_TYPE value ) {                  \
         socia_sdo_msg_t req, resp;                                      \
+        socia_sdo_set_data_ ## SUFFIX( &req, value );                   \
         socia_sdo_set_ex_dl( &req, node,                                \
-                             index, subindex, value, sizeof(value) );   \
+                             index, subindex );                         \
         ssize_t r = sdo_query( fd, &req, &resp );                       \
         if ( socia_can_ok(r) ) *rcmd = resp.command;                    \
         return r;                                                       \
@@ -198,7 +218,6 @@ static ssize_t sdo_ul( int fd,
     req.index = index;
     req.subindex = subindex;
     req.length = 0;
-
     // Query
     ssize_t r = sdo_query( fd, &req, resp );
 
@@ -217,7 +236,7 @@ static ssize_t sdo_ul( int fd,
         r = sdo_ul(fd, &resp, node, index, subindex);                   \
         if( socia_can_ok(r) ) {                                         \
             *rcmd = resp.command;                                       \
-            *value = (VAL_TYPE)socia_sdo_get_data( &resp, IS_SIGNED );  \
+            *value = socia_sdo_get_data_ ## SUFFIX( &resp );            \
         }                                                               \
         return r;                                                       \
     }

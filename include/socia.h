@@ -41,6 +41,7 @@
 #ifndef SOCIA_H
 #define SOCIA_H
 
+#include "socia/byteorder.h"
 #include "socia/canopen.h"
 #include "socia/sdo.h"
 #include "socia/ds402.h"

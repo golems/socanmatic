@@ -90,60 +90,47 @@ void socia_sdo_set_cmd( socia_sdo_msg_t *sdo,
                         uint8_t is_len_in_cmd );
 
 
-/* 64-bit ints are good enough on 64-bit CPUs */
 
-
-/** Read the data from and SDO message, returning in native byte order */
-static inline int64_t socia_sdo_get_data( const socia_sdo_msg_t *sdo, _Bool is_signed ) {
-    /* CANopen is little endian */
-    int64_t i = 0;
-    switch(sdo->length) {
-    case 4: i |= (sdo->data[3] << 24);
-    case 3: i |= (sdo->data[2] << 16);
-    case 2: i |= (sdo->data[1] <<  8);
-    case 1: i |= (sdo->data[0] <<  0);
-        break;
-    default: assert(0);
+#define SOCIA_SDO_GEN_SET_DATA( CTYPE, BITS, C )                        \
+    static inline void                                                  \
+    socia_sdo_set_data_ ## C ## BITS ( socia_sdo_msg_t *sdo, CTYPE x )  \
+    {                                                                   \
+        union socia_byte ## BITS u;                                     \
+        u.C = x;                                                        \
+        sdo->length = sizeof(x);                                        \
+        socia_byte_stle ## BITS(sdo->data, u.u);                        \
     }
-    /* Sign cast */
-    if( is_signed ) {
-        switch(sdo->length) {
-        case 1: i = (int8_t) i; break;
-        case 2: i = (int16_t)i; break;
-        case 4: i = (int32_t)i; break;
-        default: assert(0);
-        }
+SOCIA_SDO_GEN_SET_DATA( uint8_t, 8, u );
+SOCIA_SDO_GEN_SET_DATA( int8_t,  8, i );
+SOCIA_SDO_GEN_SET_DATA( uint16_t, 16, u );
+SOCIA_SDO_GEN_SET_DATA( int16_t,  16, i );
+SOCIA_SDO_GEN_SET_DATA( uint32_t, 32, u );
+SOCIA_SDO_GEN_SET_DATA( int32_t,  32, i );
+SOCIA_SDO_GEN_SET_DATA( float,    32, f );
+
+#define SOCIA_SDO_GEN_GET_DATA( CTYPE, BITS, C )                        \
+    static inline CTYPE                                                 \
+    socia_sdo_get_data_ ## C ## BITS ( socia_sdo_msg_t *sdo )           \
+    {                                                                   \
+        union socia_byte ## BITS u;                                     \
+        u.u = socia_byte_ldle ## BITS(sdo->data );                      \
+        return u.C;                                                     \
     }
-    return i;
-}
+SOCIA_SDO_GEN_GET_DATA( uint8_t, 8, u );
+SOCIA_SDO_GEN_GET_DATA( int8_t,  8, i );
+SOCIA_SDO_GEN_GET_DATA( uint16_t, 16, u );
+SOCIA_SDO_GEN_GET_DATA( int16_t,  16, i );
+SOCIA_SDO_GEN_GET_DATA( uint32_t, 32, u );
+SOCIA_SDO_GEN_GET_DATA( int32_t,  32, i );
+SOCIA_SDO_GEN_GET_DATA( float,    32, f );
 
 
-/** Set fields of sdo for an expedited download */
-static inline void socia_sdo_set_ex_dl( socia_sdo_msg_t *sdo,
-                                        uint8_t node, uint16_t index, uint8_t subindex,
-                                        int64_t value, uint8_t length ) {
-    /* Set values */
-    sdo->length = length;
-    sdo->index = index;
-    sdo->subindex = subindex;
-    sdo->node = node;
+/** Set fields of sdo for an expedited download.
+ *
+ * @precondition: sdo->data and sdo->length are set
+ */
+void socia_sdo_set_ex_dl( socia_sdo_msg_t *sdo,
+                          uint8_t node, uint16_t index, uint8_t subindex );
 
-    /* CANopen is little endian */
-    sdo->value = 0;
-    switch(sdo->length) {
-    case 4: sdo->data[3] = (uint8_t) ((value >> 24) & 0xff);
-    case 3: sdo->data[2] = (uint8_t) ((value >> 16) & 0xff);
-    case 2: sdo->data[1] = (uint8_t) ((value >> 8) & 0xff);
-    case 1: sdo->data[0] = (uint8_t) ((value >> 0) & 0xff);
-    case 0: break;
-    default: assert(0);
-    }
-
-    /* Set Command */
-    uint8_t nodata_len = (uint8_t)(4 - sdo->length);
-    uint8_t is_expedited = 1;
-    uint8_t is_len_in_command = 1;
-    socia_sdo_set_cmd(sdo, SOCIA_EX_DL, nodata_len, is_expedited, is_len_in_command);
-}
 
 #endif //SOCIA_H
