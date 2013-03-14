@@ -16,6 +16,7 @@ noinst_HEADERS = include/socia_private.h
 lib_LTLIBRARIES = libsocia.la libsocia_socketcan.la
 m4_dnl bin_PROGRAMS = esdcantool
 
+bin_PROGRAMS = socia
 noinst_PROGRAMS = test_sdo
 
 libsocia_la_SOURCES = src/sdo.c
@@ -24,3 +25,6 @@ libsocia_socketcan_la_SOURCES = src/socketcan.c
 
 test_sdo_SOURCES = src/test_sdo.c
 test_sdo_LDADD = libsocia.la libsocia_socketcan.la
+
+socia_SOURCES = src/socia.c
+socia_LDADD = libsocia.la libsocia_socketcan.la

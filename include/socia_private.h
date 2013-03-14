@@ -44,7 +44,7 @@
 _Bool socia_can_ok( ssize_t result );
 ssize_t socia_can_send( int fd, const struct can_frame *f );
 ssize_t socia_can_recv( int fd, struct can_frame *f );
-
+int socia_can_open ( const char *name );
 
 /* ex: set shiftwidth=4 tabstop=4 expandtab: */
 /* Local Variables:                          */

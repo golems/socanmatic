@@ -51,6 +51,11 @@
 #include <assert.h>
 #include <string.h>
 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <net/if.h>
+
 #include <inttypes.h>
 
 #include "socia.h"
@@ -94,6 +99,25 @@ ssize_t socia_can_recv( int fd, struct can_frame *f ) {
     } while( bytes < (ssize_t)sizeof(*f) );
 
     return bytes;
+}
+
+int socia_can_open ( const char *name ) {
+    int s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
+    if( s < 0 ) return s;
+
+    struct sockaddr_can addr;
+    struct ifreq ifr;
+
+    addr.can_family = AF_CAN;
+    strncpy(ifr.ifr_name, name, IFNAMSIZ);
+    int r = ioctl(s, SIOCGIFINDEX, &ifr);
+    if( r ) return -10;
+
+    addr.can_ifindex = ifr.ifr_ifindex;
+    r = bind(s, (struct sockaddr *)&addr, sizeof(addr));
+    if( r ) return -20;
+
+    return s;
 }
 
 

@@ -58,6 +58,7 @@
 #include "socia_private.h"
 
 
+
 void check_sdo_can( socia_sdo_msg_t *sdo ) {
     struct can_frame can;
     socia_sdo2can( &can, sdo, 0);
@@ -82,7 +83,6 @@ void check_sdo_can( socia_sdo_msg_t *sdo ) {
     for( i = 0; i < sdo->length; i ++ ) {
         assert( sdo2.data[i] == sdo->data[i] );
     }
-    //assert( 0 == memcmp(sdo, &sdo2, sizeof(sdo2)) );
 }
 
 void check_sdo_dl( ) {
