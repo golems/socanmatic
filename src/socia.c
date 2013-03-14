@@ -87,13 +87,22 @@ void hard_assert( _Bool test , const char fmt[], ...)  {
     }
 }
 
+int try_open( const char *iface) {
+    int s = socia_can_open( iface );
+    if( opt_verbosity ) {
+        if( s >= 0 ) {
+            fprintf(stderr, "Opened iface %s\n", iface);
+        }
+    }
+    return s;
+}
 int can_open() {
     // try some defaults
-    int s = socia_can_open( "vcan0" );
+    int s = try_open( "can0" );
     if( s >= 0 ) return s;
 
-    s = socia_can_open( "vcan0" );
-
+    s = try_open( "vcan0" );
+    if( s >= 0 ) return s;
 
     hard_assert( s >= 0, "Couldn't open CAN (%d): %s\n", s, strerror(errno) );
     return s;
@@ -162,9 +171,23 @@ unsigned long parse_uhex( const char *arg, uint64_t max ) {
     return u;
 }
 
+
+void invalid_arg( const char *arg ) {
+    hard_assert( 0, "Invalid argument: %s\n", arg );
+}
+
+void posarg_send( const char *arg, int i ) {
+    if( 1 == i) {
+        opt_canid = (uint16_t)parse_uhex( arg, 0x7FF );
+    } else if (i > 1 && i < 10 ) {
+        opt_can_data[opt_can_dlc++] = (uint8_t)parse_uhex( arg, 0xFF );
+    } else {
+        invalid_arg( arg );
+    }
+}
+
 void posarg( const char *arg, int i ) {
-    switch(i) {
-    case 0:
+    if( 0 == i ) {
         if( opt_verbosity ) {
             fprintf( stderr, "Setting command: %s\n", arg );
         }
@@ -173,57 +196,12 @@ void posarg( const char *arg, int i ) {
         } else if( 0 == strcasecmp(arg, "send") ) {
             set_cmd( cmd_send );
         } else {
-            goto INVALID;
+            invalid_arg( arg );
         }
-        break;
-    case 1:
-        if( cmd_send == opt_command ) {
-            opt_canid = (uint16_t)parse_uhex( arg, 0x7FF );
-        }
-        break;
-    case 2:
-        if( cmd_send == opt_command ) {
-            opt_can_data[opt_can_dlc++] = (uint8_t)parse_uhex( arg, 0xFF );
-        }
-        break;
-    case 3:
-        if( cmd_send == opt_command ) {
-            opt_can_data[opt_can_dlc++] = (uint8_t)parse_uhex( arg, 0xFF );
-        }
-        break;
-    case 4:
-        if( cmd_send == opt_command ) {
-            opt_can_data[opt_can_dlc++] = (uint8_t)parse_uhex( arg, 0xFF );
-        }
-        break;
-    case 5:
-        if( cmd_send == opt_command ) {
-            opt_can_data[opt_can_dlc++] = (uint8_t)parse_uhex( arg, 0xFF );
-        }
-        break;
-    case 6:
-        if( cmd_send == opt_command ) {
-            opt_can_data[opt_can_dlc++] = (uint8_t)parse_uhex( arg, 0xFF );
-        }
-        break;
-    case 7:
-        if( cmd_send == opt_command ) {
-            opt_can_data[opt_can_dlc++] = (uint8_t)parse_uhex( arg, 0xFF );
-        }
-        break;
-    case 8:
-        if( cmd_send == opt_command ) {
-            opt_can_data[opt_can_dlc++] = (uint8_t)parse_uhex( arg, 0xFF );
-        }
-        break;
-    case 9:
-        if( cmd_send == opt_command ) {
-            opt_can_data[opt_can_dlc++] = (uint8_t)parse_uhex( arg, 0xFF );
-        }
-        break;
-    default:
-    INVALID:
-        hard_assert( 0, "Invalid argument: %s\n", arg );
+    } else if( cmd_send == opt_command ) {
+        posarg_send( arg, i );
+    } else {
+        invalid_arg( arg );
     }
 }
 
@@ -258,7 +236,7 @@ int main( int argc, char ** argv ) {
                   "\n"
                   "Examples:\n"
                   "  socia dump                Print CAN messages to standard output\n"
-                  "  socia send id xx xx ..    Send a can message\n"
+                  "  socia send id b0 ... b7   Send a can message (values in hex)\n"
                   "\n"
                   "Report bugs to <ntd@gatech.edu>"
                 );
@@ -272,7 +250,7 @@ int main( int argc, char ** argv ) {
         posarg(argv[optind++], i++);
     }
 
-    hard_assert( opt_command, "Must specify a command. Say `socia -H' for help.\n");
+    hard_assert( opt_command, "socia: missing command.\nTry `socia -H' for more information.\n");
 
 
     if( opt_command ) {
