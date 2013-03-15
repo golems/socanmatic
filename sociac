@@ -1,0 +1,132 @@
+#!/usr/bin/env python
+#
+# Copyright (c) 2008-2012, Georgia Tech Research Corporation
+# All rights reserved.
+#
+# Author(s): Neil T. Dantam <ntd@gatech.edu>
+# Georgia Tech Humanoid Robotics Lab
+# Under Direction of Prof. Mike Stilman <mstilman@cc.gatech.edu>
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+#     * Redistributions of source code must retain the above
+#       copyright notice, this list of conditions and the following
+#       disclaimer.
+#     * Redistributions in binary form must reproduce the above
+#       copyright notice, this list of conditions and the following
+#       disclaimer in the documentation and/or other materials
+#       provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# ''AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+# COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+# OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+# FILE:        sociac
+# DESCRIPTION: Translate a CiA ESD file to C code
+# AUTHOR:      Neil T. Dantam
+
+
+
+# NOTE: The ConfigParser module has been renamed to configparser
+
+import ConfigParser
+import sys
+import re
+
+from optparse import OptionParser
+
+def config2dict( config, section ):
+    d = {}
+    for o in config.options(section):
+        d[o] = config.get(section,o)
+    return d
+
+def parse_file( accum_dict, name ):
+    '''Write all object dictaries sectons from file in accum_dict.
+       Entries are indexed by EDS section.'''
+    config = ConfigParser.ConfigParser()
+    fp = open(name, "r")
+    config.readfp( fp )
+    for s in config.sections():
+        if re.match(r'^[0-9a-fA-F]+(sub[0-9a-fA-F]+)?$', s):
+            accum_dict[s] = config2dict( config, s )
+
+
+def edsobj2cstruct( section, params ):
+    '''Print and EDS section as C code'''
+    index = re.sub(r'sub.*', '', section)
+    if re.match(r'^[0-9a-fA-F]+$', section):
+        subindex = 0
+    else:
+        subindex = re.sub(r'^[0-9a-fA-F]*sub', '', section)
+
+    def try_param(param, cparam):
+        if param in params:
+            return '\t\t.%s=%s,\n' % (cparam, params[param])
+        else:
+            return ''
+
+    s =  '\t{\n'
+    s += '\t\t.index=0x%s,\n' % index
+    s += '\t\t.subindex=0x%s,\n' % subindex
+    s += try_param('objecttype', 'object_type')
+    s += try_param('pdomapping', 'pdo_mapping')
+    if 'accesstype' in params:
+        s += '\t\t.access_type=SOCIA_ACCESS_%s,\n' % params['accesstype'].upper()
+    s += '\t\t.parameter_name="%s"\n' % params['parametername']
+    s += '\t}\n'
+
+    return s
+
+def print_dict( output, odict ):
+    # Sort by names
+    def key(sect):
+        return odict[sect]['parametername']
+
+    sections = odict.keys()
+    sections.sort(key=key)
+
+    # print
+    for section in sections:
+        output.write( edsobj2cstruct( section, odict[section] ) )
+
+
+def main() :
+    # Parse Arguments
+    optparser = OptionParser()
+    optparser.add_option("-o", "--output", dest="output")
+    optparser.add_option("-V", "--version",
+                         action="store_true", dest="version")
+
+    (opts,args) = optparser.parse_args()
+
+
+    # Open output file
+    if opts.output:
+        output = open(opts.output, "w")
+    else:
+        output = sys.stdout
+
+    # Read EDS file
+    accum_dict = {}
+    for eds in args:
+        parse_file( accum_dict, eds )
+
+    # Output
+    print_dict( output, accum_dict )
+
+
+
+main()
