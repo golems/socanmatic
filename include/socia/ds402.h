@@ -68,6 +68,8 @@ typedef enum socia_402_ctrlmask {
     SOCIA_402_CTRLMASK_MANUFACTURER_SPECIFIC4  = 1 << 15
 } socia_402_ctrlmask_t;
 
+#define SOCIA_402_INDEX_STATUSWORD     0x6041
+
 enum socia_402_statmask {
     SOCIA_402_STATMASK_READY_TO_SWITCH_ON       = 1 <<  0,
     SOCIA_402_STATMASK_SWITCHED_ON              = 1 <<  1,

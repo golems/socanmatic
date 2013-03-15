@@ -45,18 +45,26 @@
 extern "C" {
 #endif
 
+/** COB-ID base for request message (master -> slave)
+ */
 #define SOCIA_SDO_REQ_BASE  ((uint16_t)0x600)
+/** COB-ID base for response message (slave -> master)
+ */
 #define SOCIA_SDO_RESP_BASE ((uint16_t)0x580)
 
+/** COB-ID mask for node bits */
 #define SOCIA_SDO_NODE_MASK ((uint16_t)0x7F)
 
+/** Make COB-ID for request (master->slave) */
 #define SOCIA_SDO_REQ_ID(node)  ((canid_t)( ((node)&SOCIA_SDO_NODE_MASK) | SOCIA_SDO_REQ_BASE))
+
+/** Make COB-ID for response (slave->master) */
 #define SOCIA_SDO_RESP_ID(node) ((canid_t)( ((node)&SOCIA_SDO_NODE_MASK) | SOCIA_SDO_RESP_BASE))
 
 typedef enum socia_command_spec {
     SOCIA_SEG_DL = 0, ///< segment download
-    SOCIA_EX_DL = 1,  ///< expedited download (client->server)
-    SOCIA_EX_UL = 2,  ///< expedited upload (server->client)
+    SOCIA_EX_DL = 1,  ///< expedited download (master->node)
+    SOCIA_EX_UL = 2,  ///< expedited upload (node->master)
     SOCIA_SEG_UL = 3, ///< segment upload
     SOCIA_ABORT = 4
 } socia_command_spec_t;
@@ -95,6 +103,25 @@ void socia_sdo_set_cmd( socia_sdo_msg_t *sdo,
                         uint8_t is_expedited,
                         uint8_t is_len_in_cmd );
 
+
+/// Send and SDO request and wait for the response
+ssize_t socia_sdo_query( int fd, const socia_sdo_msg_t *req,
+                         socia_sdo_msg_t *resp );
+
+/// Send an SDO query
+ssize_t socia_sdo_query_send( int fd, const socia_sdo_msg_t *req );
+
+/// Receive and SDO query response
+ssize_t socia_sdo_query_recv( int fd, socia_sdo_msg_t *resp,
+                              const socia_sdo_msg_t *req );
+
+
+/** Send an SDO query response
+ *
+ * These messages are only sent by slave devices, so this is mainly
+ * for testing.
+ */
+ssize_t socia_sdo_query_resp( int fd, const socia_sdo_msg_t *resp );
 
 
 #define SOCIA_SDO_GEN_SET_DATA( CTYPE, BITS, C )                        \

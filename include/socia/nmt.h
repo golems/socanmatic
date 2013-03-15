@@ -81,6 +81,9 @@ typedef enum socia_nmt_msg {
     SOCIA_NMT_RESET_COM = 0x82
 } socia_nmt_msg_t;
 
+/* ID for all nodes */
+#define SOCIA_NODE_ALL 0x00
+
 /**  Send an NMT Message.
  */
 int socia_send_nmt( int fd, uint8_t node,

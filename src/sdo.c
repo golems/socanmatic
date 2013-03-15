@@ -116,31 +116,42 @@ void socia_can2sdo( socia_sdo_msg_t *dst, const struct can_frame *src ) {
     memset( &(dst->data[ dst->length ]), 0, (size_t)(4 - dst->length) );
 }
 
-// Send and SDO request and wait for the response
-static ssize_t sdo_query( const int fd, const socia_sdo_msg_t *req,
-                          socia_sdo_msg_t *resp ) {
-    struct can_frame can;
-    // Send Request
-    {
-        socia_sdo2can( &can, req, 0 );
-        ssize_t r = socia_can_send( fd, &can );
-        if( ! socia_can_ok( r ) ) {
-            return r;
-        }
-    }
 
-    // Collect Response
-    {
-        ssize_t r;
-        do {
-            r = socia_can_recv( fd, &can );
-            if( ! socia_can_ok( r ) )
-                return r;
-        } while ( can.can_id != (canid_t)SOCIA_SDO_RESP_ID(req->node) );
-        socia_can2sdo( resp, &can );
+/// Send and SDO request and wait for the response
+ssize_t socia_sdo_query( int fd, const socia_sdo_msg_t *req,
+                         socia_sdo_msg_t *resp ) {
+    ssize_t r = socia_sdo_query_send( fd, req );
+    if( r >= 0 ) {
+        return socia_sdo_query_recv( fd, resp, req );
+    } else {
         return r;
     }
 }
+
+/// Send an SDO query
+ssize_t socia_sdo_query_send( int fd, const socia_sdo_msg_t *req ) {
+    struct can_frame can;
+    socia_sdo2can( &can, req, 0 );
+    return  socia_can_send( fd, &can );
+}
+
+/// Receive and SDO query response
+ssize_t socia_sdo_query_recv( int fd, socia_sdo_msg_t *resp,
+                              const socia_sdo_msg_t *req ) {
+
+    ssize_t r;
+    struct can_frame can;
+    do {
+        r = socia_can_recv( fd, &can );
+        if( ! socia_can_ok( r ) )
+            return r;
+    } while ( can.can_id != (canid_t)SOCIA_SDO_RESP_ID(req->node) );
+
+    socia_can2sdo( resp, &can );
+    return r;
+
+}
+
 
 // build command byte for SDO
 void socia_sdo_set_cmd( socia_sdo_msg_t *sdo,
@@ -189,7 +200,7 @@ void socia_sdo_set_ex_dl( socia_sdo_msg_t *sdo,
         socia_sdo_set_data_ ## SUFFIX( &req, value );                   \
         socia_sdo_set_ex_dl( &req, node,                                \
                              index, subindex );                         \
-        ssize_t r = sdo_query( fd, &req, &resp );                       \
+        ssize_t r = socia_sdo_query( fd, &req, &resp );                 \
         if ( socia_can_ok(r) ) *rcmd = resp.command;                    \
         return r;                                                       \
     }                                                                   \
@@ -219,7 +230,7 @@ static ssize_t sdo_ul( int fd,
     req.subindex = subindex;
     req.length = 0;
     // Query
-    ssize_t r = sdo_query( fd, &req, resp );
+    ssize_t r = socia_sdo_query( fd, &req, resp );
 
     // Result
     return r;
