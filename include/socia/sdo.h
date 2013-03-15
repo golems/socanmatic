@@ -82,27 +82,29 @@ typedef enum socia_command_byte {
 typedef struct socia_sdo_msg {
     // Message contents
     uint16_t index;    ///< CANopen index
-    uint8_t command;   ///< CANopen command word, with ccs, reserved, n, e and s fields (see the website)
     uint8_t subindex;  ///< CANopen subindex
 
     // Additional information
     uint8_t node;      ///< CANopen Node ID
     uint8_t length;    ///< CANopen length of data, is either set in n (command) or in the data (depends on s)
 
+    /** Command word */
+    struct {
+        enum socia_command_spec ccs : 3; ///< Client Command Specifier  (ccs)
+        /** Number of bytes in the data part of the message which do not
+         *  contain data.  Only valid if e and s are set (n)
+         */
+        unsigned short n : 2;
+        _Bool e;      ///< Is an expedited transfer? (e)
+        _Bool s; ///< Is size specified in n? (s)
+    } cmd;
+
+    /* Now the message data */
     union {
         uint8_t data[4];   ///< CANopen data section
         uint32_t value;    ///< CANopen data as unsigned integer
     };
 } socia_sdo_msg_t;
-
-
-/* Set the sdo command byte */
-void socia_sdo_set_cmd( socia_sdo_msg_t *sdo,
-                        socia_command_spec_t command_spec,
-                        uint8_t nodata_len,
-                        uint8_t is_expedited,
-                        uint8_t is_len_in_cmd );
-
 
 /// Send and SDO request and wait for the response
 ssize_t socia_sdo_query( int fd, const socia_sdo_msg_t *req,
@@ -176,22 +178,22 @@ void socia_sdo_set_ex_dl( socia_sdo_msg_t *sdo,
 /*********/
 /* 8-bit */
 /*********/
-ssize_t socia_sdo_dl_u8( int fd, uint8_t *rcmd,
+ssize_t socia_sdo_dl_u8( int fd, uint8_t *rccs,
                          uint8_t node,
                          uint16_t index, uint8_t subindex,
                          uint8_t value );
 
-ssize_t socia_sdo_ul_u8( int fd, uint8_t *rcmd,
+ssize_t socia_sdo_ul_u8( int fd, uint8_t *rccs,
                          uint8_t *value,
                          uint8_t node,
                          uint16_t index, uint8_t subindex );
 
-ssize_t socia_sdo_dl_i8( int fd, uint8_t *rcmd,
+ssize_t socia_sdo_dl_i8( int fd, uint8_t *rccs,
                          uint8_t node,
                          uint16_t index, uint8_t subindex,
                          int8_t value );
 
-ssize_t socia_sdo_ul_i8( int fd, uint8_t *rcmd,
+ssize_t socia_sdo_ul_i8( int fd, uint8_t *rccs,
                          int8_t *value,
                          uint8_t node,
                          uint16_t index, uint8_t subindex );
@@ -199,22 +201,22 @@ ssize_t socia_sdo_ul_i8( int fd, uint8_t *rcmd,
 /**********/
 /* 16-bit */
 /**********/
-ssize_t socia_sdo_dl_u16( int fd, uint8_t *rcmd,
+ssize_t socia_sdo_dl_u16( int fd, uint8_t *rccs,
                           uint8_t node,
                           uint16_t index, uint8_t subindex,
                           uint16_t value );
 
-ssize_t socia_sdo_ul_u16( int fd, uint8_t *rcmd,
+ssize_t socia_sdo_ul_u16( int fd, uint8_t *rccs,
                           uint16_t *value,
                           uint8_t node,
                           uint16_t index, uint8_t subindex );
 
-ssize_t socia_sdo_dl_i16( int fd, uint8_t *rcmd,
+ssize_t socia_sdo_dl_i16( int fd, uint8_t *rccs,
                           uint8_t node,
                           uint16_t index, uint8_t subindex,
                           int16_t value );
 
-ssize_t socia_sdo_ul_i16( int fd, uint8_t *rcmd,
+ssize_t socia_sdo_ul_i16( int fd, uint8_t *rccs,
                           int16_t *value,
                           uint8_t node,
                           uint16_t index, uint8_t subindex );
@@ -222,22 +224,22 @@ ssize_t socia_sdo_ul_i16( int fd, uint8_t *rcmd,
 /**********/
 /* 32-bit */
 /**********/
-ssize_t socia_sdo_dl_u32( int fd, uint8_t *rcmd,
+ssize_t socia_sdo_dl_u32( int fd, uint8_t *rccs,
                           uint8_t node,
                           uint16_t index, uint8_t subindex,
                           uint32_t value );
 
-ssize_t socia_sdo_ul_u32( int fd, uint8_t *rcmd,
+ssize_t socia_sdo_ul_u32( int fd, uint8_t *rccs,
                           uint32_t *value,
                           uint8_t node,
                           uint16_t index, uint8_t subindex );
 
-ssize_t socia_sdo_dl_i32( int fd, uint8_t *rcmd,
+ssize_t socia_sdo_dl_i32( int fd, uint8_t *rccs,
                           uint8_t node,
                           uint16_t index, uint8_t subindex,
                           int32_t value );
 
-ssize_t socia_sdo_ul_i32( int fd, uint8_t *rcmd,
+ssize_t socia_sdo_ul_i32( int fd, uint8_t *rccs,
                           int32_t *value,
                           uint8_t node,
                           uint16_t index, uint8_t subindex );

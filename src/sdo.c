@@ -70,15 +70,9 @@
 #include "socia.h"
 #include "socia_private.h"
 
-
-
 /**********/
 /** DEFS **/
 /**********/
-
-
-/* Float conversion note: Pointer Type puns are bad, use the union trick */
-
 
 // Create a struct can_frame from a socia_sdo_msg_t
 void socia_sdo2can (struct can_frame *dst, const socia_sdo_msg_t *src, const int is_response ) {
@@ -89,11 +83,18 @@ void socia_sdo2can (struct can_frame *dst, const socia_sdo_msg_t *src, const int
     dst->can_id = (canid_t)(is_response ? SOCIA_SDO_RESP_ID(src->node) : SOCIA_SDO_REQ_ID(src->node));
     dst->can_dlc = (uint8_t)(src->length + 4);   // 4 due to "len" (1), "msg_lost" (1) and "reserved" (2) fields
 
-    // Set the data
-    dst->data[0] = src->command;
+    // set command byte
+    dst->data[0] = ( (src->cmd.s ? 1 : 0)            |
+                     ((src->cmd.e ? 1 : 0) << 1)     |
+                     ((src->cmd.n & 0x3)  << 2)      |
+                     ((src->cmd.ccs & 0x7)    << 5) );
+
+    // set indices
     dst->data[1] = (uint8_t)(src->index & 0xFF);
     dst->data[2] = (uint8_t)((src->index >> 8) & 0xFF);
     dst->data[3] = src->subindex;
+
+    // set sdo data
     memcpy( &(dst->data[4]), &(src->data[0]), src->length );
 
     // Reset the rest of the data that is not filled
@@ -107,9 +108,19 @@ void socia_sdo2can (struct can_frame *dst, const socia_sdo_msg_t *src, const int
 void socia_can2sdo( socia_sdo_msg_t *dst, const struct can_frame *src ) {
     // FIXME: better message validation
     assert( src->can_dlc <= 8 );
+
+    uint8_t cmd = src->data[0];
+    dst->cmd.s = cmd & 0x1;
+    dst->cmd.e = (cmd >> 1) & 0x1;
+    dst->cmd.n = (uint8_t) ((cmd >> 2) & 0x3);
+    dst->cmd.ccs = (enum socia_command_spec) ((cmd >> 5) & 0x7);
+
     dst->node = (uint8_t)(src->can_id & SOCIA_SDO_NODE_MASK);
+
     dst->length = (uint8_t)(src->can_dlc - 4);
-    dst->command = (uint8_t)src->data[0];
+
+
+
     dst->index = (uint16_t)(src->data[1] + (src->data[2] << 8));
     dst->subindex = src->data[3];
     memcpy( &(dst->data[0]), &(src->data[4]), dst->length );
@@ -153,27 +164,6 @@ ssize_t socia_sdo_query_recv( int fd, socia_sdo_msg_t *resp,
 }
 
 
-// build command byte for SDO
-void socia_sdo_set_cmd( socia_sdo_msg_t *sdo,
-                        socia_command_spec_t command_spec,
-                        uint8_t nodata_len,
-                        uint8_t is_expedited,
-                        uint8_t is_len_in_cmd ) {
-    // Sanity checks
-    assert( nodata_len <= 3 );
-    assert(  (is_expedited && is_len_in_cmd) || ! nodata_len );
-
-    // Create the command by setting the ccs, n, e and s fields
-    // NOTE: The reserved field is set to 0 by default.
-
-    sdo->command  = 0xFF & ( (is_len_in_cmd ? 1 : 0)         |  // s
-                             ((is_expedited ? 1 : 0) << 1)   |  // e
-                             ((nodata_len & 0x3)     << 2)   |  // n
-                             ((command_spec & 0x7)   << 5) );   // ccs
-}
-
-
-
 void socia_sdo_set_ex_dl( socia_sdo_msg_t *sdo,
                           uint8_t node, uint16_t index, uint8_t subindex ) {
 
@@ -183,16 +173,16 @@ void socia_sdo_set_ex_dl( socia_sdo_msg_t *sdo,
     sdo->node = node;
 
     /* Set Command */
-    uint8_t nodata_len = (uint8_t)(4 - sdo->length);
-    uint8_t is_expedited = 1;
-    uint8_t is_len_in_command = 1;
-    socia_sdo_set_cmd(sdo, SOCIA_EX_DL, nodata_len, is_expedited, is_len_in_command);
+    sdo->cmd.n = (unsigned char) ((4 - sdo->length) & 0x3);
+    sdo->cmd.e = 1;
+    sdo->cmd.s = 1;
+    sdo->cmd.ccs = SOCIA_EX_DL;
 }
 
 
 
 #define DEF_SDO_DL( VAL_TYPE, SUFFIX )                                  \
-    ssize_t socia_sdo_dl_ ## SUFFIX( int fd, uint8_t *rcmd,             \
+    ssize_t socia_sdo_dl_ ## SUFFIX( int fd, uint8_t *rccs,             \
                                     uint8_t node,                       \
                                     uint16_t index, uint8_t subindex,   \
                                     VAL_TYPE value ) {                  \
@@ -201,7 +191,7 @@ void socia_sdo_set_ex_dl( socia_sdo_msg_t *sdo,
         socia_sdo_set_ex_dl( &req, node,                                \
                              index, subindex );                         \
         ssize_t r = socia_sdo_query( fd, &req, &resp );                 \
-        if ( socia_can_ok(r) ) *rcmd = resp.command;                    \
+        if ( socia_can_ok(r) ) *rccs = resp.cmd.ccs;                    \
         return r;                                                       \
     }                                                                   \
 
@@ -224,7 +214,11 @@ static ssize_t sdo_ul( int fd,
                        uint8_t node, uint16_t index, uint8_t subindex ) {
     socia_sdo_msg_t req;
     // Build SDO Message
-    socia_sdo_set_cmd( &req, SOCIA_EX_UL, 0, 1, 0 );
+    req.cmd.ccs = SOCIA_EX_UL;
+    req.cmd.e = 1;
+    req.cmd.n = 0;
+    req.cmd.s = 0;
+
     req.node = node;
     req.index = index;
     req.subindex = subindex;
@@ -238,7 +232,7 @@ static ssize_t sdo_ul( int fd,
 
 #define DEF_SDO_UL( VAL_TYPE, IS_SIGNED, SUFFIX )                       \
     ssize_t socia_sdo_ul_ ## SUFFIX( int fd,                            \
-                                     uint8_t *rcmd, VAL_TYPE *value,    \
+                                     uint8_t *rccs, VAL_TYPE *value,    \
                                      uint8_t node,                      \
                                      uint16_t index, uint8_t subindex ) \
     {                                                                   \
@@ -246,7 +240,7 @@ static ssize_t sdo_ul( int fd,
         ssize_t r;                                                      \
         r = sdo_ul(fd, &resp, node, index, subindex);                   \
         if( socia_can_ok(r) ) {                                         \
-            *rcmd = resp.command;                                       \
+            *rccs = resp.cmd.ccs;                                       \
             *value = socia_sdo_get_data_ ## SUFFIX( &resp );            \
         }                                                               \
         return r;                                                       \
