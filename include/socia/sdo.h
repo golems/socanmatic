@@ -90,13 +90,13 @@ typedef struct socia_sdo_msg {
 
     /** Command word */
     struct {
-        enum socia_command_spec ccs : 3; ///< Client Command Specifier  (ccs)
+        enum socia_command_spec ccs : 3; ///< Client Command Specifier
         /** Number of bytes in the data part of the message which do not
-         *  contain data.  Only valid if e and s are set (n)
+         *  contain data.  Only valid if e and s are set
          */
         unsigned short n : 2;
-        _Bool e;      ///< Is an expedited transfer? (e)
-        _Bool s; ///< Is size specified in n? (s)
+        _Bool e;               ///< Is an expedited transfer?
+        _Bool s;               ///< Is size specified in n?
     } cmd;
 
     /* Now the message data */
@@ -117,6 +117,14 @@ ssize_t socia_sdo_query_send( int fd, const socia_sdo_msg_t *req );
 ssize_t socia_sdo_query_recv( int fd, socia_sdo_msg_t *resp,
                               const socia_sdo_msg_t *req );
 
+static inline uint8_t socia_sdo_cmd_byte( const socia_sdo_msg_t *sdo ) {
+    return (uint8_t) ( (sdo->cmd.s ? 1 : 0)            |
+                       ((sdo->cmd.e ? 1 : 0) << 1)     |
+                       ((sdo->cmd.n & 0x3)  << 2)      |
+                       ((sdo->cmd.ccs & 0x7)    << 5) );
+}
+
+int socia_sdo_print( FILE *f, const socia_sdo_msg_t *sdo );
 
 /** Send an SDO query response
  *

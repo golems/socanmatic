@@ -70,12 +70,32 @@
 
 const char *opt_cmd = NULL;
 const char *opt_verbosity = 0;
+
 uint16_t opt_canid = 0;
 uint8_t opt_can_dlc = 0;
 uint8_t opt_can_data[8];
+
+socia_sdo_msg_t opt_sdo = {0};
+
+typedef int (*cmd_fun_t)(void);
+
 int (*opt_command)(void) = NULL;
 
+
 void hard_assert( _Bool test , const char fmt[], ...)          ATTR_PRINTF(2,3);
+
+
+int cmd_send( void );
+int cmd_dump( void );
+int cmd_ul( void );
+int cmd_ul_resp( void );
+int cmd_dl( void );
+int cmd_dl_resp( void );
+
+
+/***********/
+/* HELPERS */
+/***********/
 
 void hard_assert( _Bool test , const char fmt[], ...)  {
     if( ! test ) {
@@ -119,46 +139,23 @@ static void set_cmd( int (*cmd_fun)(void) ) {
 }
 
 void dump_frame (struct can_frame *can ) {
-    printf("%03x[%d] ", can->can_id, can->can_dlc );
+    printf("%03x[%d]", can->can_id, can->can_dlc );
     int i;
     for( i = 0; i < can->can_dlc; i++) {
         uint8_t u = can->data[i];
-        printf("%02x%s", u, (i < can->can_dlc - 1)?":":"" );
+        printf("%c%02x",
+               i ? ':' : ' ',
+               u );
+
     }
     printf("\n");
     fflush(stdout);
 }
 
-int cmd_dump( ) {
-    int fd = can_open();
-    while(1) {
-        struct can_frame can;
-        ssize_t r = socia_can_recv( fd, &can );
-        if( r > 0 ) {
-            dump_frame(&can);
-        } else {
-            perror("Couldn't recv frame");
-            exit(EXIT_FAILURE);
-        }
-    }
 
-}
-
-int cmd_send( ) {
-    struct can_frame can;
-    can.can_id = opt_canid;
-    can.can_dlc = opt_can_dlc;
-    memcpy(can.data, opt_can_data, opt_can_dlc);
-    if(opt_verbosity) {
-        fprintf(stderr, "Sending ");
-        dump_frame(&can);
-    }
-
-    int fd = can_open();
-    ssize_t r = socia_can_send( fd, &can );
-    hard_assert( socia_can_ok(r), "Couldn't send frame: %s\n", strerror(errno) );
-    return 0;
-}
+/***************/
+/* ARG PARSING */
+/***************/
 
 unsigned long parse_uhex( const char *arg, uint64_t max ) {
     char *endptr;
@@ -186,20 +183,64 @@ void posarg_send( const char *arg, int i ) {
     }
 }
 
+
+void posarg_sdo( const char *arg, int i ) {
+    switch(i) {
+    case 1:
+        opt_sdo.node = (uint8_t)parse_uhex( arg, SOCIA_SDO_NODE_MASK );
+        break;
+    case 2:
+        opt_sdo.index = (uint16_t)parse_uhex( arg, 0xFFFF );
+        break;
+    case 3:
+        opt_sdo.subindex = (uint8_t)parse_uhex( arg, 0xFF );
+        break;
+    default:
+        printf("%d\n", i);
+        if( (cmd_dl == opt_command || cmd_ul_resp == opt_command) &&
+            i >= 4 && i <= 8 ) {
+            assert( opt_sdo.length == i - 4 );
+            opt_sdo.data[ opt_sdo.length++ ] = (uint8_t)parse_uhex( arg, 0xFF );
+        } else {
+            invalid_arg( arg );
+        }
+    }
+}
+
+cmd_fun_t posarg_cmd( const char *arg ) {
+    static const struct  {
+        const char *name;
+        cmd_fun_t fun;
+    } cmds[] = { {"dump", cmd_dump},
+                 {"send", cmd_send},
+                 {"dl", cmd_dl},
+                 {"dl-resp", cmd_dl_resp},
+                 {"ul", cmd_ul},
+                 {"ul-resp", cmd_ul_resp},
+                 {NULL, NULL} };
+    size_t i;
+    for( i = 0; cmds[i].name != NULL; i ++ ) {
+        if( 0 == strcasecmp( arg, cmds[i].name ) ) {
+            return cmds[i].fun;
+        }
+    }
+    invalid_arg( arg );
+    assert(0);
+}
+
 void posarg( const char *arg, int i ) {
     if( 0 == i ) {
         if( opt_verbosity ) {
             fprintf( stderr, "Setting command: %s\n", arg );
         }
-        if( 0 == strcasecmp(arg, "dump") ) {
-            set_cmd( cmd_dump );
-        } else if( 0 == strcasecmp(arg, "send") ) {
-            set_cmd( cmd_send );
-        } else {
-            invalid_arg( arg );
-        }
+        set_cmd( posarg_cmd(arg) );
     } else if( cmd_send == opt_command ) {
         posarg_send( arg, i );
+    } else if( cmd_dl == opt_command ||
+               cmd_ul == opt_command ||
+               cmd_dl_resp == opt_command ||
+               cmd_ul_resp == opt_command ) {
+        posarg_sdo( arg, i );
     } else {
         invalid_arg( arg );
     }
@@ -235,8 +276,12 @@ int main( int argc, char ** argv ) {
                   "  -V,                       Print program version\n"
                   "\n"
                   "Examples:\n"
-                  "  socia dump                Print CAN messages to standard output\n"
-                  "  socia send id b0 ... b7   Send a can message (values in hex)\n"
+                  "  socia dump                                  Print CAN messages to standard output\n"
+                  "  socia send id b0 ... b7                     Send a can message (values in hex)\n"
+                  "  socia dl node idx subidx bytes-or-val       Download SDO to node\n"
+                  "  socia dl-resp node idx subidx               Simulate node download response\n"
+                  "  socia ul node idx subidx                    Upload SDO from node\n"
+                  "  socia ul-resp node idx subidx bytes-or-val  Simulate node upload response\n"
                   "\n"
                   "Report bugs to <ntd@gatech.edu>"
                 );
@@ -260,4 +305,105 @@ int main( int argc, char ** argv ) {
     }
 
     return 0;
+}
+
+/************/
+/* COMMANDS */
+/************/
+
+int cmd_dump( void ) {
+    int fd = can_open();
+    while(1) {
+        struct can_frame can;
+        ssize_t r = socia_can_recv( fd, &can );
+        if( r > 0 ) {
+            dump_frame(&can);
+        } else {
+            perror("Couldn't recv frame");
+            exit(EXIT_FAILURE);
+        }
+    }
+}
+
+int send_frame( struct can_frame *can ) {
+    if(opt_verbosity) {
+        fprintf(stderr, "Sending ");
+        dump_frame(can);
+    }
+
+    int fd = can_open();
+    ssize_t r = socia_can_send( fd, can );
+    hard_assert( socia_can_ok(r), "Couldn't send frame: %s\n", strerror(errno) );
+    return 0;
+}
+
+int query_sdo() {
+    int fd = can_open();
+
+    socia_sdo_msg_t resp;
+
+    ssize_t r = socia_sdo_query( fd, &opt_sdo, &resp );
+    hard_assert( socia_can_ok(r), "Couldn't send frame: %s\n", strerror(errno) );
+
+    socia_sdo_print( stdout, &resp );
+
+    return 0;
+}
+
+int cmd_send( void ) {
+    struct can_frame can;
+    can.can_id = opt_canid;
+    can.can_dlc = opt_can_dlc;
+    memcpy(can.data, opt_can_data, opt_can_dlc);
+
+    return send_frame( &can );
+}
+
+int cmd_ul( void ) {
+
+    opt_sdo.cmd.ccs = SOCIA_EX_UL;
+    opt_sdo.cmd.e = 1;
+    opt_sdo.cmd.n = 0;
+    opt_sdo.cmd.s = 0;
+
+    return query_sdo();
+}
+
+int cmd_ul_resp( void ) {
+    hard_assert( opt_sdo.length > 0 && opt_sdo.length < 5,
+                 "Invalid data length\n" );
+
+    struct can_frame can;
+
+    opt_sdo.cmd.ccs = SOCIA_EX_UL;
+    opt_sdo.cmd.e = 1;
+    opt_sdo.cmd.n = (unsigned char)((4 - opt_sdo.length) & 0x3);
+    opt_sdo.cmd.s = 1;
+
+    socia_sdo2can( &can, &opt_sdo, 1 );
+    return send_frame( &can );
+}
+
+int cmd_dl( void ) {
+    hard_assert( opt_sdo.length > 0 && opt_sdo.length < 5,
+                 "Invalid data length\n" );
+
+    socia_sdo_set_ex_dl( &opt_sdo,
+                         opt_sdo.node, opt_sdo.index, opt_sdo.subindex );
+
+    return query_sdo();
+}
+
+int cmd_dl_resp( void ) {
+    hard_assert( 0 == opt_sdo.length,
+                 "Invalid data length\n" );
+
+    opt_sdo.cmd.ccs = SOCIA_EX_DL;
+    opt_sdo.cmd.e = 1;
+    opt_sdo.cmd.n = 0;
+    opt_sdo.cmd.s = 0;
+
+    struct can_frame can;
+    socia_sdo2can( &can, &opt_sdo, 1 );
+    return send_frame( &can );
 }

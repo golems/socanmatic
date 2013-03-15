@@ -40,19 +40,6 @@
  *
  */
 
-/**
- * \file ntcanopen.c
- *
- * \brief CANopen implementation using esd's NTCAN API
- *
- * \author Neil Dantam
- * \author Can Erdogan (bug fixes)
- *
- * \bug AMC servo drives require expedited SDO reads to have a full
- * 8-byte data portion.  We must accomodate.
- */
-
-
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -84,10 +71,7 @@ void socia_sdo2can (struct can_frame *dst, const socia_sdo_msg_t *src, const int
     dst->can_dlc = (uint8_t)(src->length + 4);   // 4 due to "len" (1), "msg_lost" (1) and "reserved" (2) fields
 
     // set command byte
-    dst->data[0] = ( (src->cmd.s ? 1 : 0)            |
-                     ((src->cmd.e ? 1 : 0) << 1)     |
-                     ((src->cmd.n & 0x3)  << 2)      |
-                     ((src->cmd.ccs & 0x7)    << 5) );
+    dst->data[0] = socia_sdo_cmd_byte( src );;
 
     // set indices
     dst->data[1] = (uint8_t)(src->index & 0xFF);
@@ -106,7 +90,8 @@ void socia_sdo2can (struct can_frame *dst, const socia_sdo_msg_t *src, const int
 
 // Create a socia_sdo_msg_t from a struct can_frame
 void socia_can2sdo( socia_sdo_msg_t *dst, const struct can_frame *src ) {
-    // FIXME: better message validation
+    // FIXME: better message validation, check that message is actually an SDO
+
     assert( src->can_dlc <= 8 );
 
     uint8_t cmd = src->data[0];
@@ -164,6 +149,12 @@ ssize_t socia_sdo_query_recv( int fd, socia_sdo_msg_t *resp,
 }
 
 
+ssize_t socia_sdo_query_resp( int fd, const socia_sdo_msg_t *resp ) {
+    struct can_frame can;
+    socia_sdo2can( &can, resp, 1 );
+    return  socia_can_send( fd, &can );
+}
+
 void socia_sdo_set_ex_dl( socia_sdo_msg_t *sdo,
                           uint8_t node, uint16_t index, uint8_t subindex ) {
 
@@ -203,6 +194,7 @@ DEF_SDO_DL(  int16_t, i16 )
 
 DEF_SDO_DL( uint32_t, u32 )
 DEF_SDO_DL(  int32_t, i32 )
+
 
 
 /* precondition: sdo contains message data and length
@@ -256,6 +248,21 @@ DEF_SDO_UL( uint32_t, 0, u32 )
 DEF_SDO_UL(  int32_t, 1, i32 )
 
 
+int socia_sdo_print( FILE *f, const socia_sdo_msg_t *sdo ) {
+    fprintf(f, "%02x.%02x(%d:%d:%d:%d)[%04x.%02x]",
+            sdo->node,
+            socia_sdo_cmd_byte(sdo), sdo->cmd.e, sdo->cmd.s, sdo->cmd.e, sdo->cmd.ccs,
+            sdo->index, sdo->subindex);
+    int i;
+    for( i = 0; i < sdo->length; i++ ) {
+        fprintf(f,"%c%02x",
+                i ? ':' : ' ',
+                sdo->data[i] );
+
+    }
+    fputc('\n', f);
+    return 0;
+}
 
 /* ex: set shiftwidth=4 tabstop=4 expandtab: */
 /* Local Variables:                          */
