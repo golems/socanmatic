@@ -20,3 +20,6 @@ config.*
 /test_sdo
 /socia-*.tar.*
 /socia
+amc-test
+*.so
+*.o
