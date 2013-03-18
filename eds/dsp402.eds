@@ -104,7 +104,8 @@ ObjectType=RECORD
 
 [6410sub0]
 ParameterName=Motor data/number of entries
-ObjectType=UNSIGNED8
+ObjectType=VAR
+DataType=UNSIGNED8
 AccessType=RO
 PDOMapping=0
 

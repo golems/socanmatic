@@ -39,13 +39,16 @@
 
 
 
-# NOTE: The ConfigParser module has been renamed to configparser
+# NOTE: The ConfigParser module has been renamed to configparser in
+# Python 3
 
 import ConfigParser
 import sys
 import re
 
 from optparse import OptionParser
+
+NS="SOCIA_"
 
 def config2dict( config, section ):
     d = {}
@@ -63,6 +66,17 @@ def parse_file( accum_dict, name ):
         if re.match(r'^[0-9a-fA-F]+(sub[0-9a-fA-F]+)?$', s):
             accum_dict[s] = config2dict( config, s )
 
+def datatype(s):
+    s = s.upper();
+    if ( re.match(r'BOOLEAN|((INTEGER|UNSIGNED)(8|16|32))|VISIBLE_STRING|TIME_OF_DAY', s ) ):
+        return NS+"DATA_TYPE_"+s
+    else: return s
+
+def objecttype(s):
+    s = s.upper();
+    if( re.match(r'VAR|RECORD|ARRAY',s) ):
+        return NS+"OBJ_CODE_"+s
+    else: return s
 
 def edsobj2cstruct( section, params ):
     '''Print and EDS section as C code'''
@@ -81,26 +95,43 @@ def edsobj2cstruct( section, params ):
     s =  '\t{\n'
     s += '\t\t.index=0x%s,\n' % index
     s += '\t\t.subindex=0x%s,\n' % subindex
-    s += try_param('objecttype', 'object_type')
     s += try_param('pdomapping', 'pdo_mapping')
+    if 'datatype' in params:
+        s += '\t\t.data_type=%s,\n' % datatype(params['datatype'])
+    if 'objecttype' in params:
+        s += '\t\t.object_type=%s,\n' % objecttype(params['objecttype'])
     if 'accesstype' in params:
-        s += '\t\t.access_type=SOCIA_ACCESS_%s,\n' % params['accesstype'].upper()
+        s += '\t\t.access_type=' + NS + 'ACCESS_%s,\n' % params['accesstype'].upper()
     s += '\t\t.parameter_name="%s"\n' % params['parametername']
-    s += '\t}\n'
+    s += '\t},\n'
 
     return s
 
 def print_dict( output, odict ):
     # Sort by names
     def key(sect):
-        return odict[sect]['parametername']
+        return odict[sect]['parametername'].upper()
 
     sections = odict.keys()
     sections.sort(key=key)
 
     # print
+    s = ''
+    s += '#include <stdint.h>\n'
+    s += '#include <unistd.h>\n'
+    s += '#include "socia/dict.h"\n'
+
+    s += "socia_dict_t socia_dict = {\n"
+    s += "\t.length=%d,\n" % len(sections)
+    s += "\t.obj={\n"
+
     for section in sections:
-        output.write( edsobj2cstruct( section, odict[section] ) )
+        s +=  edsobj2cstruct( section, odict[section] )
+    s += "\t}\n"
+
+    s += "};\n"
+
+    output.write(s)
 
 
 def main() :

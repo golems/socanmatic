@@ -27,3 +27,4 @@ Makefile
 /doc/man/*.1
 /doc/man/*.html
 /doc/manual/*.html
+/dict402.c

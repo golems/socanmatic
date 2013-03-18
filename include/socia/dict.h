@@ -73,13 +73,13 @@ typedef enum socia_object_type {
  *  see CiA 301
  */
 typedef enum socia_data_type {
-    SOCIA_DATA_TYPE_BOOL            = 0x0001,
-    SOCIA_DATA_TYPE_INT8            = 0x0002,
-    SOCIA_DATA_TYPE_INT16           = 0x0003,
-    SOCIA_DATA_TYPE_INT32           = 0x0004,
-    SOCIA_DATA_TYPE_UINT8           = 0x0005,
-    SOCIA_DATA_TYPE_UINT16          = 0x0006,
-    SOCIA_DATA_TYPE_UINT32          = 0x0007,
+    SOCIA_DATA_TYPE_BOOLEAN         = 0x0001,
+    SOCIA_DATA_TYPE_INTEGER8        = 0x0002,
+    SOCIA_DATA_TYPE_INTEGER16       = 0x0003,
+    SOCIA_DATA_TYPE_INTEGER32       = 0x0004,
+    SOCIA_DATA_TYPE_UNSIGNED8       = 0x0005,
+    SOCIA_DATA_TYPE_UNSIGNED16      = 0x0006,
+    SOCIA_DATA_TYPE_UNSIGNED32      = 0x0007,
     SOCIA_DATA_TYPE_REAL32          = 0x0008,
     SOCIA_DATA_TYPE_VISIBLE_STRING  = 0x0009,
     SOCIA_DATA_TYPE_OCTET_STRING    = 0x000A,
@@ -90,16 +90,16 @@ typedef enum socia_data_type {
     SOCIA_DATA_TYPE_DOMAIN          = 0x000F,
     SOCIA_DATA_TYPE_INT24           = 0x0010,
     SOCIA_DATA_TYPE_REAL64          = 0x0011,
-    SOCIA_DATA_TYPE_INT40           = 0x0012,
-    SOCIA_DATA_TYPE_INT48           = 0x0013,
-    SOCIA_DATA_TYPE_INT56           = 0x0014,
-    SOCIA_DATA_TYPE_INT64           = 0x0015,
+    SOCIA_DATA_TYPE_INTEGER40       = 0x0012,
+    SOCIA_DATA_TYPE_INTEGER48       = 0x0013,
+    SOCIA_DATA_TYPE_INTEGER56       = 0x0014,
+    SOCIA_DATA_TYPE_INTEGER64       = 0x0015,
     SOCIA_DATA_TYPE_UINT24          = 0x0016,
     /* 0x0017 is reserved */
-    SOCIA_DATA_TYPE_UINT40          = 0x0018,
-    SOCIA_DATA_TYPE_UINT48          = 0x0019,
-    SOCIA_DATA_TYPE_UINT56          = 0x001A,
-    SOCIA_DATA_TYPE_UINT64          = 0x001B,
+    SOCIA_DATA_TYPE_UNSIGNED40      = 0x0018,
+    SOCIA_DATA_TYPE_UNSIGNED48      = 0x0019,
+    SOCIA_DATA_TYPE_UNSIGNED56      = 0x001A,
+    SOCIA_DATA_TYPE_UNSIGNED64      = 0x001B,
     /* 0x001C - 0x001F are reserved */
     SOCIA_DATA_TYPE_PDO_COM         = 0x0020,
     SOCIA_DATA_TYPE_PDO_MAP         = 0x0021,
@@ -117,7 +117,7 @@ typedef struct socia_obj {
     const uint8_t subindex;
 
     /* Name of the object */
-    const char *parameter_name
+    const char *parameter_name;
 
     /** Number of sub-indices for an intex.
      *  May be empty or absent of object has no sub-objects. */
@@ -142,10 +142,10 @@ typedef struct socia_obj {
 } socia_obj_t;
 
 /** Description of a CiA Dictionary */
-typedef socia_dict {
+typedef struct socia_dict {
     size_t length;
-    struct socia_obj obj[1];
-} socia_dict;
+    struct socia_obj obj[];
+} socia_dict_t;
 
 
 
@@ -166,4 +166,4 @@ struct socia_dict *socia_dict_merge( const struct socia_dict *dict0,
 /* c-basic-offset: 4                         */
 /* indent-tabs-mode:  nil                    */
 /* End:                                      */
-#endif //SODICT_H
+#endif //SOCIA_DICT_H
