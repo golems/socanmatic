@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://docbook.org/xml/4.5/docbookx.dtd">
+
+<article>
+
+  <articleinfo>
+    <title>SoCiA User Manual</title>
+    <author>
+       <firstname>Neil</firstname>
+       <surname>Dantam</surname>
+       <othername role='mi'>T</othername>
+       <affiliation>
+          <!-- Valid email...spamblock/scramble if so desired -->
+          <address><email>ntd at gatech dot edu</email></address>
+       </affiliation>
+     </author>
+
+     <!-- All dates specified in ISO "YYYY-MM-DD" format -->
+     <pubdate>2013-03-17</pubdate>
+
+     <copyright>
+       <year>2008-2013</year>
+       <holder>Georgia Tech Research Corporation</holder>
+     </copyright>
+
+     <!-- Most recent revision goes at the top; list in descending order -->
+     <revhistory>
+       <revision>
+          <revnumber>0.0.0</revnumber>
+          <date>2013-03-17</date>
+          <authorinitials>NTD</authorinitials>
+          <revremark>Initial Release</revremark>
+       </revision>
+     </revhistory>
+
+     <abstract>
+        <para>
+          This is the manual for the SoCiA library.
+        </para>
+
+         <para>
+           SoCiA implements the CANopen protocol, focusing on control of servo motors.
+         </para>
+
+     </abstract>
+  </articleinfo>
+
+
+  <sect1>
+    <title>
+      Introduction
+    </title>
+
+    <para>TODO </para>
+
+  </sect1>
+  <colophon>
+    <para>This manual is written in Docbook XML.</para>
+
+
+     <!--<legalnotice>-->
+       <para>
+         Redistribution and use in source (XML DocBook) and 'compiled' forms
+         (SGML, HTML, PDF, PostScript, RTF and so forth) with or without
+         modification, are permitted provided that the following conditions are
+         met:
+       </para>
+       <orderedlist>
+         <listitem><para>
+           Redistributions of source code (XML DocBook) must retain the
+           above copyright notice, this list of conditions and the
+           following disclaimer as the first lines of this file
+           unmodified.
+         </para></listitem>
+         <listitem><para>
+           Redistributions in compiled form (transformed to other DTDs,
+           converted to PDF, PostScript, RTF and other formats) must
+           reproduce the above copyright notice, this list of conditions
+           and the following disclaimer in the documentation and/or other
+           materials provided with the distribution.
+         </para></listitem>
+       </orderedlist>
+       <para>
+         THIS DOCUMENTATION IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+         CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+         INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+         MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+         DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR
+         CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+         SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+         NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+         LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+         HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+         CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+         OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+         DOCUMENTATION, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+         DAMAGE.
+       </para>
+     <!-- </legalnotice> -->
+  </colophon>
+
+
+</article>

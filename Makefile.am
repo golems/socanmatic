@@ -1,5 +1,7 @@
 ACLOCAL_AMFLAGS = -I m4
 
+SUBDIRS = . doc
+
 AM_CPPFLAGS = -I$(top_srcdir)/include
 
 TESTS = test_sdo

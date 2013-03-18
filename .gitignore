@@ -23,3 +23,7 @@ config.*
 amc-test
 *.so
 *.o
+Makefile
+/doc/man/*.1
+/doc/man/*.html
+/doc/manual/*.html
