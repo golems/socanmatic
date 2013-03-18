@@ -1,0 +1,600 @@
+; Copyright (c) 2013, Georgia Tech Research Corporation
+; All rights reserved.
+;
+; Author(s): Neil T. Dantam <ntd@gatech.edu>
+; Georgia Tech Humanoid Robotics Lab
+; Under Direction of Prof. Mike Stilman <mstilman@cc.gatech.edu>
+;
+; This file is provided under the following "BSD-style" License:
+;
+;   Redistribution and use in source and binary forms, with or
+;   without modification, are permitted provided that the following
+;   conditions are met:
+;   * Redistributions of source code must retain the above copyright
+;     notice, this list of conditions and the following disclaimer.
+;   * Redistributions in binary form must reproduce the above
+;     copyright notice, this list of conditions and the following
+;     disclaimer in the documentation and/or other materials provided
+;     with the distribution.
+;   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+;   CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+;   INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+;   MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+;   DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+;   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+;   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+;   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
+;   USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+;   AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+;   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+;   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+;   POSSIBILITY OF SUCH DAMAGE.
+
+[FileInfo]
+FileName=dsp420.eds
+FileVersion=1
+FileRevision=2
+EDSVersion=4.0
+Description=EDS for dsp402
+CreationTime=18:00
+CreationDate=03-15-2013
+CreatedBy=Neil T. Dantam
+ModificationTime=18:00
+ModificationDate=03-15-2013
+ModifiedBy=Neil T. Dantam
+
+
+;;;;;;;;;;;;;;;;;;;;
+;; COMMON ENTRIES ;;
+;;;;;;;;;;;;;;;;;;;;
+
+[6007]
+ParameterName=Abort connection option code
+ObjectType=VAR
+DataType=INTEGER16
+AccessType=RW
+PDOMapping=1
+DefaultValue=0
+
+[603F]
+ParameterName=Error Code
+ObjectType=VAR
+DataType=UNSIGNED16
+AccessType=RO
+DefaultValue=0
+
+[6402]
+ParameterName=Motor Type
+ObjectType=VAR
+DataType=UNSIGNED16
+AccessType=RW
+PDOMapping=1
+
+[6403]
+ParameterName=Motor catalog number
+ObjectType=VAR
+DataType=VISIBLE_STRING
+AccessType=RW
+PDOMapping=0
+
+[6404]
+ParameterName=Motor manufacturer
+ObjectType=VAR
+DataType=VISIBLE_STRING
+AccessType=RW
+PDOMapping=0
+
+[6405]
+ParameterName=http motor catalog address
+ObjectType=VAR
+DataType=VISIBLE_STRING
+AccessType=RW
+PDOMapping=0
+
+[6406]
+ParameterName=Motor calibrate date
+ObjectType=VAR
+DataType=TIME_OF_DAY
+AccessType=RW
+PDOMapping=1
+
+[6410]
+ParameterName=Motor data
+ObjectType=RECORD
+
+[6410sub0]
+ParameterName=Motor data/number of entries
+ObjectType=UNSIGNED8
+AccessType=RO
+PDOMapping=0
+
+[6502]
+ParameterName=Supported drive modes
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RO
+PDOMapping=1
+
+[6503]
+ParameterName=Drive catalog number
+ObjectType=VAR
+DataType=VISIBLE_STRING
+AccessType=RW
+PDOMapping=0
+
+[6504]
+ParameterName=Drive manufacturer
+ObjectType=VAR
+DataType=VISIBLE_STRING
+AccessType=RW
+PDOMapping=0
+
+[6505]
+ParameterName=http drive catalog address
+ObjectType=VAR
+DataType=VISIBLE_STRING
+AccessType=RW
+PDOMapping=0
+
+[6510]
+ParameterName=Drive data
+ObjectType=RECORD
+
+[6510sub0]
+ParameterName=Drive data/number of entries
+ObjectType=VAR
+DataType=UNSIGNED8
+AccessType=RO
+PDOMapping=0
+
+[60FD]
+ParameterName=Digital inputs
+ObjectType=VAR
+AccessType=RO
+PDOMapping=1
+
+;; Spec is unclear on object/data types for the subindices
+[60FE]
+ParameterName=Digital outputs
+ObjectType=ARRAY
+DataType=UNSIGNED32
+AccessType=RO
+
+[60FEsub0]
+ParameterName=Digital outputs/number of entries
+ObjectType=VAR
+DataType=UNSIGNED8
+AccessType=RW
+PDOMapping=1
+DefaultValue=0
+
+[60FEsub2]
+ParameterName=Digital outputs/bit mask
+ObjectType=ARRAY
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=1
+DefaultValue=0
+
+
+;;;;;;;;;;;;;;;;;;;;
+;; DEVICE CONTROL ;;
+;;;;;;;;;;;;;;;;;;;;
+
+[6040]
+ParameterName=Controlword
+ObjectType=VAR
+DataType=UNSIGNED16
+AccessType=RW
+PDOMapping=1
+
+[6041]
+ParameterName=Statusword
+ObjectType=VAR
+DataType=UNSIGNED16
+AccessType=RO
+PDOMapping=1
+
+
+[605E]
+; what to do if a fault occurs
+ParameterName=Fault reaction option code
+ObjectType=VAR
+DataType=UNSIGNED16
+AccessType=RW
+PDOMapping=0
+DefaultValue=2
+
+
+[6060]
+; Switches to the chosen mode
+ParameterName=Modes of operation
+ObjectType=VAR
+DataType=INTEGER8
+AccessType=RW
+PDOMapping=1
+
+[6061]
+; shows the current mode
+ParameterName=Modes of operation display
+ObjectType=VAR
+DataType=INTEGER8
+AccessType=RO
+PDOMapping=1
+
+;;;;;;;;;;;;;;;;;;
+;; FACTOR GROUP ;;
+;;;;;;;;;;;;;;;;;;
+
+[6089]
+ParameterName=Position notation index
+ObjectType=VAR
+DataType=INTEGER8
+AccessType=RW
+PDOMapping=1
+
+[608A]
+ParameterName=Position dimension index
+ObjectType=VAR
+DataType=UNSIGNED8
+AccessType=RW
+PDOMapping=1
+
+[608B]
+ParameterName=Velocity notation index
+ObjectType=VAR
+DataType=INTEGER8
+AccessType=RW
+PDOMapping=1
+DefaultValue=0
+
+[608C]
+ParameterName=Velocity dimension index
+ObjectType=VAR
+DataType=UNSIGNED8
+AccessType=RW
+PDOMapping=1
+
+[608D]
+ParameterName=Acceleration notation index
+ObjectType=VAR
+DataType=INTEGER8
+AccessType=RW
+PDOMapping=1
+
+[608E]
+ParameterName=Acceleration dimension index
+ObjectType=VAR
+DataType=UNSIGNED8
+AccessType=RW
+PDOMapping=1
+
+
+[608F]
+ParameterName=Position encoder resolution
+ObjectType=ARRAY
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=0
+
+[608Fsub0]
+ParameterName=Position encoder resolution/number of entries
+ObjectType=VAR
+DataType=UNSIGNED8
+AccessType=RO
+PDOMapping=0
+DefaultValue=2
+
+[608Fsub1]
+ParameterName=Position encoder resolution/Encoder increments
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=1
+DefaultValue=1
+
+[608Fsub2]
+ParameterName=Position encoder resolution/Motor revolutions
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=1
+DefaultValue=1
+
+
+[6090]
+ParameterName=Velocity encoder resolution
+ObjectType=ARRAY
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=0
+
+[6090sub0]
+ParameterName=Velocity encoder resolution/number of entries
+ObjectType=VAR
+DataType=UNSIGNED8
+AccessType=RO
+PDOMapping=0
+DefaultValue=2
+
+[6090sub1]
+ParameterName=Velocity encoder resolution/Encoder increments per second
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=1
+DefaultValue=1
+
+[6090sub2]
+ParameterName=Velocity encoder resolution/Motor revolutions per second
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=1
+DefaultValue=1
+
+
+[6091]
+ParameterName=Gear ratio
+ObjectType=ARRAY
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=0
+
+[6091sub0]
+ParameterName=Gear Ratio/number of entries
+ObjectType=VAR
+DataType=UNSIGNED8
+AccessType=RO
+PDOMapping=0
+DefaultValue=2
+
+[6091sub1]
+ParameterName=Gear Ratio/Motor revolutions
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=1
+DefaultValue=1
+
+[6091sub2]
+ParameterName=Gear Ratio/Shaft revolutions
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=1
+DefaultValue=1
+
+
+[6092]
+ParameterName=Feed constant
+ObjectType=ARRAY
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=0
+
+[6092sub0]
+ParameterName=Feed constant/number of entries
+ObjectType=VAR
+DataType=UNSIGNED8
+AccessType=RO
+PDOMapping=0
+DefaultValue=2
+
+[6092sub1]
+ParameterName=Feed constant/Feed
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=1
+DefaultValue=1
+
+[6092sub2]
+ParameterName=Feed constant/Shaft revolutions
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=1
+DefaultValue=1
+
+
+[6092]
+ParameterName=Feed constant
+ObjectType=ARRAY
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=0
+
+[6092sub0]
+ParameterName=Feed constant/number of entries
+ObjectType=VAR
+DataType=UNSIGNED8
+AccessType=RO
+PDOMapping=0
+DefaultValue=2
+
+[6092sub1]
+ParameterName=Feed constant/Feed
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=1
+DefaultValue=1
+
+[6092sub2]
+ParameterName=Feed constant/Shaft revolutions
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=1
+DefaultValue=1
+
+
+[6093]
+ParameterName=Position factor
+ObjectType=ARRAY
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=0
+
+[6093sub0]
+ParameterName=Position factor/number of entries
+ObjectType=VAR
+DataType=UNSIGNED8
+AccessType=RO
+PDOMapping=0
+DefaultValue=2
+
+[6093sub1]
+ParameterName=Position factor/Numerator
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=1
+DefaultValue=1
+
+[6093sub2]
+ParameterName=Position factor/Feed constant
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=1
+DefaultValue=1
+
+[6094]
+ParameterName=Velocity encoder factor
+ObjectType=ARRAY
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=0
+
+[6094sub0]
+ParameterName=Velocity encoder factor/number of entries
+ObjectType=VAR
+DataType=UNSIGNED8
+AccessType=RO
+PDOMapping=0
+DefaultValue=2
+
+[6094sub1]
+ParameterName=Velocity encoder factor/Numerator
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=1
+DefaultValue=1
+
+[6094sub2]
+ParameterName=Velocity encoder factor/Divisor
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=1
+DefaultValue=1
+
+[6095]
+ParameterName=Velocity factor 1
+ObjectType=ARRAY
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=0
+
+[6095sub0]
+ParameterName=Velocity factor 1/number of entries
+ObjectType=VAR
+DataType=UNSIGNED8
+AccessType=RO
+PDOMapping=0
+DefaultValue=2
+
+[6095sub1]
+ParameterName=Velocity factor 1/Numerator
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=1
+DefaultValue=1
+
+[6095sub2]
+ParameterName=Velocity factor 1/Divisor
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=1
+DefaultValue=1
+
+[6096]
+ParameterName=Velocity factor 2
+ObjectType=ARRAY
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=0
+
+[6096sub0]
+ParameterName=Velocity factor 2/number of entries
+ObjectType=VAR
+DataType=UNSIGNED8
+AccessType=RO
+PDOMapping=0
+DefaultValue=2
+
+[6096sub1]
+ParameterName=Velocity factor 2/Numerator
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=1
+DefaultValue=1
+
+[6096sub2]
+ParameterName=Velocity factor 2/Divisor
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=1
+DefaultValue=1
+
+[6097]
+ParameterName=Acceleration factor
+ObjectType=ARRAY
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=0
+
+[6097sub0]
+ParameterName=Acceleration factor/number of entries
+ObjectType=VAR
+DataType=UNSIGNED8
+AccessType=RO
+PDOMapping=0
+DefaultValue=2
+
+[6097sub1]
+ParameterName=Acceleration factor/Numerator
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=1
+DefaultValue=1
+
+[6097sub2]
+ParameterName=Acceleration factor/Divisor
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=1
+DefaultValue=1
+
+[607E]
+ParameterName=Polarity
+ObjectType=VAR
+DataType=UNSIGNED8
+AccessType=RW
+PDOMapping=1
+DefaultValue=0
+
+
+
+; Local Variables:
+; mode: conf
+; End:

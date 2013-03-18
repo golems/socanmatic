@@ -3,6 +3,13 @@ SoCiA -- Socket CAN in Automation
 
 CAN Protocol Library for CANopen and CiA.
 
+
+Electronic Data Sheets (EDS)
+----------------------------
+The included `sociac` program translates CiA EDS files to C code. The
+socia library provides routines for communicating with CANopen nodes
+using this generated code
+
 See Also
 --------
 * http://www.can-cia.org/
