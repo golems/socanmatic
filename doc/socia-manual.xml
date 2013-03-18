@@ -54,6 +54,184 @@
     <para>TODO </para>
 
   </sect1>
+
+
+  <sect1>
+    <title>
+      CANopen
+    </title>
+
+    <para>
+      CANopen is a communications protocol for embedded automation
+      systems.  In the OSI network model, CANopen covers the network,
+      transport, session, and presentation layers (3-6).
+    </para>
+
+    <sect2>
+      <title>Object Dictionary</title>
+
+      <para>
+        Each CANopen node has an Object Dictionary, used by the master
+        to read and write values such a status codes, physical
+        parameters, and commanded actions.
+      </para>
+
+      <para>
+        Dictionary entries are addressed with a 16-bit index and 8-bit
+        subindex.  The subindex is used for compound object, e.g.,
+        records and arrays, in order to access the individual elements
+        of that object.
+      </para>
+
+      <table>
+        <title>Dictionary Entry Ranges</title>
+        <tgroup cols='2'>
+        <thead>
+          <row>
+            <entry>Index Range</entry>
+            <entry>Description</entry>
+          </row>
+        </thead>
+        <tbody>
+          <row>
+            <entry>0x0000</entry>
+            <entry>Unused</entry>
+          </row>
+          <row>
+            <entry>0x0001-0x001F</entry>
+            <entry>Simple Data Types</entry>
+          </row>
+          <row>
+            <entry>0x0020-0x003F</entry>
+            <entry>Complex Data Types</entry>
+          </row>
+          <row>
+            <entry>0x0040-0x005F</entry>
+            <entry>Manufacturer Specific Complex Data Types</entry>
+          </row>
+          <row>
+            <entry>0x0060-0x007F</entry>
+            <entry>Profile-Specific Simple Data Types</entry>
+          </row>
+          <row>
+            <entry>0x0080-0x009F</entry>
+            <entry>Profile-Specific Comple Data Types</entry>
+          </row>
+          <row>
+            <entry>0x00A0-0x0FF</entry>
+            <entry>Reserved</entry>
+          </row>
+          <row>
+            <entry>0x1000-0x1FFF</entry>
+            <entry>Comunications Profile Objects</entry>
+          </row>
+          <row>
+            <entry>0x2000-0x5FFF</entry>
+            <entry>Manufacturer Specific Objects</entry>
+          </row>
+          <row>
+            <entry>0x6000-0x9FFF</entry>
+            <entry>Standardised Device Profile Objects</entry>
+          </row>
+          <row>
+            <entry>0xA000-0xBFFF</entry>
+            <entry>Standardised Interface Profile Objects</entry>
+          </row>
+          <row>
+            <entry>0xC000-0xFFFF</entry>
+            <entry>Reserved</entry>
+          </row>
+          <row>
+            <entry>0x0000</entry>
+            <entry>Unused</entry>
+          </row>
+        </tbody>
+        </tgroup>
+      </table>
+
+      <para>
+        Entries in the dictionary are typed.  Some common types
+        include:
+      </para>
+
+      <itemizedlist mark='opencircle'>
+        <listitem><para>Boolean</para></listitem>
+        <listitem><para>INTEGER8</para></listitem>
+        <listitem><para>INTEGER16</para></listitem>
+        <listitem><para>INTEGER8</para></listitem>
+        <listitem><para>UNSIGNED16</para></listitem>
+        <listitem><para>UNSIGNED32</para></listitem>
+        <listitem><para>UNSIGNED32</para></listitem>
+        <listitem><para>REAL32</para></listitem>
+        <listitem><para>VISIBLE_STRING</para></listitem>
+        <listitem><para>OCTET_STRING</para></listitem>
+        <listitem><para>UNICODE_STRING</para></listitem>
+        <listitem><para>TIME_OF_DAY</para></listitem>
+        <listitem><para>TIME_DIFFERENCE</para></listitem>
+      </itemizedlist>
+
+    <para>
+      Data is encoded in little-endian format (least-significant byte
+      first).
+    </para>
+    </sect2>
+
+  </sect1>
+
+
+
+
+  <sect1>
+    <title>Legal</title>
+    <para><trademark class="registered">CiA</trademark> and <trademark
+    class="registered">CANopen</trademark> are registered Community
+    Trademarks of CAN in Automation e.V.</para>
+  </sect1>
+
+  <glossary><title>Glossary</title>
+
+  <glossentry id="COB-ID"><glossterm>CAN Object Identifier</glossterm>
+  <acronym>COB-ID</acronym>
+  <glossdef>
+    <para>11-bit identifier for a CAN frame.</para>
+  </glossdef>
+  </glossentry>
+
+  <glossentry id="node"> <glossterm>Node</glossterm>
+  <glossdef>
+    <para>A (typically) embedded device performing some automation
+    control, containing an Object Dictionary and communicating with
+    the CANopen master.</para>
+  </glossdef>
+  </glossentry>
+
+  <glossentry id="PDO"><glossterm>Process Data Object</glossterm>
+  <acronym>PDO</acronym>
+  <glossdef>
+    <para>Message used to transmit real-time process data.</para>
+  </glossdef>
+  </glossentry>
+
+  <glossentry id="SDO"><glossterm>Service Data Object</glossterm>
+  <acronym>SDO</acronym>
+  <glossdef>
+    <para>Message used to transmit non-real-time configuration data.</para>
+  </glossdef>
+  </glossentry>
+
+  <glossentry id="slave">
+    <glossterm>Slave</glossterm>
+    <glosssee>node</glosssee>
+  </glossentry>
+
+  <glossentry id="server">
+    <glossterm>Server</glossterm>
+    <glosssee>node</glosssee>
+  </glossentry>
+
+  </glossary>
+
+
   <colophon>
     <para>This manual is written in Docbook XML.</para>
 
