@@ -38,14 +38,17 @@
  *
  */
 
-#ifndef SOCIA_H
-#define SOCIA_H
+#ifndef SOCIA_STATUS_H
+#define SOCIA_STATUS_H
 
-#include "socia/status.h"
-#include "socia/byteorder.h"
-#include "socia/dict.h"
-#include "socia/nmt.h"
-#include "socia/sdo.h"
-#include "socia/ds402.h"
+typedef enum socia_status {
+    SOCIA_OK             =  0,
+    SOCIA_ERR_OS         = -1,
+    SOCIA_ERR_OVERFLOW   = -2,
+    SOCIA_ERR_UNDERFLOW  = -3,
+    SOCIA_ERR_PARAM      = -4
+} socia_status_t;
 
-#endif //SOCIA_H
+const char *socia_strerror( socia_status_t status );
+
+#endif //SOCIA_STATUS_H

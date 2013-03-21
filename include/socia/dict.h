@@ -144,18 +144,34 @@ typedef struct socia_obj {
 /** Description of a CiA Dictionary */
 typedef struct socia_dict {
     size_t length;
-    struct socia_obj obj[];
+    struct socia_obj *obj;
 } socia_dict_t;
 
+typedef union socia_scalar {
+    uint8_t u8;
+    int8_t  i8;
+
+    uint16_t u16;
+    int16_t  i16;
+
+    uint32_t u32;
+    int32_t  i32;
+
+    float r32;
+} socia_scalar_t;
 
 
 /* Return the index of the item in dict with given name */
-ssize_t socia_dict_search_name( const struct socia_dict *dict, const char *name );
+socia_obj_t *socia_dict_search_name( const struct socia_dict *dict, const char *name );
 
-/* Merge two dictionaries */
-struct socia_dict *socia_dict_merge( const struct socia_dict *dict0,
-                                     const struct socia_dict dict1 );
+socia_status_t socia_obj_ul( int fd, uint8_t node, const socia_obj_t *obj, socia_scalar_t *val );
 
+socia_status_t socia_obj_dl( int fd, uint8_t node, const socia_obj_t *obj, const socia_scalar_t *val );
+
+socia_status_t socia_obj_dl_str( int fd, uint8_t node, const socia_obj_t *obj, const char *val );
+
+/* Parse str based on provided type and store in val */
+socia_status_t socia_typed_parse( socia_data_type_t type, const char *str, socia_scalar_t *val );
 
 #ifdef __cplusplus
 }

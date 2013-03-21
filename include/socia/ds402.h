@@ -46,6 +46,8 @@
 extern "C" {
 #endif
 
+extern socia_dict_t socia_dict402;
+
 typedef enum socia_402_abort_conn {
     SOCIA_402_ABORT_CONN_NO_ACTION          = 0,
     SOCIA_402_ABORT_CONN_MALFUNCTION        = 1,

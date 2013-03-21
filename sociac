@@ -107,7 +107,7 @@ def edsobj2cstruct( section, params ):
 
     return s
 
-def print_dict( output, odict ):
+def print_dict( name, output, odict ):
     # Sort by names
     def key(sect):
         return odict[sect]['parametername'].upper()
@@ -119,11 +119,12 @@ def print_dict( output, odict ):
     s = ''
     s += '#include <stdint.h>\n'
     s += '#include <unistd.h>\n'
+    s += '#include "socia/status.h"\n'
     s += '#include "socia/dict.h"\n'
 
-    s += "socia_dict_t socia_dict = {\n"
+    s += "socia_dict_t %s = {\n" % name
     s += "\t.length=%d,\n" % len(sections)
-    s += "\t.obj={\n"
+    s += "\t.obj=(socia_obj_t[]){\n"
 
     for section in sections:
         s +=  edsobj2cstruct( section, odict[section] )
@@ -138,6 +139,7 @@ def main() :
     # Parse Arguments
     optparser = OptionParser()
     optparser.add_option("-o", "--output", dest="output")
+    optparser.add_option("-n", "--name", dest="name", default="socia_dict")
     optparser.add_option("-V", "--version",
                          action="store_true", dest="version")
 
@@ -156,7 +158,7 @@ def main() :
         parse_file( accum_dict, eds )
 
     # Output
-    print_dict( output, accum_dict )
+    print_dict( opts.name, output, accum_dict )
 
 
 

@@ -52,6 +52,7 @@
 #include <signal.h>
 #include <time.h>
 #include <stdarg.h>
+#include <inttypes.h>
 
 #include <linux/can.h>
 #include <linux/can/raw.h>
@@ -81,6 +82,10 @@ typedef int (*cmd_fun_t)(void);
 
 int (*opt_command)(void) = NULL;
 
+uint8_t opt_node;
+const char *opt_dict_param_name;
+const char *opt_dict_param_value;
+
 
 void hard_assert( _Bool test , const char fmt[], ...)          ATTR_PRINTF(2,3);
 
@@ -91,6 +96,8 @@ int cmd_ul( void );
 int cmd_ul_resp( void );
 int cmd_dl( void );
 int cmd_dl_resp( void );
+int cmd_dict_dl( void );
+int cmd_dict_ul( void );
 
 
 /***********/
@@ -168,7 +175,6 @@ unsigned long parse_uhex( const char *arg, uint64_t max ) {
     return u;
 }
 
-
 void invalid_arg( const char *arg ) {
     hard_assert( 0, "Invalid argument: %s\n", arg );
 }
@@ -183,6 +189,25 @@ void posarg_send( const char *arg, int i ) {
     }
 }
 
+void posarg_dict( const char *arg, int i ) {
+    switch(i) {
+    case 1:
+        opt_node = (uint8_t)parse_uhex( arg, SOCIA_SDO_NODE_MASK );
+        break;
+    case 2:
+        opt_dict_param_name = strdup( arg );
+        break;
+    case 3:
+        if( opt_command == cmd_dict_dl ) {
+            opt_dict_param_name = strdup( arg );
+        } else {
+            invalid_arg( arg );
+        }
+        break;
+    default:
+        invalid_arg( arg );
+    }
+}
 
 void posarg_sdo( const char *arg, int i ) {
     switch(i) {
@@ -196,7 +221,6 @@ void posarg_sdo( const char *arg, int i ) {
         opt_sdo.subindex = (uint8_t)parse_uhex( arg, 0xFF );
         break;
     default:
-        printf("%d\n", i);
         if( (cmd_dl == opt_command || cmd_ul_resp == opt_command) &&
             i >= 4 && i <= 8 ) {
             assert( opt_sdo.length == i - 4 );
@@ -217,6 +241,8 @@ cmd_fun_t posarg_cmd( const char *arg ) {
                  {"dl-resp", cmd_dl_resp},
                  {"ul", cmd_ul},
                  {"ul-resp", cmd_ul_resp},
+                 {"dict-dl", cmd_dict_dl},
+                 {"dict-ul", cmd_dict_ul},
                  {NULL, NULL} };
     size_t i;
     for( i = 0; cmds[i].name != NULL; i ++ ) {
@@ -241,6 +267,9 @@ void posarg( const char *arg, int i ) {
                cmd_dl_resp == opt_command ||
                cmd_ul_resp == opt_command ) {
         posarg_sdo( arg, i );
+    } else if( cmd_dict_dl == opt_command ||
+               cmd_dict_ul == opt_command ) {
+        posarg_dict( arg, i );
     } else {
         invalid_arg( arg );
     }
@@ -278,6 +307,8 @@ int main( int argc, char ** argv ) {
                   "Examples:\n"
                   "  socia dump                                  Print CAN messages to standard output\n"
                   "  socia send id b0 ... b7                     Send a can message (values in hex)\n"
+                  "  socia dict-dl node param-name value         Download SDO to node\n"
+                  "  socia dict-ul node param-name               Upload SDO from node\n"
                   "  socia dl node idx subidx bytes-or-val       Download SDO to node\n"
                   "  socia dl-resp node idx subidx               Simulate node download response\n"
                   "  socia ul node idx subidx                    Upload SDO from node\n"
@@ -324,6 +355,7 @@ int cmd_dump( void ) {
         }
     }
 }
+
 
 int send_frame( struct can_frame *can ) {
     if(opt_verbosity) {
@@ -406,4 +438,45 @@ int cmd_dl_resp( void ) {
     struct can_frame can;
     socia_sdo2can( &can, &opt_sdo, 1 );
     return send_frame( &can );
+}
+
+int cmd_dict_dl() {
+    socia_obj_t *obj = socia_dict_search_name( &socia_dict402, opt_dict_param_name );
+    int fd = can_open();
+    socia_status_t r = socia_obj_dl_str( fd, opt_node, obj, opt_dict_param_value );
+    hard_assert( SOCIA_OK == r, "Failed download: %s\n", socia_strerror(r) );
+
+    return 0;
+}
+
+int cmd_dict_ul() {
+    socia_obj_t *obj = socia_dict_search_name( &socia_dict402, opt_dict_param_name );
+    int fd = can_open();
+    socia_scalar_t val;
+    socia_status_t r = socia_obj_ul( fd, opt_node, obj, &val );
+    hard_assert( SOCIA_OK == r, "Failed upload: %s\n", socia_strerror(r) );
+    switch(obj->data_type) {
+
+    case SOCIA_DATA_TYPE_INTEGER8:
+        printf("%"PRId8"\n", val.i8);
+        break;
+    case SOCIA_DATA_TYPE_INTEGER16:
+        printf("%"PRId16"\n", val.i16);
+        break;
+    case SOCIA_DATA_TYPE_INTEGER32:
+        printf("%"PRId32"\n", val.i32);
+        break;
+    case SOCIA_DATA_TYPE_UNSIGNED8:
+        printf("0x%"PRIx8"\n", val.u8);
+        break;
+    case SOCIA_DATA_TYPE_UNSIGNED16:
+        printf("0x%"PRIx16"\n", val.u16);
+        break;
+    case SOCIA_DATA_TYPE_UNSIGNED32:
+        printf("0x%"PRIx32"\n", val.u32);
+        break;
+    default: return SOCIA_ERR_PARAM;
+    }
+
+    return 0;
 }

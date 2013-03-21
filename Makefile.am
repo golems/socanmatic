@@ -22,17 +22,17 @@ m4_dnl bin_PROGRAMS = esdcantool
 bin_PROGRAMS = socia
 noinst_PROGRAMS = test_sdo
 
-libsocia_la_SOURCES = src/sdo.c src/ds301.c
+libsocia_la_SOURCES = src/sdo.c src/ds301.c src/error.c src/dict.c
 
 libsocia_socketcan_la_SOURCES = src/socketcan.c
 
 libsocia402_la_SOURCES = dict402.c
 
 test_sdo_SOURCES = src/test_sdo.c
-test_sdo_LDADD = libsocia.la libsocia_socketcan.la
+test_sdo_LDADD = libsocia.la libsocia_socketcan.la libsocia402.la
 
 socia_SOURCES = src/socia.c
-socia_LDADD = libsocia.la libsocia_socketcan.la
+socia_LDADD = libsocia.la libsocia_socketcan.la libsocia402.la
 
 dict402.c: $(top_srcdir)/sociac $(top_srcdir)/eds/dsp301.eds $(top_srcdir)/eds/dsp402.eds
-	$(top_srcdir)/sociac -o dict402.c $(top_srcdir)/eds/dsp301.eds $(top_srcdir)/eds/dsp402.eds
+	$(top_srcdir)/sociac -n socia_dict402 -o dict402.c $(top_srcdir)/eds/dsp301.eds $(top_srcdir)/eds/dsp402.eds

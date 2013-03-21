@@ -1,5 +1,7 @@
+/* -*- mode: C; c-basic-offset: 4 -*- */
+/* ex: set shiftwidth=4 tabstop=4 expandtab: */
 /*
- * Copyright (c) 2013, Georgia Tech Research Corporation
+ * Copyright (c) 2008-2013, Georgia Tech Research Corporation
  * All rights reserved.
  *
  * Author(s): Neil T. Dantam <ntd@gatech.edu>
@@ -38,14 +40,37 @@
  *
  */
 
-#ifndef SOCIA_H
-#define SOCIA_H
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <errno.h>
+#include <stdint.h>
 
-#include "socia/status.h"
-#include "socia/byteorder.h"
-#include "socia/dict.h"
-#include "socia/nmt.h"
-#include "socia/sdo.h"
-#include "socia/ds402.h"
 
-#endif //SOCIA_H
+/* Assume linux socketcan for now */
+#include <linux/can.h>
+#include <linux/can/raw.h>
+
+#include <inttypes.h>
+
+#include "socia.h"
+
+
+const char *socia_strerror( socia_status_t status ) {
+    switch (status) {
+    case SOCIA_OK:            return "OK";
+    case SOCIA_ERR_OS:        return strerror(errno);
+    case SOCIA_ERR_OVERFLOW:  return "overflow error";
+    case SOCIA_ERR_UNDERFLOW: return "underflow error";
+    case SOCIA_ERR_PARAM:     return "invalid parameter";
+    }
+    return "unknown status";
+}
+
+/* ex: set shiftwidth=4 tabstop=4 expandtab: */
+/* Local Variables:                          */
+/* mode: c                                   */
+/* c-basic-offset: 4                         */
+/* indent-tabs-mode:  nil                    */
+/* End:                                      */
