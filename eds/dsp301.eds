@@ -1,0 +1,378 @@
+; Copyright (c) 2013, Georgia Tech Research Corporation
+; All rights reserved.
+;
+; Author(s): Neil T. Dantam <ntd@gatech.edu>
+; Georgia Tech Humanoid Robotics Lab
+; Under Direction of Prof. Mike Stilman <mstilman@cc.gatech.edu>
+;
+; This file is provided under the following "BSD-style" License:
+;
+;   Redistribution and use in source and binary forms, with or
+;   without modification, are permitted provided that the following
+;   conditions are met:
+;   * Redistributions of source code must retain the above copyright
+;     notice, this list of conditions and the following disclaimer.
+;   * Redistributions in binary form must reproduce the above
+;     copyright notice, this list of conditions and the following
+;     disclaimer in the documentation and/or other materials provided
+;     with the distribution.
+;   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+;   CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+;   INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+;   MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+;   DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+;   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+;   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+;   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
+;   USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+;   AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+;   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+;   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+;   POSSIBILITY OF SUCH DAMAGE.
+
+[FileInfo]
+FileName=dsp301.eds
+FileVersion=1
+FileRevision=2
+EDSVersion=4.0
+Description=EDS for dsp402
+CreationTime=23:50
+CreationDate=03-18-2013
+CreatedBy=Neil T. Dantam
+ModificationTime=23:50
+ModificationDate=03-18-2013
+ModifiedBy=Neil T. Dantam
+
+[1000]
+ParameterName=Device type
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RO
+PDOMapping=0
+
+
+[1001]
+ParameterName=Error register
+ObjectType=VAR
+DataType=UNSIGNED8
+AccessType=RO
+PDOMapping=1
+
+[1002]
+ParameterName=Manufacturer status register
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RO
+PDOMapping=1
+
+[1003]
+ParameterName=Pre-defined error field
+ObjectType=ARRAY
+DataType=UNSIGNED32
+
+[1005]
+ParameterName=COB-ID SYNC
+ObjectType=ARRAY
+DataType=UNSIGNED32
+PDOMapping=0
+AccessType=RW
+
+[1006]
+; given in multiple of micro seconds
+; 0 means disabled
+ParameterName=Communication cycle period
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=0
+DefaultValue=0
+ParameterName=Communication cycle period
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=0
+DefaultValue=0
+
+[1007]
+ParameterName=Synchronous window length
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=0
+DefaultValue=0
+
+[1008]
+ParameterName=Manufacturer device name
+ObjectType=VAR
+DataType=VISIBLE_STRING
+AccessType=RO
+PDOMapping=0
+
+[1009]
+ParameterName=Manufacturer hardware version
+ObjectType=VAR
+DataType=VISIBLE_STRING
+AccessType=RO
+PDOMapping=0
+
+[1009]
+ParameterName=Manufacturer software version
+ObjectType=VAR
+DataType=VISIBLE_STRING
+AccessType=RO
+PDOMapping=0
+
+[100C]
+ParameterName=Guard time
+ObjectType=VAR
+DataType=UNSIGNED16
+AccessType=RW ; RO is life guarding not supported
+PDOMapping=0
+
+[100D]
+ParameterName=Life time favtor
+ObjectType=VAR
+DataType=UNSIGNED8
+AccessType=RW ; RO is life guarding not supported
+PDOMapping=0
+
+[1010]
+ParameterName=Store parameters
+ObjectType=ARRAY
+DataType=UNSIGNED32
+AccessType=RW
+
+[1010sub01]
+ParameterName=Store parameters/save all parameters
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW ; RO if autonomous storing is supported
+PDOMapping=0
+
+[1010sub02]
+ParameterName=Store parameters/save communication parameters
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW ; RO if autonomous storing is supported
+PDOMapping=0
+
+[1010sub03]
+ParameterName=Store parameters/save application parameters
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW ; RO if autonomous storing is supported
+PDOMapping=0
+
+[1011]
+ParameterName=Restore default parameters
+ObjectType=ARRAY
+DataType=UNSIGNED32
+AccessType=RW
+
+[1011sub01]
+ParameterName=Restore default parameters/restore all default parameters
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=0
+
+[1011sub02]
+ParameterName=Restore default parameters/restore communication default parameters
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=0
+
+[1011sub03]
+ParameterName=Restore default parameters/restore application default parameters
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=0
+
+[1012]
+ParameterName=COB-ID time stamp message
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=0
+
+[1013]
+; value is given in multiples of 1 micro second
+ParameterName=High resolution time stamp
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=0
+
+[1014]
+; default: 0x80 + NODE-ID, 11-bit frame
+ParameterName=COB-ID emergency message
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW
+PDOMapping=0
+
+[1015]
+; value given in multiples of 100 micro second
+ParameterName=Inhibit time EMCY
+ObjectType=VAR
+DataType=UNSIGNED16
+PDOMapping=0
+AccessType=RW
+
+[1016]
+;; lower 16 bits: time
+;; next 8 bits: node ide
+;; top 8 bits: 0 / reserved
+ParameterName=Consumer heartbeat time
+ObjectType=ARRAY
+DataType=UNSIGNED32
+PDOMapping=0
+AccessType=RW
+
+[1017]
+;; lower 16 bits: time
+;; next 8 bits: node ide
+;; top 8 bits: 0 / reserved
+ParameterName=Producer heartbeat time
+ObjectType=ARRAY
+DataType=UNSIGNED32
+PDOMapping=0
+AccessType=RW
+
+[1018]
+ParameterName=Identity object
+ObjectType=RECORD
+DataType=Identity
+
+[1018sub1]
+ParameterName=Identity object/Vendor-ID
+DataType=UNSIGNED32
+ObjectType=VAR
+PDOMapping=0
+AccessType=RO
+
+[1018sub2]
+ParameterName=Identity object/Product code
+DataType=UNSIGNED32
+ObjectType=VAR
+PDOMapping=0
+AccessType=RO
+
+[1018sub3]
+ParameterName=Identity object/Revision number
+DataType=UNSIGNED32
+ObjectType=VAR
+PDOMapping=0
+AccessType=RO
+
+[1018sub4]
+ParameterName=Identity object/Serial number
+DataType=UNSIGNED32
+ObjectType=VAR
+PDOMapping=0
+AccessType=RO
+
+[1019]
+ParameterName=Synchronous counter overflow value
+DataType=UNSIGNED8
+ObjectType=VAR
+PDOMapping=0
+AccessType=RW
+
+[1020]
+ParameterName=Verify configuration
+DataType=UNSIGNED32
+ObjectType=ARRAY
+PDOMapping=0
+
+[1020sub1]
+ParameterName=Verify configuration/Configuration date
+DataType=UNSIGNED32
+ObjectType=ARRAY
+PDOMapping=0
+AccessType=RW
+
+[1020sub2]
+ParameterName=Verify configuration/Configuration time
+DataType=UNSIGNED32
+ObjectType=ARRAY
+PDOMapping=0
+AccessType=RW
+
+[1021]
+ParameterName=Store EDS
+DataType=DOMAIN
+ObjectType=VAR
+PDOMapping=0
+AccessType=RO
+
+[1022]
+ParameterName=Store format
+DataType=UNSIGNED16
+ObjectType=VAR
+PDOMapping=0
+AccessType=RO
+
+[1023]
+ParameterName=OS command
+ObjectType=RECORD
+PDOMapping=0
+
+[1023sub2]
+ParameterName=OS command/status
+ObjectType=VAR
+DataType=UNSIGNED8
+AccessType=RO
+PDOMapping=0
+
+[1023sub3]
+ParameterName=OS command/reply
+ObjectType=VAR
+DataType=UNSIGNED8
+AccessType=RO
+PDOMapping=0
+
+[1024]
+ParameterName=OS command mode
+ObjectType=VAR
+DataType=UNSIGNED8
+PDOMapping=0
+
+[1028]
+ParameterName=Emergency consumer
+ObjectType=ARRAY
+DataType=UNSIGNED32
+AccessType=RW
+
+
+[1029]
+ParameterName=Error behavior
+ObjectType=ARRAY
+DataType=UNSIGNED8
+AccessType=RW
+
+[1029sub1]
+ParameterName=Error behavior/communication error
+ObjectType=ARRAY
+DataType=UNSIGNED8
+AccessType=RW
+
+; [1200] ; to 127F
+; ParameterName=SDO service parameter
+; ObjectType=RECORD
+
+; [1200sub1]
+; ParameterName=COB-ID RX
+; ObjectType=VAR
+; DataType=UNSIGNED32
+
+; [1200sub2]
+; ParameterName=COB-ID TX
+; ObjectType=VAR
+; DataType=UNSIGNED32
+
+; Local Variables:
+; mode: conf
+; End:

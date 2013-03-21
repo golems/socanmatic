@@ -68,7 +68,7 @@ def parse_file( accum_dict, name ):
 
 def datatype(s):
     s = s.upper();
-    if ( re.match(r'BOOLEAN|((INTEGER|UNSIGNED)(8|16|32))|VISIBLE_STRING|TIME_OF_DAY', s ) ):
+    if ( re.match(r'BOOLEAN|((INTEGER|UNSIGNED)(8|16|32))|VISIBLE_STRING|TIME_OF_DAY|IDENTITY|DOMAIN', s ) ):
         return NS+"DATA_TYPE_"+s
     else: return s
 

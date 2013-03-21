@@ -11,6 +11,7 @@ pkginclude_HEADERS = 	                \
 	include/socia/byteorder.h       \
 	include/socia/nmt.h             \
 	include/socia/sdo.h             \
+	include/socia/dict.h            \
 	include/socia/ds402.h
 
 noinst_HEADERS = include/socia_private.h
@@ -21,7 +22,7 @@ m4_dnl bin_PROGRAMS = esdcantool
 bin_PROGRAMS = socia
 noinst_PROGRAMS = test_sdo
 
-libsocia_la_SOURCES = src/sdo.c
+libsocia_la_SOURCES = src/sdo.c src/ds301.c
 
 libsocia_socketcan_la_SOURCES = src/socketcan.c
 
@@ -33,5 +34,5 @@ test_sdo_LDADD = libsocia.la libsocia_socketcan.la
 socia_SOURCES = src/socia.c
 socia_LDADD = libsocia.la libsocia_socketcan.la
 
-dict402.c: $(top_srcdir)/sociac $(top_srcdir)/eds/dsp402.eds
-	$(top_srcdir)/sociac -o dict402.c $(top_srcdir)/eds/dsp402.eds
+dict402.c: $(top_srcdir)/sociac $(top_srcdir)/eds/dsp301.eds $(top_srcdir)/eds/dsp402.eds
+	$(top_srcdir)/sociac -o dict402.c $(top_srcdir)/eds/dsp301.eds $(top_srcdir)/eds/dsp402.eds

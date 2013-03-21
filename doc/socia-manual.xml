@@ -134,8 +134,12 @@
             <entry>Standardised Device Profile Objects</entry>
           </row>
           <row>
-            <entry>0xA000-0xBFFF</entry>
-            <entry>Standardised Interface Profile Objects</entry>
+            <entry>0xA000-0xAFFF</entry>
+            <entry>Standardised Network Objects</entry>
+          </row>
+          <row>
+            <entry>0xB000-0xBFFF</entry>
+            <entry>Standardised System Objects</entry>
           </row>
           <row>
             <entry>0xC000-0xFFFF</entry>
