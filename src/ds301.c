@@ -54,12 +54,12 @@
 
 #include <inttypes.h>
 
-#include "socia.h"
-#include "socia_private.h"
+#include "socanmatic.h"
+#include "socanmatic_private.h"
 
 
 
-const char *socia_sdo_abort_code2str( uint32_t code ) {
+const char *canmat_sdo_abort_code2str( uint32_t code ) {
     switch( code ) {
     case 0x05030000: return "Toggle bit not alternated";
     case 0x05040000: return "SDO protocol timed out";

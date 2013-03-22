@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Georgia Tech Research Corporation
+ * Copyright (c) 2008, Georgia Tech Research Corporation
  * All rights reserved.
  *
  * Author(s): Neil T. Dantam <ntd@gatech.edu>
@@ -38,17 +38,18 @@
  *
  */
 
-#ifndef SOCIA_STATUS_H
-#define SOCIA_STATUS_H
+#ifndef CANMAT_PRIVATE_H
+#define CANMAT_PRIVATE_H
 
-typedef enum socia_status {
-    SOCIA_OK             =  0,
-    SOCIA_ERR_OS         = -1,
-    SOCIA_ERR_OVERFLOW   = -2,
-    SOCIA_ERR_UNDERFLOW  = -3,
-    SOCIA_ERR_PARAM      = -4
-} socia_status_t;
+_Bool canmat_can_ok( ssize_t result );
+ssize_t canmat_can_send( int fd, const struct can_frame *f );
+ssize_t canmat_can_recv( int fd, struct can_frame *f );
+int canmat_can_open ( const char *name );
 
-const char *socia_strerror( socia_status_t status );
-
-#endif //SOCIA_STATUS_H
+/* ex: set shiftwidth=4 tabstop=4 expandtab: */
+/* Local Variables:                          */
+/* mode: c                                   */
+/* c-basic-offset: 4                         */
+/* indent-tabs-mode:  nil                    */
+/* End:                                      */
+#endif //CANMAT_PRIVATE_H

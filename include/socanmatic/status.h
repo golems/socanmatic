@@ -1,7 +1,5 @@
-/* -*- mode: C; c-basic-offset: 4 -*- */
-/* ex: set shiftwidth=4 tabstop=4 expandtab: */
 /*
- * Copyright (c) 2008-2013, Georgia Tech Research Corporation
+ * Copyright (c) 2013, Georgia Tech Research Corporation
  * All rights reserved.
  *
  * Author(s): Neil T. Dantam <ntd@gatech.edu>
@@ -40,37 +38,17 @@
  *
  */
 
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <assert.h>
-#include <errno.h>
-#include <stdint.h>
+#ifndef SOCANMATIC_STATUS_H
+#define SOCANMATIC_STATUS_H
 
+typedef enum canmat_status {
+    CANMAT_OK             =  0,
+    CANMAT_ERR_OS         = -1,
+    CANMAT_ERR_OVERFLOW   = -2,
+    CANMAT_ERR_UNDERFLOW  = -3,
+    CANMAT_ERR_PARAM      = -4
+} canmat_status_t;
 
-/* Assume linux socketcan for now */
-#include <linux/can.h>
-#include <linux/can/raw.h>
+const char *canmat_strerror( canmat_status_t status );
 
-#include <inttypes.h>
-
-#include "socanmatic.h"
-
-
-const char *canmat_strerror( canmat_status_t status ) {
-    switch (status) {
-    case CANMAT_OK:            return "OK";
-    case CANMAT_ERR_OS:        return strerror(errno);
-    case CANMAT_ERR_OVERFLOW:  return "overflow error";
-    case CANMAT_ERR_UNDERFLOW: return "underflow error";
-    case CANMAT_ERR_PARAM:     return "invalid parameter";
-    }
-    return "unknown status";
-}
-
-/* ex: set shiftwidth=4 tabstop=4 expandtab: */
-/* Local Variables:                          */
-/* mode: c                                   */
-/* c-basic-offset: 4                         */
-/* indent-tabs-mode:  nil                    */
-/* End:                                      */
+#endif //SOCANMATIC_STATUS_H

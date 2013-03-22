@@ -51,20 +51,21 @@
 #include <inttypes.h>
 
 /* Assume linux socketcan for now */
+#include <sys/socket.h>
 #include <linux/can.h>
 #include <linux/can/raw.h>
 
-#include "socia.h"
-#include "socia_private.h"
+#include "socanmatic.h"
+#include "socanmatic_private.h"
 
 
 
-void check_sdo_can( socia_sdo_msg_t *sdo, uint8_t cmd ) {
+void check_sdo_can( canmat_sdo_msg_t *sdo, uint8_t cmd ) {
     struct can_frame can;
-    socia_sdo2can( &can, sdo, 0);
-    assert( can.can_id == SOCIA_SDO_REQ_ID( sdo->node ) );
-    assert( (can.can_id & (uint16_t)~SOCIA_SDO_NODE_MASK) == SOCIA_SDO_REQ_BASE );
-    assert( (can.can_id & SOCIA_SDO_NODE_MASK) == sdo->node );
+    canmat_sdo2can( &can, sdo, 0);
+    assert( can.can_id == CANMAT_SDO_REQ_ID( sdo->node ) );
+    assert( (can.can_id & (uint16_t)~CANMAT_SDO_NODE_MASK) == CANMAT_SDO_REQ_BASE );
+    assert( (can.can_id & CANMAT_SDO_NODE_MASK) == sdo->node );
     assert( can.data[0] == cmd );
     assert( can.data[1] == (sdo->index & 0xff) );
     assert( can.data[2] == sdo->index >> 8 );
@@ -73,9 +74,9 @@ void check_sdo_can( socia_sdo_msg_t *sdo, uint8_t cmd ) {
     for( i = 0; i < sdo->length; i ++ ) {
         assert( can.data[4+i] == sdo->data[i] );
     }
-    socia_sdo_msg_t sdo2;
+    canmat_sdo_msg_t sdo2;
 
-    socia_can2sdo( &sdo2, &can );
+    canmat_can2sdo( &sdo2, &can );
     assert( sdo2.node == sdo->node );
     //assert( sdo2.command == sdo->command );
     assert( sdo2.index == sdo->index );
@@ -87,67 +88,67 @@ void check_sdo_can( socia_sdo_msg_t *sdo, uint8_t cmd ) {
 
 void check_sdo_dl( ) {
 
-    socia_sdo_msg_t sdo;
+    canmat_sdo_msg_t sdo;
 
     // 8 bit
-    socia_sdo_set_data_u8( &sdo, 0x11 );
+    canmat_sdo_set_data_u8( &sdo, 0x11 );
 
     // set values
-    socia_sdo_set_ex_dl( &sdo, 0x10, 0x20, 0x30 );
+    canmat_sdo_set_ex_dl( &sdo, 0x10, 0x20, 0x30 );
 
     // check values
     assert( 0x10 == sdo.node );
     assert( 0x20 == sdo.index );
     assert( 0x30 == sdo.subindex );
-    assert( SOCIA_EX_DL == sdo.cmd.ccs );
+    assert( CANMAT_EX_DL == sdo.cmd.ccs );
     assert( 3 == sdo.cmd.n );
     assert( 1 == sdo.cmd.e );
     assert( 1 == sdo.cmd.s );
 
 
-    check_sdo_can( &sdo, SOCIA_SDO_CMD_DL1 );
+    check_sdo_can( &sdo, CANMAT_SDO_CMD_DL1 );
 
     // 16 bit
-    socia_sdo_set_data_u16( &sdo, 0x2211 );
+    canmat_sdo_set_data_u16( &sdo, 0x2211 );
 
     // set values
-    socia_sdo_set_ex_dl( &sdo, 0x10, 0x20, 0x30 );
+    canmat_sdo_set_ex_dl( &sdo, 0x10, 0x20, 0x30 );
 
     // check values
     assert( 0x10 == sdo.node );
     assert( 0x20 == sdo.index );
     assert( 0x30 == sdo.subindex );
-    assert( SOCIA_EX_DL == sdo.cmd.ccs );
+    assert( CANMAT_EX_DL == sdo.cmd.ccs );
     assert( 2 == sdo.cmd.n );
     assert( 1 == sdo.cmd.e );
     assert( 1 == sdo.cmd.s );
 
-    check_sdo_can( &sdo, SOCIA_SDO_CMD_DL2 );
+    check_sdo_can( &sdo, CANMAT_SDO_CMD_DL2 );
 
     // 32 bit
-    socia_sdo_set_data_u32( &sdo, 0x44332211 );
+    canmat_sdo_set_data_u32( &sdo, 0x44332211 );
 
     // set values
-    socia_sdo_set_ex_dl( &sdo, 0x10, 0x20, 0x30 );
+    canmat_sdo_set_ex_dl( &sdo, 0x10, 0x20, 0x30 );
 
     // check values
     assert( 0x10 == sdo.node );
     assert( 0x20 == sdo.index );
     assert( 0x30 == sdo.subindex );
-    assert( SOCIA_EX_DL == sdo.cmd.ccs );
+    assert( CANMAT_EX_DL == sdo.cmd.ccs );
     assert( 0 == sdo.cmd.n );
     assert( 1 == sdo.cmd.e );
     assert( 1 == sdo.cmd.s );
 
-    check_sdo_can( &sdo, SOCIA_SDO_CMD_DL4 );
+    check_sdo_can( &sdo, CANMAT_SDO_CMD_DL4 );
 }
 
 static void byteorder(void) {
     uint8_t a[2];
     uint8_t b[4];
 
-    socia_byte_stle16( a, 0x2211 );
-    socia_byte_stle32( b, 0x44332211 );
+    canmat_byte_stle16( a, 0x2211 );
+    canmat_byte_stle32( b, 0x44332211 );
 
     assert( 0x11 == a[0] );
     assert( 0x22 == a[1] );
@@ -158,21 +159,21 @@ static void byteorder(void) {
     assert( 0x44 == b[3] );
 
 
-    assert( 0x2211 == socia_byte_ldle16(a) );
-    assert( 0x44332211 == socia_byte_ldle32(b) );
+    assert( 0x2211 == canmat_byte_ldle16(a) );
+    assert( 0x44332211 == canmat_byte_ldle32(b) );
 
-    assert( 0x2211 == socia_byte_ldle16(b) );
+    assert( 0x2211 == canmat_byte_ldle16(b) );
 
 }
 
 static void sdo_data(void) {
-    socia_sdo_msg_t sdo;
-    socia_sdo_set_data_u16( &sdo, 0x2211 );
+    canmat_sdo_msg_t sdo;
+    canmat_sdo_set_data_u16( &sdo, 0x2211 );
     assert( 2 == sdo.length );
     assert( 0x11 == sdo.data[0] );
     assert( 0x22 == sdo.data[1] );
 
-    socia_sdo_set_data_u32( &sdo, 0x00332211 );
+    canmat_sdo_set_data_u32( &sdo, 0x00332211 );
     assert( 4 == sdo.length );
     assert( 0x11 == sdo.data[0] );
     assert( 0x22 == sdo.data[1] );
@@ -180,9 +181,9 @@ static void sdo_data(void) {
     assert( 0x00 == sdo.data[3] );
 
 
-    socia_sdo_set_data_i16( &sdo, -42 );
+    canmat_sdo_set_data_i16( &sdo, -42 );
     assert( 2 == sdo.length );
-    assert( -42 == socia_sdo_get_data_i16( &sdo ) );
+    assert( -42 == canmat_sdo_get_data_i16( &sdo ) );
 }
 
 int main( int argc, char **argv ) {

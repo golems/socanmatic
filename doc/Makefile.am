@@ -1,12 +1,12 @@
-EXTRA_DIST = socia-manual.xml
+EXTRA_DIST = socanmatic-manual.xml
 
 # Rules to build
 if HAVE_HELP2MAN
-man/socia.1: $(top_srcdir)/src/socia.c $(top_srcdir)/configure.ac
-	$(HELP2MAN) -h -h -v -V --no-info -n "socia shell tool" $(top_builddir)/socia$(EXEEXT) -o $@
+man/canmat.1: $(top_srcdir)/src/canmat.c $(top_srcdir)/configure.ac
+	$(HELP2MAN) -h -h -v -V --no-info -n "canmat shell tool" $(top_builddir)/canmat$(EXEEXT) -o $@
 
-man/sociac.1: $(top_srcdir)/sociac $(top_srcdir)/configure.ac
-	$(HELP2MAN) -h -h -v -V --no-info -n "socia profile compiler" $(top_builddir)/socia$(EXEEXT) -o $@
+man/canmatc.1: $(top_srcdir)/canmatc $(top_srcdir)/configure.ac
+	$(HELP2MAN) -h -h -v -V --no-info -n "canmat profile compiler" $(top_builddir)/canmat$(EXEEXT) -o $@
 
 if HAVE_MAN2HTML
 .1.html:
@@ -15,21 +15,21 @@ endif
 endif
 
 if HAVE_DB2HTML
-manual/socia-manual.html: socia-manual.xml
+manual/socanmatic-manual.html: socanmatic-manual.xml
 	db2html -u -o manual $<
 endif
 
 # test what to install
 if HAVE_MANPAGES
-dist_man_MANS = man/socia.1 man/sociac.1
+dist_man_MANS = man/canmat.1 man/canmatc.1
 endif
 
 if HAVE_MANHTML
-MAN_HTML = man/socia.html man/sociac.html
+MAN_HTML = man/canmat.html man/canmatc.html
 endif
 
 if HAVE_MANUAL
-DOCBOOK_HTML =  manual/socia-manual.html
+DOCBOOK_HTML =  manual/socanmatic-manual.html
 endif
 
 dist_doc_DATA = $(DOCBOOK_HTML) $(MAN_HTML)

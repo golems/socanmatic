@@ -1,9 +1,8 @@
-/* Copyright (c) 2008-2013, Georgia Tech Research Corporation
+/*
+ * Copyright (c) 2013, Georgia Tech Research Corporation
  * All rights reserved.
  *
  * Author(s): Neil T. Dantam <ntd@gatech.edu>
- *            Can Erdogan <cerdogan@gatech.edu>
- *
  * Georgia Tech Humanoid Robotics Lab
  * Under Direction of Prof. Mike Stilman <mstilman@cc.gatech.edu>
  *
@@ -39,70 +38,14 @@
  *
  */
 
-#ifndef SOCIA_NMT_H
-#define SOCIA_NMT_H
+#ifndef SOCANMATIC_H
+#define SOCANMATIC_H
 
-/**
- * \file socia_canopen.h
- *
- * \brief CANopen implementation using SocketCAN and esd's NTCAN
- * API. See the website
- * http://en.wikipedia.org/wiki/Canopen#Service_Data_Object_.28SDO.29_protocol
- * for details of service data object (SDO) protocol.
- *
- * \author Neil Dantam
- * \author Can Erdogan (bug fixes)
- *
- * \bug Deferring implementation of segmented messages
- *
- * \bug esd's driver will non-deterministically order loopback and
- * off-the-wire CAN messages.
- */
+#include "socanmatic/status.h"
+#include "socanmatic/byteorder.h"
+#include "socanmatic/dict.h"
+#include "socanmatic/nmt.h"
+#include "socanmatic/sdo.h"
+#include "socanmatic/ds402.h"
 
-
-/// Produce COB-ID for response from node
-
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-
-/*********************/
-/* NMT Communication */
-/*********************/
-
-typedef enum socia_nmt_msg {
-    SOCIA_NMT_INVAL = -1,
-    SOCIA_NMT_START_REMOTE = 0x1,
-    SOCIA_NMT_STOP_REMOTE = 0x2,
-    SOCIA_NMT_PRE_OP = 0x80,
-    SOCIA_NMT_RESET_NODE = 0x81,
-    SOCIA_NMT_RESET_COM = 0x82
-} socia_nmt_msg_t;
-
-/* ID for all nodes */
-#define SOCIA_NODE_ALL 0x00
-
-/**  Send an NMT Message.
- */
-int socia_send_nmt( int fd, uint8_t node,
-                    socia_nmt_msg_t nmt_msg );
-
-
-
-
-
-
-#ifdef __cplusplus
-}
-#endif
-
-/* ex: set shiftwidth=4 tabstop=4 expandtab: */
-/* Local Variables:                          */
-/* mode: c                                   */
-/* c-basic-offset: 4                         */
-/* indent-tabs-mode:  nil                    */
-/* End:                                      */
-
-#endif //SOCIA_NMT_H
+#endif //SOCANMATIC_H

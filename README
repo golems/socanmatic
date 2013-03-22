@@ -1,8 +1,7 @@
-SoCiA -- Socket CAN in Automation
-=================================
+SoCANmatic
+==========
 
-CAN Protocol Library for CANopen and CiA.
-
+CAN Protocol Library for CANopen.
 
 Electronic Data Sheets (EDS)
 ----------------------------
@@ -13,6 +12,4 @@ using this generated code
 See Also
 --------
 * http://www.can-cia.org/
-* http://www.a-m-c.com/download/manual/AMC_CANopenCommunicationManual.pdf
-  Protocol documenation for AMC servo drives, which implement CiA
-  DS301 and DS402.
+

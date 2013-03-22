@@ -58,14 +58,14 @@
 
 #include <inttypes.h>
 
-#include "socia.h"
-#include "socia_private.h"
+#include "socanmatic.h"
+#include "socanmatic_private.h"
 
-_Bool socia_can_ok( ssize_t r ) {
+_Bool canmat_can_ok( ssize_t r ) {
     return r >= 0;
 }
 
-ssize_t socia_can_send( int fd, const struct can_frame *f ) {
+ssize_t canmat_can_send( int fd, const struct can_frame *f ) {
     ssize_t bytes = 0;
     do {
         ssize_t r = write( fd, (uint8_t*)f + bytes, (sizeof(*f) - (size_t)bytes) );
@@ -83,7 +83,7 @@ ssize_t socia_can_send( int fd, const struct can_frame *f ) {
     return bytes;
 }
 
-ssize_t socia_can_recv( int fd, struct can_frame *f ) {
+ssize_t canmat_can_recv( int fd, struct can_frame *f ) {
     ssize_t bytes = 0;
     do {
         ssize_t r = read( fd, (uint8_t*)f + bytes, (sizeof(*f) - (size_t)bytes) );
@@ -101,7 +101,7 @@ ssize_t socia_can_recv( int fd, struct can_frame *f ) {
     return bytes;
 }
 
-int socia_can_open ( const char *name ) {
+int canmat_can_open ( const char *name ) {
     int s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
     if( s < 0 ) return s;
 

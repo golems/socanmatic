@@ -33,7 +33,7 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-# FILE:        sociac
+# FILE:        canmatc
 # DESCRIPTION: Translate a CiA ESD file to C code
 # AUTHOR:      Neil T. Dantam
 
@@ -48,7 +48,7 @@ import re
 
 from optparse import OptionParser
 
-NS="SOCIA_"
+NS="CANMAT_"
 
 def config2dict( config, section ):
     d = {}
@@ -119,12 +119,12 @@ def print_dict( name, output, odict ):
     s = ''
     s += '#include <stdint.h>\n'
     s += '#include <unistd.h>\n'
-    s += '#include "socia/status.h"\n'
-    s += '#include "socia/dict.h"\n'
+    s += '#include "socanmatic/status.h"\n'
+    s += '#include "socanmatic/dict.h"\n'
 
-    s += "socia_dict_t %s = {\n" % name
+    s += "canmat_dict_t %s = {\n" % name
     s += "\t.length=%d,\n" % len(sections)
-    s += "\t.obj=(socia_obj_t[]){\n"
+    s += "\t.obj=(canmat_obj_t[]){\n"
 
     for section in sections:
         s +=  edsobj2cstruct( section, odict[section] )
@@ -139,7 +139,7 @@ def main() :
     # Parse Arguments
     optparser = OptionParser()
     optparser.add_option("-o", "--output", dest="output")
-    optparser.add_option("-n", "--name", dest="name", default="socia_dict")
+    optparser.add_option("-n", "--name", dest="name", default="canmat_dict")
     optparser.add_option("-V", "--version",
                          action="store_true", dest="version")
 

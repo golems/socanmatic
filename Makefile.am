@@ -6,33 +6,37 @@ AM_CPPFLAGS = -I$(top_srcdir)/include
 
 TESTS = test_sdo
 
-include_HEADERS = include/socia.h
-pkginclude_HEADERS = 	                \
-	include/socia/byteorder.h       \
-	include/socia/nmt.h             \
-	include/socia/sdo.h             \
-	include/socia/dict.h            \
-	include/socia/ds402.h
+include_HEADERS = include/socanmatic.h
+pkginclude_HEADERS = 	                     \
+	include/socanmatic/byteorder.h       \
+	include/socanmatic/status.h          \
+	include/socanmatic/nmt.h             \
+	include/socanmatic/sdo.h             \
+	include/socanmatic/dict.h            \
+	include/socanmatic/ds402.h
 
-noinst_HEADERS = include/socia_private.h
+noinst_HEADERS = include/socanmatic_private.h
 
-lib_LTLIBRARIES = libsocia.la libsocia_socketcan.la libsocia402.la
+lib_LTLIBRARIES = libsocanmatic.la libsocanmatic_socketcan.la libsocanmatic402.la
 m4_dnl bin_PROGRAMS = esdcantool
 
-bin_PROGRAMS = socia
+bin_PROGRAMS = canmat
 noinst_PROGRAMS = test_sdo
 
-libsocia_la_SOURCES = src/sdo.c src/ds301.c src/error.c src/dict.c
+libsocanmatic_la_SOURCES = src/sdo.c src/ds301.c src/error.c src/dict.c
 
-libsocia_socketcan_la_SOURCES = src/socketcan.c
+libsocanmatic_socketcan_la_SOURCES = src/socketcan.c
 
-libsocia402_la_SOURCES = dict402.c
+libsocanmatic402_la_SOURCES = dict402.c
 
 test_sdo_SOURCES = src/test_sdo.c
-test_sdo_LDADD = libsocia.la libsocia_socketcan.la libsocia402.la
+test_sdo_LDADD = libsocanmatic.la libsocanmatic_socketcan.la libsocanmatic402.la
 
-socia_SOURCES = src/socia.c
-socia_LDADD = libsocia.la libsocia_socketcan.la libsocia402.la
+canmat_SOURCES = src/canmat.c
+canmat_LDADD = libsocanmatic.la libsocanmatic_socketcan.la libsocanmatic402.la
 
-dict402.c: $(top_srcdir)/sociac $(top_srcdir)/eds/dsp301.eds $(top_srcdir)/eds/dsp402.eds
-	$(top_srcdir)/sociac -n socia_dict402 -o dict402.c $(top_srcdir)/eds/dsp301.eds $(top_srcdir)/eds/dsp402.eds
+dict402.c: $(top_srcdir)/canmatc $(top_srcdir)/eds/dsp301.eds $(top_srcdir)/eds/dsp402.eds
+	$(top_srcdir)/canmatc -n canmat_dict402 -o dict402.c $(top_srcdir)/eds/dsp301.eds $(top_srcdir)/eds/dsp402.eds
+
+clean-local:
+	rm -f dict402.c

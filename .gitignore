@@ -6,7 +6,6 @@ m4/*.m4
 missing
 *.lo
 *.la
-gt-esdcan*.tar.gz
 /aclocal.m4
 config.*
 /configure
@@ -18,13 +17,13 @@ config.*
 /stamp-h1
 /Makefile
 /test_sdo
-/socia-*.tar.*
-/socia
-amc-test
+/socanmatic-*.tar.*
 *.so
 *.o
 Makefile
 /doc/man/*.1
 /doc/man/*.html
 /doc/manual/*.html
+doc/Makefile.in
 /dict402.c
+/canmat

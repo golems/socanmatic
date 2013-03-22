@@ -1,10 +1,9 @@
-/* -*- mode: C; c-basic-offset: 4 -*- */
-/* ex: set shiftwidth=4 tabstop=4 expandtab: */
-/*
- * Copyright (c) 2008-2013, Georgia Tech Research Corporation
+/* Copyright (c) 2008-2013, Georgia Tech Research Corporation
  * All rights reserved.
  *
  * Author(s): Neil T. Dantam <ntd@gatech.edu>
+ *            Can Erdogan <cerdogan@gatech.edu>
+ *
  * Georgia Tech Humanoid Robotics Lab
  * Under Direction of Prof. Mike Stilman <mstilman@cc.gatech.edu>
  *
@@ -40,81 +39,64 @@
  *
  */
 
-#ifndef SOCIA_BYTEORDER_H
-#define SOCIA_BYTEORDER_H
+#ifndef SOCANMATIC_NMT_H
+#define SOCANMATIC_NMT_H
+
+/**
+ * \file canmat_canopen.h
+ *
+ * \brief CANopen implementation using SocketCAN and esd's NTCAN
+ * API. See the website
+ * http://en.wikipedia.org/wiki/Canopen#Service_Data_Object_.28SDO.29_protocol
+ * for details of service data object (SDO) protocol.
+ *
+ * \author Neil Dantam
+ * \author Can Erdogan (bug fixes)
+ *
+ * \bug Deferring implementation of segmented messages
+ *
+ * \bug esd's driver will non-deterministically order loopback and
+ * off-the-wire CAN messages.
+ */
+
+
+/// Produce COB-ID for response from node
+
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 
-typedef union socia_byte8  {
-    int8_t i;
-    uint8_t u;
-} socia_byte8_t;
+/*********************/
+/* NMT Communication */
+/*********************/
 
-typedef union socia_byte16  {
-    int16_t i;
-    uint16_t u;
-} socia_byte16_t;
+typedef enum canmat_nmt_msg {
+    CANMAT_NMT_INVAL = -1,
+    CANMAT_NMT_START_REMOTE = 0x1,
+    CANMAT_NMT_STOP_REMOTE = 0x2,
+    CANMAT_NMT_PRE_OP = 0x80,
+    CANMAT_NMT_RESET_NODE = 0x81,
+    CANMAT_NMT_RESET_COM = 0x82
+} canmat_nmt_msg_t;
 
-typedef union socia_byte32  {
-    int32_t i;
-    uint32_t u;
-    float f;
-} socia_byte32_t;
+/* ID for all nodes */
+#define CANMAT_NODE_ALL 0x00
 
-typedef union socia_byte64  {
-    int64_t i;
-    uint64_t u;
-    double f;
-} socia_byte64_t;
+/**  Send an NMT Message.
+ */
+int canmat_send_nmt( int fd, uint8_t node,
+                   canmat_nmt_msg_t nmt_msg );
 
 
-static inline void socia_byte_stle32( void *p, uint32_t u) {
-    uint8_t *q = (uint8_t*)p;
-    q[0] = (uint8_t)(u & 0xFF);
-    q[1] = (uint8_t)((u >>  8) & 0xFF);
-    q[2] = (uint8_t)((u >> 16) & 0xFF);
-    q[3] = (uint8_t)((u >> 24) & 0xFF);
-}
 
-static inline void socia_byte_stle16( void *p, uint16_t u) {
-    uint8_t *q = (uint8_t*)p;
-    q[0] = (uint8_t)(u & 0xFF);
-    q[1] = (uint8_t)((u >>  8) & 0xFF);
-}
 
-static inline uint32_t socia_byte_ldle32( void *p ) {
-    uint8_t *q = (uint8_t*)p;
-    return  (uint32_t)( (uint32_t)(q[0])        |
-                        (uint32_t)(q[1] << 8)   |
-                        (uint32_t)(q[2] << 16)  |
-                        (uint32_t)(q[3] << 24) );
-}
 
-static inline uint16_t socia_byte_ldle16( void *p ) {
-    uint8_t *q = (uint8_t*)p;
-    return (uint16_t)( (uint16_t)(q[0])       |
-                       (uint16_t)(q[1] << 8) );
-}
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-static inline uint8_t socia_byte_ldle8( void *p ) {
-    return ((uint8_t*)p)[0];
-}
-
-static inline void socia_byte_stle8( void *p, uint8_t u) {
-    ((uint8_t*)p)[0] = u;
-}
 
 #ifdef __cplusplus
 }
 #endif
-
 
 /* ex: set shiftwidth=4 tabstop=4 expandtab: */
 /* Local Variables:                          */
@@ -123,4 +105,4 @@ static inline void socia_byte_stle8( void *p, uint8_t u) {
 /* indent-tabs-mode:  nil                    */
 /* End:                                      */
 
-#endif //SOCIA_BYTEORDER_H
+#endif //SOCANMATIC_NMT_H

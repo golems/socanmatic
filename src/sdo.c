@@ -54,24 +54,24 @@
 
 #include <inttypes.h>
 
-#include "socia.h"
-#include "socia_private.h"
+#include "socanmatic.h"
+#include "socanmatic_private.h"
 
 /**********/
 /** DEFS **/
 /**********/
 
-// Create a struct can_frame from a socia_sdo_msg_t
-void socia_sdo2can (struct can_frame *dst, const socia_sdo_msg_t *src, const int is_response ) {
+// Create a struct can_frame from a canmat_sdo_msg_t
+void canmat_sdo2can (struct can_frame *dst, const canmat_sdo_msg_t *src, const int is_response ) {
     // FIXME: better message validation
     assert( src->length <= 4 );
 
     // Set the message ID and the length
-    dst->can_id = (canid_t)(is_response ? SOCIA_SDO_RESP_ID(src->node) : SOCIA_SDO_REQ_ID(src->node));
+    dst->can_id = (canid_t)(is_response ? CANMAT_SDO_RESP_ID(src->node) : CANMAT_SDO_REQ_ID(src->node));
     dst->can_dlc = (uint8_t)(src->length + 4);   // 4 due to "len" (1), "msg_lost" (1) and "reserved" (2) fields
 
     // set command byte
-    dst->data[0] = socia_sdo_cmd_byte( src );;
+    dst->data[0] = canmat_sdo_cmd_byte( src );;
 
     // set indices
     dst->data[1] = (uint8_t)(src->index & 0xFF);
@@ -88,8 +88,8 @@ void socia_sdo2can (struct can_frame *dst, const socia_sdo_msg_t *src, const int
 // NOTE: Does this translation stand correct if the dst message does not
 // use the entire data?
 
-// Create a socia_sdo_msg_t from a struct can_frame
-void socia_can2sdo( socia_sdo_msg_t *dst, const struct can_frame *src ) {
+// Create a canmat_sdo_msg_t from a struct can_frame
+void canmat_can2sdo( canmat_sdo_msg_t *dst, const struct can_frame *src ) {
     // FIXME: better message validation, check that message is actually an SDO
 
     assert( src->can_dlc <= 8 );
@@ -98,9 +98,9 @@ void socia_can2sdo( socia_sdo_msg_t *dst, const struct can_frame *src ) {
     dst->cmd.s = cmd & 0x1;
     dst->cmd.e = (cmd >> 1) & 0x1;
     dst->cmd.n = (uint8_t) ((cmd >> 2) & 0x3);
-    dst->cmd.ccs = (enum socia_command_spec) ((cmd >> 5) & 0x7);
+    dst->cmd.ccs = (enum canmat_command_spec) ((cmd >> 5) & 0x7);
 
-    dst->node = (uint8_t)(src->can_id & SOCIA_SDO_NODE_MASK);
+    dst->node = (uint8_t)(src->can_id & CANMAT_SDO_NODE_MASK);
 
     dst->length = (uint8_t)(src->can_dlc - 4);
 
@@ -114,49 +114,49 @@ void socia_can2sdo( socia_sdo_msg_t *dst, const struct can_frame *src ) {
 
 
 /// Send and SDO request and wait for the response
-ssize_t socia_sdo_query( int fd, const socia_sdo_msg_t *req,
-                         socia_sdo_msg_t *resp ) {
-    ssize_t r = socia_sdo_query_send( fd, req );
+ssize_t canmat_sdo_query( int fd, const canmat_sdo_msg_t *req,
+                          canmat_sdo_msg_t *resp ) {
+    ssize_t r = canmat_sdo_query_send( fd, req );
     if( r >= 0 ) {
-        return socia_sdo_query_recv( fd, resp, req );
+        return canmat_sdo_query_recv( fd, resp, req );
     } else {
         return r;
     }
 }
 
 /// Send an SDO query
-ssize_t socia_sdo_query_send( int fd, const socia_sdo_msg_t *req ) {
+ssize_t canmat_sdo_query_send( int fd, const canmat_sdo_msg_t *req ) {
     struct can_frame can;
-    socia_sdo2can( &can, req, 0 );
-    return  socia_can_send( fd, &can );
+    canmat_sdo2can( &can, req, 0 );
+    return  canmat_can_send( fd, &can );
 }
 
 /// Receive and SDO query response
-ssize_t socia_sdo_query_recv( int fd, socia_sdo_msg_t *resp,
-                              const socia_sdo_msg_t *req ) {
+ssize_t canmat_sdo_query_recv( int fd, canmat_sdo_msg_t *resp,
+                               const canmat_sdo_msg_t *req ) {
 
     ssize_t r;
     struct can_frame can;
     do {
-        r = socia_can_recv( fd, &can );
-        if( ! socia_can_ok( r ) )
+        r = canmat_can_recv( fd, &can );
+        if( ! canmat_can_ok( r ) )
             return r;
-    } while ( can.can_id != (canid_t)SOCIA_SDO_RESP_ID(req->node) );
+    } while ( can.can_id != (canid_t)CANMAT_SDO_RESP_ID(req->node) );
 
-    socia_can2sdo( resp, &can );
+    canmat_can2sdo( resp, &can );
     return r;
 
 }
 
 
-ssize_t socia_sdo_query_resp( int fd, const socia_sdo_msg_t *resp ) {
+ssize_t canmat_sdo_query_resp( int fd, const canmat_sdo_msg_t *resp ) {
     struct can_frame can;
-    socia_sdo2can( &can, resp, 1 );
-    return  socia_can_send( fd, &can );
+    canmat_sdo2can( &can, resp, 1 );
+    return  canmat_can_send( fd, &can );
 }
 
-void socia_sdo_set_ex_dl( socia_sdo_msg_t *sdo,
-                          uint8_t node, uint16_t index, uint8_t subindex ) {
+void canmat_sdo_set_ex_dl( canmat_sdo_msg_t *sdo,
+                           uint8_t node, uint16_t index, uint8_t subindex ) {
 
     /* Set values */
     sdo->index = index;
@@ -167,22 +167,22 @@ void socia_sdo_set_ex_dl( socia_sdo_msg_t *sdo,
     sdo->cmd.n = (unsigned char) ((4 - sdo->length) & 0x3);
     sdo->cmd.e = 1;
     sdo->cmd.s = 1;
-    sdo->cmd.ccs = SOCIA_EX_DL;
+    sdo->cmd.ccs = CANMAT_EX_DL;
 }
 
 
 
 #define DEF_SDO_DL( VAL_TYPE, SUFFIX )                                  \
-    ssize_t socia_sdo_dl_ ## SUFFIX( int fd, uint8_t *rccs,             \
-                                    uint8_t node,                       \
-                                    uint16_t index, uint8_t subindex,   \
-                                    VAL_TYPE value ) {                  \
-        socia_sdo_msg_t req, resp;                                      \
-        socia_sdo_set_data_ ## SUFFIX( &req, value );                   \
-        socia_sdo_set_ex_dl( &req, node,                                \
-                             index, subindex );                         \
-        ssize_t r = socia_sdo_query( fd, &req, &resp );                 \
-        if ( socia_can_ok(r) ) *rccs = resp.cmd.ccs;                    \
+    ssize_t canmat_sdo_dl_ ## SUFFIX( int fd, uint8_t *rccs,            \
+                                      uint8_t node,                     \
+                                      uint16_t index, uint8_t subindex, \
+                                      VAL_TYPE value ) {                \
+        canmat_sdo_msg_t req, resp;                                     \
+        canmat_sdo_set_data_ ## SUFFIX( &req, value );                  \
+        canmat_sdo_set_ex_dl( &req, node,                               \
+                              index, subindex );                        \
+        ssize_t r = canmat_sdo_query( fd, &req, &resp );                \
+        if ( canmat_can_ok(r) ) *rccs = resp.cmd.ccs;                   \
         return r;                                                       \
     }                                                                   \
 
@@ -202,11 +202,11 @@ DEF_SDO_DL(  int32_t, i32 )
  * Expedited only
  */
 static ssize_t sdo_ul( int fd,
-                       socia_sdo_msg_t *resp,
+                       canmat_sdo_msg_t *resp,
                        uint8_t node, uint16_t index, uint8_t subindex ) {
-    socia_sdo_msg_t req;
+    canmat_sdo_msg_t req;
     // Build SDO Message
-    req.cmd.ccs = SOCIA_EX_UL;
+    req.cmd.ccs = CANMAT_EX_UL;
     req.cmd.e = 1;
     req.cmd.n = 0;
     req.cmd.s = 0;
@@ -216,24 +216,24 @@ static ssize_t sdo_ul( int fd,
     req.subindex = subindex;
     req.length = 0;
     // Query
-    ssize_t r = socia_sdo_query( fd, &req, resp );
+    ssize_t r = canmat_sdo_query( fd, &req, resp );
 
     // Result
     return r;
 }
 
 #define DEF_SDO_UL( VAL_TYPE, IS_SIGNED, SUFFIX )                       \
-    ssize_t socia_sdo_ul_ ## SUFFIX( int fd,                            \
-                                     uint8_t *rccs, VAL_TYPE *value,    \
-                                     uint8_t node,                      \
-                                     uint16_t index, uint8_t subindex ) \
+    ssize_t canmat_sdo_ul_ ## SUFFIX( int fd,                           \
+                                      uint8_t *rccs, VAL_TYPE *value,   \
+                                      uint8_t node,                     \
+                                      uint16_t index, uint8_t subindex ) \
     {                                                                   \
-        socia_sdo_msg_t resp;                                           \
+        canmat_sdo_msg_t resp;                                          \
         ssize_t r;                                                      \
         r = sdo_ul(fd, &resp, node, index, subindex);                   \
-        if( socia_can_ok(r) ) {                                         \
+        if( canmat_can_ok(r) ) {                                        \
             *rccs = resp.cmd.ccs;                                       \
-            *value = socia_sdo_get_data_ ## SUFFIX( &resp );            \
+            *value = canmat_sdo_get_data_ ## SUFFIX( &resp );           \
         }                                                               \
         return r;                                                       \
     }
@@ -248,10 +248,10 @@ DEF_SDO_UL( uint32_t, 0, u32 )
 DEF_SDO_UL(  int32_t, 1, i32 )
 
 
-int socia_sdo_print( FILE *f, const socia_sdo_msg_t *sdo ) {
+int canmat_sdo_print( FILE *f, const canmat_sdo_msg_t *sdo ) {
     fprintf(f, "%02x.%02x(%d:%d:%d:%d)[%04x.%02x]",
             sdo->node,
-            socia_sdo_cmd_byte(sdo), sdo->cmd.e, sdo->cmd.s, sdo->cmd.e, sdo->cmd.ccs,
+            canmat_sdo_cmd_byte(sdo), sdo->cmd.e, sdo->cmd.s, sdo->cmd.e, sdo->cmd.ccs,
             sdo->index, sdo->subindex);
     int i;
     for( i = 0; i < sdo->length; i++ ) {

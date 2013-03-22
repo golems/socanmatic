@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Georgia Tech Research Corporation
+ * Copyright (c) 2008-2013, Georgia Tech Research Corporation
  * All rights reserved.
  *
  * Author(s): Neil T. Dantam <ntd@gatech.edu>
@@ -38,14 +38,26 @@
  *
  */
 
-#ifndef SOCIA_H
-#define SOCIA_H
+#ifndef SOCANMATIC_PDO_H
+#define SOCANMATIC_PDO_H
 
-#include "socia/status.h"
-#include "socia/byteorder.h"
-#include "socia/dict.h"
-#include "socia/nmt.h"
-#include "socia/sdo.h"
-#include "socia/ds402.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#endif //SOCIA_H
+#define CANMAT_RPDO_COM_BASE  ((uint16_t)0x1400)
+#define CANMAT_TPDO_COM_BASE  ((uint16_t)0x1800)
+#define CANMAT_RPDO_MAP_BASE  ((uint16_t)0x1600)
+#define CANMAT_TPDO_MAP_BASE  ((uint16_t)0x1A00)
+
+
+#ifdef __cplusplus
+}
+#endif
+/* ex: set shiftwidth=4 tabstop=4 expandtab: */
+/* Local Variables:                          */
+/* mode: c                                   */
+/* c-basic-offset: 4                         */
+/* indent-tabs-mode:  nil                    */
+/* End:                                      */
+#endif //SOCANMATIC_PDO_H

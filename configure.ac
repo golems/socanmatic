@@ -2,9 +2,9 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.65])
-AC_INIT([socia], [0.0.1], [ntd@gatech.edu])
+AC_INIT([socanmatic], [0.0.1], [ntd@gatech.edu])
 AM_INIT_AUTOMAKE([-Wall])
-AC_CONFIG_SRCDIR([include/socia.h])
+AC_CONFIG_SRCDIR([include/socanmatic.h])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -93,9 +93,9 @@ AM_CONDITIONAL([HAVE_MAN2HTML], [test x$MAN2HTML != x])
 AM_CONDITIONAL([HAVE_DB2HTML],  [test x$DB2HTML != x])
 
 # Check if we already have docs (from tarball)
-AC_CHECK_FILE( [$srcdir/doc/man/socia.1],              [FOUND_MANPAGES=yes])
-AC_CHECK_FILE( [$srcdir/doc/man/socia.html],           [FOUND_MANHTML=yes])
-AC_CHECK_FILE( [$srcdir/doc/manual/socia-manual.html], [FOUND_MANUAL=yes])
+AC_CHECK_FILE( [$srcdir/doc/man/socanmatic.1],              [FOUND_MANPAGES=yes])
+AC_CHECK_FILE( [$srcdir/doc/man/socanmatic.html],           [FOUND_MANHTML=yes])
+AC_CHECK_FILE( [$srcdir/doc/manual/socanmatic-manual.html], [FOUND_MANUAL=yes])
 
 # If we can make the docs or already have them, then we can install them
 AM_CONDITIONAL([HAVE_MANPAGES], [test x$HELP2MAN != x -o x$FOUND_MANPAGES = xyes])

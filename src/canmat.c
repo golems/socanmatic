@@ -58,8 +58,8 @@
 #include <linux/can/raw.h>
 
 
-#include "socia.h"
-#include "socia_private.h"
+#include "socanmatic.h"
+#include "socanmatic_private.h"
 
 
 #ifdef __GNUC__
@@ -76,7 +76,7 @@ uint16_t opt_canid = 0;
 uint8_t opt_can_dlc = 0;
 uint8_t opt_can_data[8];
 
-socia_sdo_msg_t opt_sdo = {0};
+canmat_sdo_msg_t opt_sdo = {0};
 
 typedef int (*cmd_fun_t)(void);
 
@@ -115,7 +115,7 @@ void hard_assert( _Bool test , const char fmt[], ...)  {
 }
 
 int try_open( const char *iface) {
-    int s = socia_can_open( iface );
+    int s = canmat_can_open( iface );
     if( opt_verbosity ) {
         if( s >= 0 ) {
             fprintf(stderr, "Opened iface %s\n", iface);
@@ -192,7 +192,7 @@ void posarg_send( const char *arg, int i ) {
 void posarg_dict( const char *arg, int i ) {
     switch(i) {
     case 1:
-        opt_node = (uint8_t)parse_uhex( arg, SOCIA_SDO_NODE_MASK );
+        opt_node = (uint8_t)parse_uhex( arg, CANMAT_SDO_NODE_MASK );
         break;
     case 2:
         opt_dict_param_name = strdup( arg );
@@ -212,7 +212,7 @@ void posarg_dict( const char *arg, int i ) {
 void posarg_sdo( const char *arg, int i ) {
     switch(i) {
     case 1:
-        opt_sdo.node = (uint8_t)parse_uhex( arg, SOCIA_SDO_NODE_MASK );
+        opt_sdo.node = (uint8_t)parse_uhex( arg, CANMAT_SDO_NODE_MASK );
         break;
     case 2:
         opt_sdo.index = (uint16_t)parse_uhex( arg, 0xFFFF );
@@ -281,7 +281,7 @@ int main( int argc, char ** argv ) {
     while( (c = getopt( argc, argv, "vhH?V")) != -1 ) {
         switch(c) {
         case 'V':   /* version     */
-            puts( "socia " PACKAGE_VERSION "\n"
+            puts( "canmat " PACKAGE_VERSION "\n"
                   "\n"
                   "Copyright (c) 2008-2013, Georgia Tech Research Corporation\n"
                   "This is free software; see the source for copying conditions.  There is NO\n"
@@ -296,7 +296,7 @@ int main( int argc, char ** argv ) {
         case '?':   /* help     */
         case 'h':
         case 'H':
-            puts( "Usage: socia [OPTION...] [dump]\n"
+            puts( "Usage: canmat [OPTION...] [dump]\n"
                   "Shell tool for CANopen\n"
                   "\n"
                   "Options:\n"
@@ -305,14 +305,14 @@ int main( int argc, char ** argv ) {
                   "  -V,                       Print program version\n"
                   "\n"
                   "Examples:\n"
-                  "  socia dump                                  Print CAN messages to standard output\n"
-                  "  socia send id b0 ... b7                     Send a can message (values in hex)\n"
-                  "  socia dict-dl node param-name value         Download SDO to node\n"
-                  "  socia dict-ul node param-name               Upload SDO from node\n"
-                  "  socia dl node idx subidx bytes-or-val       Download SDO to node\n"
-                  "  socia dl-resp node idx subidx               Simulate node download response\n"
-                  "  socia ul node idx subidx                    Upload SDO from node\n"
-                  "  socia ul-resp node idx subidx bytes-or-val  Simulate node upload response\n"
+                  "  canmat dump                                  Print CAN messages to standard output\n"
+                  "  canmat send id b0 ... b7                     Send a can message (values in hex)\n"
+                  "  canmat dict-dl node param-name value         Download SDO to node\n"
+                  "  canmat dict-ul node param-name               Upload SDO from node\n"
+                  "  canmat dl node idx subidx bytes-or-val       Download SDO to node\n"
+                  "  canmat dl-resp node idx subidx               Simulate node download response\n"
+                  "  canmat ul node idx subidx                    Upload SDO from node\n"
+                  "  canmat ul-resp node idx subidx bytes-or-val  Simulate node upload response\n"
                   "\n"
                   "Report bugs to <ntd@gatech.edu>"
                 );
@@ -326,7 +326,7 @@ int main( int argc, char ** argv ) {
         posarg(argv[optind++], i++);
     }
 
-    hard_assert( opt_command, "socia: missing command.\nTry `socia -H' for more information.\n");
+    hard_assert( opt_command, "canmat: missing command.\nTry `canmat -H' for more information.\n");
 
 
     if( opt_command ) {
@@ -346,7 +346,7 @@ int cmd_dump( void ) {
     int fd = can_open();
     while(1) {
         struct can_frame can;
-        ssize_t r = socia_can_recv( fd, &can );
+        ssize_t r = canmat_can_recv( fd, &can );
         if( r > 0 ) {
             dump_frame(&can);
         } else {
@@ -364,20 +364,20 @@ int send_frame( struct can_frame *can ) {
     }
 
     int fd = can_open();
-    ssize_t r = socia_can_send( fd, can );
-    hard_assert( socia_can_ok(r), "Couldn't send frame: %s\n", strerror(errno) );
+    ssize_t r = canmat_can_send( fd, can );
+    hard_assert( canmat_can_ok(r), "Couldn't send frame: %s\n", strerror(errno) );
     return 0;
 }
 
 int query_sdo() {
     int fd = can_open();
 
-    socia_sdo_msg_t resp;
+    canmat_sdo_msg_t resp;
 
-    ssize_t r = socia_sdo_query( fd, &opt_sdo, &resp );
-    hard_assert( socia_can_ok(r), "Couldn't send frame: %s\n", strerror(errno) );
+    ssize_t r = canmat_sdo_query( fd, &opt_sdo, &resp );
+    hard_assert( canmat_can_ok(r), "Couldn't send frame: %s\n", strerror(errno) );
 
-    socia_sdo_print( stdout, &resp );
+    canmat_sdo_print( stdout, &resp );
 
     return 0;
 }
@@ -393,7 +393,7 @@ int cmd_send( void ) {
 
 int cmd_ul( void ) {
 
-    opt_sdo.cmd.ccs = SOCIA_EX_UL;
+    opt_sdo.cmd.ccs = CANMAT_EX_UL;
     opt_sdo.cmd.e = 1;
     opt_sdo.cmd.n = 0;
     opt_sdo.cmd.s = 0;
@@ -407,12 +407,12 @@ int cmd_ul_resp( void ) {
 
     struct can_frame can;
 
-    opt_sdo.cmd.ccs = SOCIA_EX_UL;
+    opt_sdo.cmd.ccs = CANMAT_EX_UL;
     opt_sdo.cmd.e = 1;
     opt_sdo.cmd.n = (unsigned char)((4 - opt_sdo.length) & 0x3);
     opt_sdo.cmd.s = 1;
 
-    socia_sdo2can( &can, &opt_sdo, 1 );
+    canmat_sdo2can( &can, &opt_sdo, 1 );
     return send_frame( &can );
 }
 
@@ -420,7 +420,7 @@ int cmd_dl( void ) {
     hard_assert( opt_sdo.length > 0 && opt_sdo.length < 5,
                  "Invalid data length\n" );
 
-    socia_sdo_set_ex_dl( &opt_sdo,
+    canmat_sdo_set_ex_dl( &opt_sdo,
                          opt_sdo.node, opt_sdo.index, opt_sdo.subindex );
 
     return query_sdo();
@@ -430,52 +430,52 @@ int cmd_dl_resp( void ) {
     hard_assert( 0 == opt_sdo.length,
                  "Invalid data length\n" );
 
-    opt_sdo.cmd.ccs = SOCIA_EX_DL;
+    opt_sdo.cmd.ccs = CANMAT_EX_DL;
     opt_sdo.cmd.e = 1;
     opt_sdo.cmd.n = 0;
     opt_sdo.cmd.s = 0;
 
     struct can_frame can;
-    socia_sdo2can( &can, &opt_sdo, 1 );
+    canmat_sdo2can( &can, &opt_sdo, 1 );
     return send_frame( &can );
 }
 
 int cmd_dict_dl() {
-    socia_obj_t *obj = socia_dict_search_name( &socia_dict402, opt_dict_param_name );
+    canmat_obj_t *obj = canmat_dict_search_name( &canmat_dict402, opt_dict_param_name );
     int fd = can_open();
-    socia_status_t r = socia_obj_dl_str( fd, opt_node, obj, opt_dict_param_value );
-    hard_assert( SOCIA_OK == r, "Failed download: %s\n", socia_strerror(r) );
+    canmat_status_t r = canmat_obj_dl_str( fd, opt_node, obj, opt_dict_param_value );
+    hard_assert( CANMAT_OK == r, "Failed download: %s\n", canmat_strerror(r) );
 
     return 0;
 }
 
 int cmd_dict_ul() {
-    socia_obj_t *obj = socia_dict_search_name( &socia_dict402, opt_dict_param_name );
+    canmat_obj_t *obj = canmat_dict_search_name( &canmat_dict402, opt_dict_param_name );
     int fd = can_open();
-    socia_scalar_t val;
-    socia_status_t r = socia_obj_ul( fd, opt_node, obj, &val );
-    hard_assert( SOCIA_OK == r, "Failed upload: %s\n", socia_strerror(r) );
+    canmat_scalar_t val;
+    canmat_status_t r = canmat_obj_ul( fd, opt_node, obj, &val );
+    hard_assert( CANMAT_OK == r, "Failed upload: %s\n", canmat_strerror(r) );
     switch(obj->data_type) {
 
-    case SOCIA_DATA_TYPE_INTEGER8:
+    case CANMAT_DATA_TYPE_INTEGER8:
         printf("%"PRId8"\n", val.i8);
         break;
-    case SOCIA_DATA_TYPE_INTEGER16:
+    case CANMAT_DATA_TYPE_INTEGER16:
         printf("%"PRId16"\n", val.i16);
         break;
-    case SOCIA_DATA_TYPE_INTEGER32:
+    case CANMAT_DATA_TYPE_INTEGER32:
         printf("%"PRId32"\n", val.i32);
         break;
-    case SOCIA_DATA_TYPE_UNSIGNED8:
+    case CANMAT_DATA_TYPE_UNSIGNED8:
         printf("0x%"PRIx8"\n", val.u8);
         break;
-    case SOCIA_DATA_TYPE_UNSIGNED16:
+    case CANMAT_DATA_TYPE_UNSIGNED16:
         printf("0x%"PRIx16"\n", val.u16);
         break;
-    case SOCIA_DATA_TYPE_UNSIGNED32:
+    case CANMAT_DATA_TYPE_UNSIGNED32:
         printf("0x%"PRIx32"\n", val.u32);
         break;
-    default: return SOCIA_ERR_PARAM;
+    default: return CANMAT_ERR_PARAM;
     }
 
     return 0;
