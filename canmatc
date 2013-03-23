@@ -78,13 +78,19 @@ def objecttype(s):
         return NS+"OBJ_CODE_"+s
     else: return s
 
-def edsobj2cstruct( section, params ):
-    '''Print and EDS section as C code'''
-    index = re.sub(r'sub.*', '', section)
+
+def sect2index( section ):
+    ''' Return (index,subindex)'''
+    index = int( re.sub(r'sub.*', '', section), 16 )
     if re.match(r'^[0-9a-fA-F]+$', section):
         subindex = 0
     else:
-        subindex = re.sub(r'^[0-9a-fA-F]*sub', '', section)
+        subindex = int( re.sub(r'^[0-9a-fA-F]*sub', '', section), 16 )
+    return (index,subindex)
+
+def edsobj2cstruct( section, params ):
+    '''Print and EDS section as C code'''
+    (index,subindex) = sect2index( section )
 
     def try_param(param, cparam):
         if param in params:
@@ -93,8 +99,8 @@ def edsobj2cstruct( section, params ):
             return ''
 
     s =  '\t{\n'
-    s += '\t\t.index=0x%s,\n' % index
-    s += '\t\t.subindex=0x%s,\n' % subindex
+    s += '\t\t.index=0x%04x,\n' % index
+    s += '\t\t.subindex=0x%02x,\n' % subindex
     s += try_param('pdomapping', 'pdo_mapping')
     if 'datatype' in params:
         s += '\t\t.data_type=%s,\n' % datatype(params['datatype'])
@@ -109,11 +115,18 @@ def edsobj2cstruct( section, params ):
 
 def print_dict( name, output, odict ):
     # Sort by names
-    def key(sect):
-        return odict[sect]['parametername'].upper()
+    def key_index(section):
+        (index,subindex) = sect2index( section )
+        return index << 16 + subindex
 
     sections = odict.keys()
-    sections.sort(key=key)
+    sections.sort(key=key_index)
+
+    def key_name(i):
+        return odict[ sections[i] ]['parametername'].upper()
+
+    btree_name = range(0,len(sections))
+    btree_name.sort( key=key_name )
 
     # print
     s = ''
@@ -123,9 +136,17 @@ def print_dict( name, output, odict ):
     s += '#include "socanmatic/dict.h"\n'
 
     s += "canmat_dict_t %s = {\n" % name
-    s += "\t.length=%d,\n" % len(sections)
-    s += "\t.obj=(canmat_obj_t[]){\n"
 
+    # length
+    s += "\t.length=%d,\n" % len(sections)
+    # name tree
+    s += "\t.btree_name=(canmat_dict_name_tree_t[]){\n"
+    for i in btree_name:
+        s += "\t\t{.parameter_name=\"%s\",.i=%d},\n" % (odict[sections[i]]['parametername'], i)
+    s += "\t},\n"
+
+    # entries in index order
+    s += "\t.obj=(canmat_obj_t[]){\n"
     for section in sections:
         s +=  edsobj2cstruct( section, odict[section] )
     s += "\t}\n"

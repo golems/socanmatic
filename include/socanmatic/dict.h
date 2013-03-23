@@ -141,9 +141,20 @@ typedef struct canmat_obj {
     const unsigned pdo_mapping : 1;
 } canmat_obj_t;
 
+typedef struct canmat_dict_name_tree {
+    const char *parameter_name;
+    size_t i;
+} canmat_dict_name_tree_t ;
+
 /** Description of a CiA Dictionary */
 typedef struct canmat_dict {
     size_t length;
+
+    canmat_dict_name_tree_t *btree_name;
+
+    /** Array of object descriptors
+     * sorted in ascending order by index
+     */
     struct canmat_obj *obj;
 } canmat_dict_t;
 
@@ -161,8 +172,11 @@ typedef union canmat_scalar {
 } canmat_scalar_t;
 
 
-/* Return the index of the item in dict with given name */
+/* Return the item in dict with given name */
 canmat_obj_t *canmat_dict_search_name( const struct canmat_dict *dict, const char *name );
+
+/* Return the item in dict with given index and subindex */
+canmat_obj_t *canmat_dict_search_index( const struct canmat_dict *dict, uint16_t idx, uint8_t subindex );
 
 canmat_status_t canmat_obj_ul( int fd, uint8_t node, const canmat_obj_t *obj, canmat_scalar_t *val );
 
