@@ -43,20 +43,13 @@
 
 #include "config.h"
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <argp.h>
-#include <assert.h>
-#include <stdint.h>
-#include <signal.h>
-#include <time.h>
 #include <stdarg.h>
+#include <stdlib.h>
+#include <errno.h>
 #include <inttypes.h>
-
-#include <linux/can.h>
-#include <linux/can/raw.h>
-
+#include <string.h>
+#include <getopt.h>
+#include <assert.h>
 
 #include "socanmatic.h"
 #include "socanmatic_private.h"

@@ -123,7 +123,7 @@ typedef enum canmat_cobid_sync_gen {
 typedef enum canmat_store_param_mask {
     CANMAT_STORE_PARAM_MASK_CMD  = 1 << 0, /* device stores parameters autonomously */
     CANMAT_STORE_PARAM_MASK_AUTO = 1 << 0  /* device saves parameters on command */
-} canmat_store_param_mask_t
+} canmat_store_param_mask_t;
 
 typedef enum canmat_cobid_time_mask {
     CANMAT_COBID_TIME_MASK_FRAME   = 1 << 29,

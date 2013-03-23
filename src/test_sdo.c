@@ -41,19 +41,7 @@
  */
 
 
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <assert.h>
-#include <errno.h>
-#include <stdint.h>
-
-#include <inttypes.h>
-
-/* Assume linux socketcan for now */
-#include <sys/socket.h>
-#include <linux/can.h>
-#include <linux/can/raw.h>
 
 #include "socanmatic.h"
 #include "socanmatic_private.h"

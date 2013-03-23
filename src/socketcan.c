@@ -39,24 +39,14 @@
  *
  */
 
-#include <unistd.h>
-#include <stdint.h>
-#include <errno.h>
-#include <stdio.h>
-/* Assume linux socketcan for now */
-#include <linux/can.h>
-#include <linux/can/raw.h>
-
-
-#include <assert.h>
-#include <string.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <net/if.h>
-
-#include <inttypes.h>
+#include <errno.h>
+#include <unistd.h>
+#include <string.h>
 
 #include "socanmatic.h"
 #include "socanmatic_private.h"

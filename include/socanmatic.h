@@ -41,11 +41,19 @@
 #ifndef SOCANMATIC_H
 #define SOCANMATIC_H
 
+#include <stdio.h>
+#include <inttypes.h>
+
+#include <linux/can.h>
+#include <linux/can/raw.h>
+
+
 #include "socanmatic/status.h"
 #include "socanmatic/byteorder.h"
 #include "socanmatic/dict.h"
 #include "socanmatic/nmt.h"
 #include "socanmatic/sdo.h"
+#include "socanmatic/ds301.h"
 #include "socanmatic/ds402.h"
 
 #endif //SOCANMATIC_H
