@@ -78,6 +78,7 @@ int (*opt_command)(void) = NULL;
 uint8_t opt_node;
 const char *opt_dict_param_name;
 const char *opt_dict_param_value;
+const char *opt_iface = NULL;
 
 
 void hard_assert( _Bool test , const char fmt[], ...)          ATTR_PRINTF(2,3);
@@ -118,12 +119,17 @@ int try_open( const char *iface) {
 }
 int can_open() {
     // try some defaults
-    int s = try_open( "can0" );
-    if( s >= 0 ) return s;
+    int s;
+    if( opt_iface ) {
+        s = try_open( opt_iface );
+    } else {
 
-    s = try_open( "vcan0" );
-    if( s >= 0 ) return s;
+        s = try_open( "can0" );
+        if( s >= 0 ) return s;
 
+        s = try_open( "vcan0" );
+        if( s >= 0 ) return s;
+    }
     hard_assert( s >= 0, "Couldn't open CAN (%d): %s\n", s, strerror(errno) );
     return s;
 
@@ -271,7 +277,7 @@ void posarg( const char *arg, int i ) {
 int main( int argc, char ** argv ) {
 
     int c, i = 0;
-    while( (c = getopt( argc, argv, "vhH?V")) != -1 ) {
+    while( (c = getopt( argc, argv, "vhH?Vf:")) != -1 ) {
         switch(c) {
         case 'V':   /* version     */
             puts( "canmat " PACKAGE_VERSION "\n"
@@ -286,14 +292,18 @@ int main( int argc, char ** argv ) {
         case 'v':   /* verbose  */
             opt_verbosity++;
             break;
+        case 'f':   /* interface  */
+            opt_iface = strdup(optarg);
+            break;
         case '?':   /* help     */
         case 'h':
         case 'H':
-            puts( "Usage: canmat [OPTION...] [dump]\n"
+            puts( "Usage: socia [OPTION...] [dump]\n"
                   "Shell tool for CANopen\n"
                   "\n"
                   "Options:\n"
                   "  -v,                       Make output more verbose\n"
+                  "  -f interface,             CAN interface\n"
                   "  -?,                       Give program help list\n"
                   "  -V,                       Print program version\n"
                   "\n"
@@ -319,14 +329,9 @@ int main( int argc, char ** argv ) {
         posarg(argv[optind++], i++);
     }
 
-    hard_assert( opt_command, "canmat: missing command.\nTry `canmat -H' for more information.\n");
+    hard_assert( opt_command, "socia: missing command.\nTry `socia -H' for more information.\n");
 
-
-    if( opt_command ) {
-        return opt_command();
-    } else {
-        assert(0);
-    }
+    return opt_command();
 
     return 0;
 }
