@@ -52,13 +52,12 @@ extern "C" {
 #define CANMAT_SDO_RESP_ID(node) ((canid_t)( ((node)&CANMAT_NODE_MASK) | CANMAT_FUNC_SDO_TX))
 
 typedef enum canmat_command_spec {
-    CANMAT_SEG_DL = 0, ///< segment download
-    CANMAT_EX_DL = 1,  ///< expedited download (master->node)
-    CANMAT_EX_UL = 2,  ///< expedited upload (node->master)
-    CANMAT_SEG_UL = 3, ///< segment upload
-    CANMAT_ABORT = 4
+    CANMAT_SEG_DL  = 0, ///< segment download
+    CANMAT_EX_DL   = 1, ///< expedited download (master->node)
+    CANMAT_EX_UL   = 2, ///< expedited upload (node->master)
+    CANMAT_SEG_UL  = 3, ///< segment upload
+    CANMAT_ABORT    = 4
 } canmat_command_spec_t;
-
 
 typedef enum canmat_command_byte {
     CANMAT_SDO_CMD_DL1 = 0x2f,
@@ -68,6 +67,7 @@ typedef enum canmat_command_byte {
 } canmat_command_byte_t;
 
 /** Container struct for SDO requests.
+ *
  */
 typedef struct canmat_sdo_msg {
     // Message contents
@@ -78,7 +78,12 @@ typedef struct canmat_sdo_msg {
     uint8_t node;      ///< CANopen Node ID
     uint8_t length;    ///< CANopen length of data, is either set in n (command) or in the data (depends on s)
 
-    /** Command word */
+    /** Command word
+     *
+     * It seems that e and s bits are redundant with the comman
+     * specifier, and n field is reduandant to the overall CAN message
+     * length.
+     */
     struct {
         enum canmat_command_spec ccs : 3; ///< Client Command Specifier
         /** Number of bytes in the data part of the message which do not
