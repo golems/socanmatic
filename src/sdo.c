@@ -89,7 +89,7 @@ void canmat_can2sdo( canmat_sdo_msg_t *dst, const struct can_frame *src ) {
     dst->cmd.n = (uint8_t) ((cmd >> 2) & 0x3);
     dst->cmd.ccs = (enum canmat_command_spec) ((cmd >> 5) & 0x7);
 
-    dst->node = (uint8_t)(src->can_id & CANMAT_SDO_NODE_MASK);
+    dst->node = (uint8_t)(src->can_id & CANMAT_NODE_MASK);
 
     dst->length = (uint8_t)(src->can_dlc - 4);
 

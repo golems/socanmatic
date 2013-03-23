@@ -46,6 +46,43 @@
 extern "C" {
 #endif
 
+/** COB-ID mask for node bits */
+#define CANMAT_NODE_MASK ((uint16_t)0x7F)
+
+/* ID for all nodes */
+#define CANMAT_NODE_ALL 0x00
+
+/** Function codes for CAN Object Identifier (CAN-ID)
+ */
+typedef enum canmat_func_code {
+    /* predefined broadcast objects */
+    CANMAT_FUNC_NMT      = 0x000,
+    CANMAT_FUNC_SYNC     = 0x080,
+    CANMAT_FUNC_TIME     = 0x100,
+
+    /* predefined peer-to-peer objects */
+    /* TX/RX are from the nodes perspective */
+    CANMAT_FUNC_EMCY     = 0x080,
+    CANMAT_FUNC_PDO1_TX  = 0x180,
+    CANMAT_FUNC_PDO1_RX  = 0x200,
+    CANMAT_FUNC_PDO2_TX  = 0x280,
+    CANMAT_FUNC_PDO2_RX  = 0x300,
+    CANMAT_FUNC_PDO3_TX  = 0x380,
+    CANMAT_FUNC_PDO3_RX  = 0x400,
+    CANMAT_FUNC_PDO4_TX  = 0x480,
+    CANMAT_FUNC_PDO4_RX  = 0x500,
+    CANMAT_FUNC_SDO_TX   = 0x580,
+    CANMAT_FUNC_SDO_RX   = 0x600,
+    CANMAT_FUNC_NMT_ERR  = 0x700
+} canmat_func_code_t;
+
+static inline uint16_t canmat_frame_func( const struct can_frame *can ) {
+    return can->can_id & (~CANMAT_NODE_MASK & 0xFFFF);
+}
+
+static inline uint8_t canmat_frame_node( const struct can_frame *can ) {
+    return can->can_id & CANMAT_NODE_MASK;
+}
 
 const char *canmat_sdo_abort_code2str( uint32_t code );
 
@@ -76,7 +113,6 @@ typedef enum canmat_emcy_class {
     CANMAT_EMCY_CODE_ADDITIONAL_FUNC     = 0xF000,
     CANMAT_EMCY_CODE_DEVICE_SPECIFIC     = 0xFF00
 } canmat_emcy_class_t;
-
 
 typedef enum canmat_error_reg_mask {
     CANMAT_ERROR_REG_MASK_ERROR     = 1 << 0,

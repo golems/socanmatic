@@ -73,21 +73,32 @@ extern "C" {
 /*********************/
 
 typedef enum canmat_nmt_msg {
-    CANMAT_NMT_INVAL = -1,
+    CANMAT_NMT_INVAL        = -1,
     CANMAT_NMT_START_REMOTE = 0x1,
-    CANMAT_NMT_STOP_REMOTE = 0x2,
-    CANMAT_NMT_PRE_OP = 0x80,
-    CANMAT_NMT_RESET_NODE = 0x81,
-    CANMAT_NMT_RESET_COM = 0x82
+    CANMAT_NMT_STOP_REMOTE  = 0x2,
+    CANMAT_NMT_PRE_OP       = 0x80,
+    CANMAT_NMT_RESET_NODE   = 0x81,
+    CANMAT_NMT_RESET_COM    = 0x82
 } canmat_nmt_msg_t;
 
-/* ID for all nodes */
-#define CANMAT_NODE_ALL 0x00
+
+/**  Toggle bit used with remote-transmission requests.
+ *   Node will toggle the bit on each message.
+ */
+#define CANMANT_NMT_ERR_TOGGLE_MASK (1 << 8)
+
+typedef enum canmat_nmt_err_msg {
+    CANMAT_NMT_ERR_BOOT    = 0x00,
+    CANMAT_NMT_ERR_STOPPED = 0x04,
+    CANMAT_NMT_ERR_OP      = 0x05,
+    CANMAT_NMT_ERR_PRE_OP  = 0x7F
+} canmat_nmt_err_msg_t;
+
 
 /**  Send an NMT Message.
  */
 int canmat_send_nmt( int fd, uint8_t node,
-                   canmat_nmt_msg_t nmt_msg );
+                     canmat_nmt_msg_t nmt_msg );
 
 
 

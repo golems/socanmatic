@@ -52,8 +52,8 @@ void check_sdo_can( canmat_sdo_msg_t *sdo, uint8_t cmd ) {
     struct can_frame can;
     canmat_sdo2can( &can, sdo, 0);
     assert( can.can_id == CANMAT_SDO_REQ_ID( sdo->node ) );
-    assert( (can.can_id & (uint16_t)~CANMAT_SDO_NODE_MASK) == CANMAT_SDO_REQ_BASE );
-    assert( (can.can_id & CANMAT_SDO_NODE_MASK) == sdo->node );
+    assert( (can.can_id & (uint16_t)~CANMAT_NODE_MASK) == CANMAT_FUNC_SDO_RX );
+    assert( (can.can_id & CANMAT_NODE_MASK) == sdo->node );
     assert( can.data[0] == cmd );
     assert( can.data[1] == (sdo->index & 0xff) );
     assert( can.data[2] == sdo->index >> 8 );

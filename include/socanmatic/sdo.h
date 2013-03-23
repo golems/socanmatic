@@ -45,21 +45,11 @@
 extern "C" {
 #endif
 
-/** COB-ID base for request message (master -> slave)
- */
-#define CANMAT_SDO_REQ_BASE  ((uint16_t)0x600)
-/** COB-ID base for response message (slave -> master)
- */
-#define CANMAT_SDO_RESP_BASE ((uint16_t)0x580)
-
-/** COB-ID mask for node bits */
-#define CANMAT_SDO_NODE_MASK ((uint16_t)0x7F)
-
 /** Make COB-ID for request (master->slave) */
-#define CANMAT_SDO_REQ_ID(node)  ((canid_t)( ((node)&CANMAT_SDO_NODE_MASK) | CANMAT_SDO_REQ_BASE))
+#define CANMAT_SDO_REQ_ID(node)  ((canid_t)( ((node)&CANMAT_NODE_MASK) | CANMAT_FUNC_SDO_RX))
 
 /** Make COB-ID for response (slave->master) */
-#define CANMAT_SDO_RESP_ID(node) ((canid_t)( ((node)&CANMAT_SDO_NODE_MASK) | CANMAT_SDO_RESP_BASE))
+#define CANMAT_SDO_RESP_ID(node) ((canid_t)( ((node)&CANMAT_NODE_MASK) | CANMAT_FUNC_SDO_TX))
 
 typedef enum canmat_command_spec {
     CANMAT_SEG_DL = 0, ///< segment download

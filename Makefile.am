@@ -23,7 +23,7 @@ m4_dnl bin_PROGRAMS = esdcantool
 bin_PROGRAMS = canmat
 noinst_PROGRAMS = test_sdo
 
-libsocanmatic_la_SOURCES = src/sdo.c src/ds301.c src/error.c src/dict.c
+libsocanmatic_la_SOURCES = src/sdo.c src/ds301.c src/error.c src/dict.c src/util.c
 
 libsocanmatic_socketcan_la_SOURCES = src/socketcan.c
 
@@ -32,7 +32,7 @@ libsocanmatic402_la_SOURCES = dict402.c
 test_sdo_SOURCES = src/test_sdo.c
 test_sdo_LDADD = libsocanmatic.la libsocanmatic_socketcan.la libsocanmatic402.la
 
-canmat_SOURCES = src/canmat.c
+canmat_SOURCES = src/canmat.c src/display.c
 canmat_LDADD = libsocanmatic.la libsocanmatic_socketcan.la libsocanmatic402.la
 
 dict402.c: $(top_srcdir)/canmatc $(top_srcdir)/eds/dsp301.eds $(top_srcdir)/eds/dsp402.eds

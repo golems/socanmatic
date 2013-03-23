@@ -1,5 +1,7 @@
+/* -*- mode: C; c-basic-offset: 4 -*- */
+/* ex: set shiftwidth=4 tabstop=4 expandtab: */
 /*
- * Copyright (c) 2008, Georgia Tech Research Corporation
+ * Copyright (c) 2008-2013, Georgia Tech Research Corporation
  * All rights reserved.
  *
  * Author(s): Neil T. Dantam <ntd@gatech.edu>
@@ -38,17 +40,26 @@
  *
  */
 
-#ifndef CANMAT_PRIVATE_H
-#define CANMAT_PRIVATE_H
-
-_Bool canmat_can_ok( ssize_t result );
-ssize_t canmat_can_send( int fd, const struct can_frame *f );
-ssize_t canmat_can_recv( int fd, struct can_frame *f );
-int canmat_can_open ( const char *name );
+#include <errno.h>
+#include <string.h>
+#include "socanmatic.h"
+#include "socanmatic_private.h"
 
 
-void canmat_dump_frame (FILE *f, const struct can_frame *can );
-void canmat_display( const canmat_dict_t *dict, const struct can_frame *can );
+
+void canmat_dump_frame (FILE *f, const struct can_frame *can ) {
+    fprintf(f,"%03x[%d]", can->can_id, can->can_dlc );
+    int i;
+    for( i = 0; i < can->can_dlc; i++) {
+        uint8_t u = can->data[i];
+        fprintf(f,"%c%02x",
+                i ? ':' : ' ',
+                u );
+
+    }
+    fputc('\n',f);
+}
+
 
 /* ex: set shiftwidth=4 tabstop=4 expandtab: */
 /* Local Variables:                          */
@@ -56,4 +67,3 @@ void canmat_display( const canmat_dict_t *dict, const struct can_frame *can );
 /* c-basic-offset: 4                         */
 /* indent-tabs-mode:  nil                    */
 /* End:                                      */
-#endif //CANMAT_PRIVATE_H
