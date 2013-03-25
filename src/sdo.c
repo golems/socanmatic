@@ -145,10 +145,10 @@ ssize_t canmat_sdo_query_resp( int fd, const canmat_sdo_msg_t *resp ) {
 }
 
 void canmat_sdo_set_ex_dl( canmat_sdo_msg_t *sdo,
-                           uint8_t node, uint16_t index, uint8_t subindex ) {
+                           uint8_t node, uint16_t idx, uint8_t subindex ) {
 
     /* Set values */
-    sdo->index = index;
+    sdo->index = idx;
     sdo->subindex = subindex;
     sdo->node = node;
 
@@ -164,12 +164,12 @@ void canmat_sdo_set_ex_dl( canmat_sdo_msg_t *sdo,
 #define DEF_SDO_DL( VAL_TYPE, SUFFIX )                                  \
     ssize_t canmat_sdo_dl_ ## SUFFIX( int fd, uint8_t *rccs,            \
                                       uint8_t node,                     \
-                                      uint16_t index, uint8_t subindex, \
+                                      uint16_t idx, uint8_t subindex,   \
                                       VAL_TYPE value ) {                \
         canmat_sdo_msg_t req, resp;                                     \
         canmat_sdo_set_data_ ## SUFFIX( &req, value );                  \
         canmat_sdo_set_ex_dl( &req, node,                               \
-                              index, subindex );                        \
+                              idx, subindex );                          \
         ssize_t r = canmat_sdo_query( fd, &req, &resp );                \
         if ( canmat_can_ok(r) ) *rccs = resp.cmd.ccs;                   \
         return r;                                                       \
@@ -192,7 +192,7 @@ DEF_SDO_DL(  int32_t, i32 )
  */
 static ssize_t sdo_ul( int fd,
                        canmat_sdo_msg_t *resp,
-                       uint8_t node, uint16_t index, uint8_t subindex ) {
+                       uint8_t node, uint16_t idx, uint8_t subindex ) {
     canmat_sdo_msg_t req;
     // Build SDO Message
     req.cmd.ccs = CANMAT_EX_UL;
@@ -201,7 +201,7 @@ static ssize_t sdo_ul( int fd,
     req.cmd.s = 0;
 
     req.node = node;
-    req.index = index;
+    req.index = idx;
     req.subindex = subindex;
     req.length = 0;
     // Query
@@ -215,11 +215,11 @@ static ssize_t sdo_ul( int fd,
     ssize_t canmat_sdo_ul_ ## SUFFIX( int fd,                           \
                                       uint8_t *rccs, VAL_TYPE *value,   \
                                       uint8_t node,                     \
-                                      uint16_t index, uint8_t subindex ) \
+                                      uint16_t idx, uint8_t subindex )  \
     {                                                                   \
         canmat_sdo_msg_t resp;                                          \
         ssize_t r;                                                      \
-        r = sdo_ul(fd, &resp, node, index, subindex);                   \
+        r = sdo_ul(fd, &resp, node, idx, subindex);                     \
         if( canmat_can_ok(r) ) {                                        \
             *rccs = resp.cmd.ccs;                                       \
             *value = canmat_sdo_get_data_ ## SUFFIX( &resp );           \
