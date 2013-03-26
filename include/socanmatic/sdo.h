@@ -146,14 +146,15 @@ CANMAT_SDO_GEN_SET_DATA( uint32_t, 32, u );
 CANMAT_SDO_GEN_SET_DATA( int32_t,  32, i );
 CANMAT_SDO_GEN_SET_DATA( float,    32, f );
 
-#define CANMAT_SDO_GEN_GET_DATA( CTYPE, BITS, C )               \
-    static inline CTYPE                                         \
-    canmat_sdo_get_data_ ## C ## BITS ( canmat_sdo_msg_t *sdo ) \
-    {                                                           \
-        union canmat_byte ## BITS u;                            \
-        u.u = canmat_byte_ldle ## BITS(sdo->data );             \
-        return u.C;                                             \
+#define CANMAT_SDO_GEN_GET_DATA( CTYPE, BITS, C )                       \
+    static inline CTYPE                                                 \
+    canmat_sdo_get_data_ ## C ## BITS ( const canmat_sdo_msg_t *sdo )   \
+    {                                                                   \
+        union canmat_byte ## BITS u;                                    \
+        u.u = canmat_byte_ldle ## BITS(sdo->data );                     \
+        return u.C;                                                     \
     }
+
 CANMAT_SDO_GEN_GET_DATA( uint8_t, 8, u );
 CANMAT_SDO_GEN_GET_DATA( int8_t,  8, i );
 CANMAT_SDO_GEN_GET_DATA( uint16_t, 16, u );
@@ -247,6 +248,9 @@ ssize_t canmat_sdo_ul_i32( int fd, uint8_t *rccs,
                            uint8_t node,
                            uint16_t index, uint8_t subindex );
 
+
+/** Return a string describing the error status of SDO */
+const char *canmat_sdo_strerror( const canmat_sdo_msg_t *sdo );
 
 
 

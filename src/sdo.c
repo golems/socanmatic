@@ -253,6 +253,75 @@ int canmat_sdo_print( FILE *f, const canmat_sdo_msg_t *sdo ) {
     return 0;
 }
 
+const char *canmat_sdo_strerror( const canmat_sdo_msg_t *sdo ) {
+    uint32_t e = canmat_sdo_get_data_u32(sdo);
+    switch (e)
+    {
+    case 0x00000000:
+        return "Error Reset or no Error";
+    case 0x05030000:
+        return "Toggle bit not alternated";
+    case 0x05040000:
+        return "SDO protocol timed out";
+    case 0x05040001:
+        return "Client/server command specifier not valid or unknown";
+    case 0x05040002:
+        return "Invalid block size (block mode only)";
+    case 0x05040003:
+        return "Invalid sequence number (block mode only)";
+    case 0x05040004:
+        return "CRC error (block mode only)";
+    case 0x05040005:
+        return "Out of memory";
+    case 0x06010000:
+        return "Unsupported access to an object";
+    case 0x06010001:
+        return "Attempt to read a write only object";
+    case 0x06010002:
+        return "Attempt to write a read only object";
+    case 0x06020000:
+        return "Object does not exist in the object dictionary";
+    case 0x06040041:
+        return "Object cannot be mapped to the PDO";
+    case 0x06040042:
+        return "The number and length of the objects to be mapped would exceed PDO length";
+    case 0x06040043:
+        return "General parameter incompatibility reason";
+    case 0x06040047:
+        return "General internal incompatibility in the device";
+    case 0x06060000:
+        return "Access failed due to an hardware error";
+    case 0x06070010:
+        return "Data type does not match, length of service parameter does not match";
+    case 0x06070012:
+        return "Data type does not match, length of service parameter too high";
+    case 0x06070013:
+        return "Data type does not match, length of service parameter too low";
+    case 0x06090011:
+        return "Sub-index does not exist";
+    case 0x06090030:
+        return "Value range of parameter exceeded (only for write access)";
+    case 0x06090031:
+        return "Value of parameter written too high";
+    case 0x06090032:
+        return "Value of parameter written too low";
+    case 0x06090036:
+        return "Maximum value is less than minimum value";
+    case 0x08000000:
+        return "general error";
+    case 0x08000020:
+        return "Data cannot be transferred or stored to the application";
+    case 0x08000021:
+        return "Data cannot be transferred or stored to the application because of local control";
+    case 0x08000022:
+        return "Data cannot be transferred or stored to the application because of the present device state";
+    case 0x08000023:
+        return "Object dictionary dynamic generation fails or no object dictionary is present (e.g. object dictionary is generated from file and generation fails because of an file error)";
+    default: return "Unknown";
+    }
+}
+
+
 /* ex: set shiftwidth=4 tabstop=4 expandtab: */
 /* Local Variables:                          */
 /* mode: c                                   */

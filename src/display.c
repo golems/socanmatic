@@ -146,7 +146,16 @@ static void display_sdo( const canmat_dict_t *dict, const struct can_frame *can 
         );
 
     // print data
-    if( (CANMAT_FUNC_SDO_RX == func &&
+    if ( CANMAT_ABORT == sdo.cmd.ccs ) {
+        if( 4 == sdo.length ) {
+            printf( " `%s' (0x%04"PRIx32")",
+                    canmat_sdo_strerror(&sdo),
+                    canmat_sdo_get_data_u32(&sdo) );
+        } else {
+            printf(" bad length");
+            sdo_bytes(&sdo);
+        }
+    } else if( (CANMAT_FUNC_SDO_RX == func &&
          CANMAT_EX_DL == sdo.cmd.ccs) ||
         (CANMAT_FUNC_SDO_TX == func &&
          CANMAT_EX_UL == sdo.cmd.ccs) ) {
