@@ -314,7 +314,7 @@ int main( int argc, char ** argv ) {
         case '?':   /* help     */
         case 'h':
         case 'H':
-            puts( "Usage: socia [OPTION...] [dump]\n"
+            puts( "Usage: canmat [OPTION...] [dump]\n"
                   "Shell tool for CANopen\n"
                   "\n"
                   "Options:\n"
@@ -346,7 +346,7 @@ int main( int argc, char ** argv ) {
         posarg(argv[optind++], i++);
     }
 
-    hard_assert( opt_command, "socia: missing command.\nTry `socia -H' for more information.\n");
+    hard_assert( opt_command, "canmat: missing command.\nTry `canmat -H' for more information.\n");
 
     return opt_command();
 
