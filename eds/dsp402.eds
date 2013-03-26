@@ -104,7 +104,6 @@ ObjectType=RECORD
 
 [6410sub0]
 ParameterName=Motor data/number of entries
-ObjectType=VAR
 DataType=UNSIGNED8
 AccessType=RO
 PDOMapping=0
@@ -143,7 +142,6 @@ ObjectType=RECORD
 
 [6510sub0]
 ParameterName=Drive data/number of entries
-ObjectType=VAR
 DataType=UNSIGNED8
 AccessType=RO
 PDOMapping=0
@@ -163,7 +161,6 @@ AccessType=RO
 
 [60FEsub0]
 ParameterName=Digital outputs/number of entries
-ObjectType=VAR
 DataType=UNSIGNED8
 AccessType=RW
 PDOMapping=1
@@ -171,7 +168,6 @@ DefaultValue=0
 
 [60FEsub2]
 ParameterName=Digital outputs/bit mask
-ObjectType=ARRAY
 DataType=UNSIGNED32
 AccessType=RW
 PDOMapping=1
@@ -280,7 +276,6 @@ PDOMapping=0
 
 [608Fsub0]
 ParameterName=Position encoder resolution/number of entries
-ObjectType=VAR
 DataType=UNSIGNED8
 AccessType=RO
 PDOMapping=0
@@ -288,7 +283,6 @@ DefaultValue=2
 
 [608Fsub1]
 ParameterName=Position encoder resolution/Encoder increments
-ObjectType=VAR
 DataType=UNSIGNED32
 AccessType=RW
 PDOMapping=1
@@ -296,7 +290,6 @@ DefaultValue=1
 
 [608Fsub2]
 ParameterName=Position encoder resolution/Motor revolutions
-ObjectType=VAR
 DataType=UNSIGNED32
 AccessType=RW
 PDOMapping=1
@@ -312,7 +305,6 @@ PDOMapping=0
 
 [6090sub0]
 ParameterName=Velocity encoder resolution/number of entries
-ObjectType=VAR
 DataType=UNSIGNED8
 AccessType=RO
 PDOMapping=0
@@ -320,7 +312,6 @@ DefaultValue=2
 
 [6090sub1]
 ParameterName=Velocity encoder resolution/Encoder increments per second
-ObjectType=VAR
 DataType=UNSIGNED32
 AccessType=RW
 PDOMapping=1
@@ -328,7 +319,6 @@ DefaultValue=1
 
 [6090sub2]
 ParameterName=Velocity encoder resolution/Motor revolutions per second
-ObjectType=VAR
 DataType=UNSIGNED32
 AccessType=RW
 PDOMapping=1
@@ -344,7 +334,6 @@ PDOMapping=0
 
 [6091sub0]
 ParameterName=Gear Ratio/number of entries
-ObjectType=VAR
 DataType=UNSIGNED8
 AccessType=RO
 PDOMapping=0
@@ -352,7 +341,6 @@ DefaultValue=2
 
 [6091sub1]
 ParameterName=Gear Ratio/Motor revolutions
-ObjectType=VAR
 DataType=UNSIGNED32
 AccessType=RW
 PDOMapping=1
@@ -360,7 +348,6 @@ DefaultValue=1
 
 [6091sub2]
 ParameterName=Gear Ratio/Shaft revolutions
-ObjectType=VAR
 DataType=UNSIGNED32
 AccessType=RW
 PDOMapping=1
@@ -376,7 +363,6 @@ PDOMapping=0
 
 [6092sub0]
 ParameterName=Feed constant/number of entries
-ObjectType=VAR
 DataType=UNSIGNED8
 AccessType=RO
 PDOMapping=0
@@ -384,7 +370,6 @@ DefaultValue=2
 
 [6092sub1]
 ParameterName=Feed constant/Feed
-ObjectType=VAR
 DataType=UNSIGNED32
 AccessType=RW
 PDOMapping=1
@@ -392,7 +377,6 @@ DefaultValue=1
 
 [6092sub2]
 ParameterName=Feed constant/Shaft revolutions
-ObjectType=VAR
 DataType=UNSIGNED32
 AccessType=RW
 PDOMapping=1
@@ -408,7 +392,6 @@ PDOMapping=0
 
 [6092sub0]
 ParameterName=Feed constant/number of entries
-ObjectType=VAR
 DataType=UNSIGNED8
 AccessType=RO
 PDOMapping=0
@@ -416,7 +399,6 @@ DefaultValue=2
 
 [6092sub1]
 ParameterName=Feed constant/Feed
-ObjectType=VAR
 DataType=UNSIGNED32
 AccessType=RW
 PDOMapping=1
@@ -424,7 +406,6 @@ DefaultValue=1
 
 [6092sub2]
 ParameterName=Feed constant/Shaft revolutions
-ObjectType=VAR
 DataType=UNSIGNED32
 AccessType=RW
 PDOMapping=1
@@ -440,7 +421,6 @@ PDOMapping=0
 
 [6093sub0]
 ParameterName=Position factor/number of entries
-ObjectType=VAR
 DataType=UNSIGNED8
 AccessType=RO
 PDOMapping=0
@@ -448,7 +428,6 @@ DefaultValue=2
 
 [6093sub1]
 ParameterName=Position factor/Numerator
-ObjectType=VAR
 DataType=UNSIGNED32
 AccessType=RW
 PDOMapping=1
@@ -456,7 +435,6 @@ DefaultValue=1
 
 [6093sub2]
 ParameterName=Position factor/Feed constant
-ObjectType=VAR
 DataType=UNSIGNED32
 AccessType=RW
 PDOMapping=1
@@ -471,7 +449,6 @@ PDOMapping=0
 
 [6094sub0]
 ParameterName=Velocity encoder factor/number of entries
-ObjectType=VAR
 DataType=UNSIGNED8
 AccessType=RO
 PDOMapping=0
@@ -479,7 +456,6 @@ DefaultValue=2
 
 [6094sub1]
 ParameterName=Velocity encoder factor/Numerator
-ObjectType=VAR
 DataType=UNSIGNED32
 AccessType=RW
 PDOMapping=1
@@ -487,7 +463,6 @@ DefaultValue=1
 
 [6094sub2]
 ParameterName=Velocity encoder factor/Divisor
-ObjectType=VAR
 DataType=UNSIGNED32
 AccessType=RW
 PDOMapping=1
@@ -502,7 +477,6 @@ PDOMapping=0
 
 [6095sub0]
 ParameterName=Velocity factor 1/number of entries
-ObjectType=VAR
 DataType=UNSIGNED8
 AccessType=RO
 PDOMapping=0
@@ -510,7 +484,6 @@ DefaultValue=2
 
 [6095sub1]
 ParameterName=Velocity factor 1/Numerator
-ObjectType=VAR
 DataType=UNSIGNED32
 AccessType=RW
 PDOMapping=1
@@ -518,7 +491,6 @@ DefaultValue=1
 
 [6095sub2]
 ParameterName=Velocity factor 1/Divisor
-ObjectType=VAR
 DataType=UNSIGNED32
 AccessType=RW
 PDOMapping=1
@@ -533,7 +505,6 @@ PDOMapping=0
 
 [6096sub0]
 ParameterName=Velocity factor 2/number of entries
-ObjectType=VAR
 DataType=UNSIGNED8
 AccessType=RO
 PDOMapping=0
@@ -541,7 +512,6 @@ DefaultValue=2
 
 [6096sub1]
 ParameterName=Velocity factor 2/Numerator
-ObjectType=VAR
 DataType=UNSIGNED32
 AccessType=RW
 PDOMapping=1
@@ -549,7 +519,6 @@ DefaultValue=1
 
 [6096sub2]
 ParameterName=Velocity factor 2/Divisor
-ObjectType=VAR
 DataType=UNSIGNED32
 AccessType=RW
 PDOMapping=1
@@ -564,7 +533,6 @@ PDOMapping=0
 
 [6097sub0]
 ParameterName=Acceleration factor/number of entries
-ObjectType=VAR
 DataType=UNSIGNED8
 AccessType=RO
 PDOMapping=0
@@ -572,7 +540,6 @@ DefaultValue=2
 
 [6097sub1]
 ParameterName=Acceleration factor/Numerator
-ObjectType=VAR
 DataType=UNSIGNED32
 AccessType=RW
 PDOMapping=1
@@ -580,7 +547,6 @@ DefaultValue=1
 
 [6097sub2]
 ParameterName=Acceleration factor/Divisor
-ObjectType=VAR
 DataType=UNSIGNED32
 AccessType=RW
 PDOMapping=1

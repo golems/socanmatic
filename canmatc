@@ -56,6 +56,23 @@ def config2dict( config, section ):
         d[o] = config.get(section,o)
     return d
 
+def is_section_index(section):
+    return re.match(r'^[0-9a-fA-F]$', section)
+
+def is_section_subindex(section):
+    return re.match(r'^[0-9a-fA-F]+sub[0-9a-fA-F]+$', section)
+
+def check_eds_entry(filename, section, params):
+    if is_section_subindex( section ):
+        # is var type
+        if 'objecttype' in params:
+            if 'VAR' != params['objecttype']:
+                print "%s: section %s, bad ObjectType %s\n" % (filename, section, params['objecttype'])
+                exit(-1)
+        else:
+            params['objecttype'] = 'VAR'
+    return True
+
 def parse_file( accum_dict, name ):
     '''Write all object dictaries sectons from file in accum_dict.
        Entries are indexed by EDS section.'''
@@ -65,6 +82,7 @@ def parse_file( accum_dict, name ):
     for s in config.sections():
         if re.match(r'^[0-9a-fA-F]+(sub[0-9a-fA-F]+)?$', s):
             accum_dict[s] = config2dict( config, s )
+            check_eds_entry(name, s, accum_dict[s])
 
 def datatype(s):
     s = s.upper();
@@ -77,8 +95,6 @@ def objecttype(s):
     if( re.match(r'VAR|RECORD|ARRAY',s) ):
         return NS+"OBJ_CODE_"+s
     else: return s
-
-
 def sect2index( section ):
     ''' Return (index,subindex)'''
     index = int( re.sub(r'sub.*', '', section), 16 )

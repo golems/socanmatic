@@ -144,21 +144,18 @@ AccessType=RW
 
 [1010sub01]
 ParameterName=Store parameters/save all parameters
-ObjectType=VAR
 DataType=UNSIGNED32
 AccessType=RW ; RO if autonomous storing is supported
 PDOMapping=0
 
 [1010sub02]
 ParameterName=Store parameters/save communication parameters
-ObjectType=VAR
 DataType=UNSIGNED32
 AccessType=RW ; RO if autonomous storing is supported
 PDOMapping=0
 
 [1010sub03]
 ParameterName=Store parameters/save application parameters
-ObjectType=VAR
 DataType=UNSIGNED32
 AccessType=RW ; RO if autonomous storing is supported
 PDOMapping=0
@@ -249,28 +246,24 @@ DataType=Identity
 [1018sub1]
 ParameterName=Identity object/Vendor-ID
 DataType=UNSIGNED32
-ObjectType=VAR
 PDOMapping=0
 AccessType=RO
 
 [1018sub2]
 ParameterName=Identity object/Product code
 DataType=UNSIGNED32
-ObjectType=VAR
 PDOMapping=0
 AccessType=RO
 
 [1018sub3]
 ParameterName=Identity object/Revision number
 DataType=UNSIGNED32
-ObjectType=VAR
 PDOMapping=0
 AccessType=RO
 
 [1018sub4]
 ParameterName=Identity object/Serial number
 DataType=UNSIGNED32
-ObjectType=VAR
 PDOMapping=0
 AccessType=RO
 
@@ -290,14 +283,12 @@ PDOMapping=0
 [1020sub1]
 ParameterName=Verify configuration/Configuration date
 DataType=UNSIGNED32
-ObjectType=ARRAY
 PDOMapping=0
 AccessType=RW
 
 [1020sub2]
 ParameterName=Verify configuration/Configuration time
 DataType=UNSIGNED32
-ObjectType=ARRAY
 PDOMapping=0
 AccessType=RW
 
@@ -322,14 +313,12 @@ PDOMapping=0
 
 [1023sub2]
 ParameterName=OS command/status
-ObjectType=VAR
 DataType=UNSIGNED8
 AccessType=RO
 PDOMapping=0
 
 [1023sub3]
 ParameterName=OS command/reply
-ObjectType=VAR
 DataType=UNSIGNED8
 AccessType=RO
 PDOMapping=0
@@ -355,7 +344,6 @@ AccessType=RW
 
 [1029sub1]
 ParameterName=Error behavior/communication error
-ObjectType=ARRAY
 DataType=UNSIGNED8
 AccessType=RW
 
