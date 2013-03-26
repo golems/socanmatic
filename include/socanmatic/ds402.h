@@ -74,14 +74,15 @@ typedef enum canmat_402_motor_type {
     /* 0x8000 - 0xFFFF manufacturer specific */
 } canmat_402_motor_type_t;
 
+/** Bit mask for the "Supported drive modes" dictionary object */
 typedef enum canmat_402_supported_drive_modes_mask {
-    CANMAT_402_SUPPORTED_DRIVE_MODES_MASK_PP   = 1 << 0,
-    CANMAT_402_SUPPORTED_DRIVE_MODES_MASK_VL   = 1 << 1,
-    CANMAT_402_SUPPORTED_DRIVE_MODES_MASK_PV   = 1 << 2,
-    CANMAT_402_SUPPORTED_DRIVE_MODES_MASK_TQ   = 1 << 3,
+    CANMAT_402_SUPPORTED_DRIVE_MODES_MASK_PP   = 1 << 0, ///< Profile Position
+    CANMAT_402_SUPPORTED_DRIVE_MODES_MASK_VL   = 1 << 1, ///< Velocity
+    CANMAT_402_SUPPORTED_DRIVE_MODES_MASK_PV   = 1 << 2, ///< Profile Velocity
+    CANMAT_402_SUPPORTED_DRIVE_MODES_MASK_TQ   = 1 << 3, ///< Torque
     /* bit 4 reserved */
-    CANMAT_402_SUPPORTED_DRIVE_MODES_MASK_HM   = 1 << 5,
-    CANMAT_402_SUPPORTED_DRIVE_MODES_MASK_IP   = 1 << 6,
+    CANMAT_402_SUPPORTED_DRIVE_MODES_MASK_HM   = 1 << 5, ///< Homing
+    CANMAT_402_SUPPORTED_DRIVE_MODES_MASK_IP   = 1 << 6, ///< Interpolated position
     /* bits 7-15 reserved */
     /* bits 16-31 manufacturer specific */
 } canmat_402_supported_drive_modes_mask_;
