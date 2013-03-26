@@ -53,6 +53,7 @@
 #include "socanmatic/byteorder.h"
 #include "socanmatic/dict.h"
 #include "socanmatic/nmt.h"
+#include "socanmatic/emcy.h"
 #include "socanmatic/sdo.h"
 #include "socanmatic/ds301.h"
 #include "socanmatic/ds402.h"

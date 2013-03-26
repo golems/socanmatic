@@ -56,24 +56,23 @@ extern "C" {
  */
 typedef enum canmat_func_code {
     /* predefined broadcast objects */
-    CANMAT_FUNC_NMT      = 0x000,
-    CANMAT_FUNC_SYNC     = 0x080,
-    CANMAT_FUNC_TIME     = 0x100,
+    CANMAT_FUNC_NMT       = 0x000,
+    CANMAT_FUNC_SYNC_EMCY = 0x080, //< both SYNC and EMCY use this function code
+    CANMAT_FUNC_TIME      = 0x100,
 
     /* predefined peer-to-peer objects */
     /* TX/RX are from the nodes perspective */
-    CANMAT_FUNC_EMCY     = 0x080,
-    CANMAT_FUNC_PDO1_TX  = 0x180,
-    CANMAT_FUNC_PDO1_RX  = 0x200,
-    CANMAT_FUNC_PDO2_TX  = 0x280,
-    CANMAT_FUNC_PDO2_RX  = 0x300,
-    CANMAT_FUNC_PDO3_TX  = 0x380,
-    CANMAT_FUNC_PDO3_RX  = 0x400,
-    CANMAT_FUNC_PDO4_TX  = 0x480,
-    CANMAT_FUNC_PDO4_RX  = 0x500,
-    CANMAT_FUNC_SDO_TX   = 0x580,
-    CANMAT_FUNC_SDO_RX   = 0x600,
-    CANMAT_FUNC_NMT_ERR  = 0x700
+    CANMAT_FUNC_PDO1_TX   = 0x180,
+    CANMAT_FUNC_PDO1_RX   = 0x200,
+    CANMAT_FUNC_PDO2_TX   = 0x280,
+    CANMAT_FUNC_PDO2_RX   = 0x300,
+    CANMAT_FUNC_PDO3_TX   = 0x380,
+    CANMAT_FUNC_PDO3_RX   = 0x400,
+    CANMAT_FUNC_PDO4_TX   = 0x480,
+    CANMAT_FUNC_PDO4_RX   = 0x500,
+    CANMAT_FUNC_SDO_TX    = 0x580,
+    CANMAT_FUNC_SDO_RX    = 0x600,
+    CANMAT_FUNC_NMT_ERR   = 0x700
 } canmat_func_code_t;
 
 static inline uint16_t canmat_frame_func( const struct can_frame *can ) {
@@ -85,34 +84,6 @@ static inline uint8_t canmat_frame_node( const struct can_frame *can ) {
 }
 
 const char *canmat_sdo_abort_code2str( uint32_t code );
-
-typedef enum canmat_emcy_class {
-    CANMAT_EMCY_CODE_CLASS_NO_ERROR      = 0x0000,
-    CANMAT_EMCY_CODE_CLASS_GENERIC       = 0x1000,
-    CANMAT_EMCY_CODE_CURRENT             = 0x2000,
-    CANMAT_EMCY_CODE_CURRENT_INPUT       = 0x2100,
-    CANMAT_EMCY_CODE_CURRENT_INSIDE      = 0x2200,
-    CANMAT_EMCY_CODE_CURRENT_OUTPUT      = 0x2300,
-    CANMAT_EMCY_CODE_VOLTAGE             = 0x3000,
-    CANMAT_EMCY_CODE_VOLTAGE_MAINS       = 0x3100,
-    CANMAT_EMCY_CODE_VOLTAGE_INSIDE      = 0x3200,
-    CANMAT_EMCY_CODE_VOLTAGE_OUTPUT      = 0x3300,
-    CANMAT_EMCY_CODE_TEMP                = 0x4000,
-    CANMAT_EMCY_CODE_TEMP_AMBIENT        = 0x4100,
-    CANMAT_EMCY_CODE_TEMP_DEVICE         = 0x4200,
-    CANMAT_EMCY_CODE_HARDWARE            = 0x5000,
-    CANMAT_EMCY_CODE_SOFTWARE            = 0x6000,
-    CANMAT_EMCY_CODE_SOFTWARE_INTERNAL   = 0x6100,
-    CANMAT_EMCY_CODE_SOFTWARE_USER       = 0x6200,
-    CANMAT_EMCY_CODE_SOFTWARE_DATA       = 0x6300,
-    CANMAT_EMCY_CODE_ADDITIONAL_MODULES  = 0x7000,
-    CANMAT_EMCY_CODE_MONITORING          = 0x8000,
-    CANMAT_EMCY_CODE_MONITORING_COMM     = 0x8100,
-    CANMAT_EMCY_CODE_MONITORING_PROTO    = 0x8100,
-    CANMAT_EMCY_CODE_EXTERNAL            = 0x9000,
-    CANMAT_EMCY_CODE_ADDITIONAL_FUNC     = 0xF000,
-    CANMAT_EMCY_CODE_DEVICE_SPECIFIC     = 0xFF00
-} canmat_emcy_class_t;
 
 typedef enum canmat_error_reg_mask {
     CANMAT_ERROR_REG_MASK_ERROR     = 1 << 0,

@@ -50,6 +50,7 @@
 static void display_raw( const struct can_frame *can ) ;
 static void display_sdo( const canmat_dict_t *dict, const struct can_frame *can ) ;
 static void display_nmt( const struct can_frame *can ) ;
+static void display_emcy( const struct can_frame *can ) ;
 static void display_nmt_err( const struct can_frame *can ) ;
 static void display_malformed( const struct can_frame *can ) ;
 
@@ -67,8 +68,11 @@ void canmat_display( const canmat_dict_t *dict, const struct can_frame *can ) {
     case CANMAT_FUNC_NMT_ERR:
         display_nmt_err( can );
         break;
+    case CANMAT_FUNC_SYNC_EMCY:
+        /* TODO: display sync */
+        display_emcy(can);
+        break;
     case CANMAT_FUNC_TIME:
-    case CANMAT_FUNC_SYNC: /* or EMCY */
     case CANMAT_FUNC_PDO1_TX:
     case CANMAT_FUNC_PDO1_RX:
     case CANMAT_FUNC_PDO2_TX:
@@ -218,7 +222,6 @@ static void display_nmt( const struct can_frame *can )  {
 }
 
 static void display_nmt_err( const struct can_frame *can ) {
-
     uint16_t func = canmat_frame_func(can);
     uint8_t node = canmat_frame_node(can);
 
@@ -244,6 +247,55 @@ static void display_nmt_err( const struct can_frame *can ) {
 
     printf( "nmt-err (0x%03x), node 0x%02x %s (0x%02x)\n",
             func, node, status, can->data[0] );
+}
+
+
+static void display_emcy( const struct can_frame *can ) {
+    uint16_t func = canmat_frame_func(can);
+    uint8_t node = canmat_frame_node(can);
+
+    assert( CANMAT_FUNC_SYNC_EMCY == func );
+
+    if( can->can_dlc < 3 ) {
+        display_malformed(can);
+        return;
+    }
+
+    uint16_t eec = canmat_frame_emcy_get_eec( can );
+    uint8_t er = canmat_frame_emcy_get_er( can );
+
+    const char *status = "unknown";
+    switch(eec & 0xFF00) {
+
+    case CANMAT_EMCY_CODE_CLASS_NO_ERROR:     status = "no_error";           break;
+    case CANMAT_EMCY_CODE_CLASS_GENERIC:      status = "generic";            break;
+    case CANMAT_EMCY_CODE_CURRENT:            status = "current";            break;
+    case CANMAT_EMCY_CODE_CURRENT_INPUT:      status = "current_input";      break;
+    case CANMAT_EMCY_CODE_CURRENT_INSIDE:     status = "current_inside";     break;
+    case CANMAT_EMCY_CODE_CURRENT_OUTPUT:     status = "current_output";     break;
+    case CANMAT_EMCY_CODE_VOLTAGE:            status = "voltage";            break;
+    case CANMAT_EMCY_CODE_VOLTAGE_MAINS:      status = "voltage_mains";      break;
+    case CANMAT_EMCY_CODE_VOLTAGE_INSIDE:     status = "voltage_inside";     break;
+    case CANMAT_EMCY_CODE_VOLTAGE_OUTPUT:     status = "voltage_output";     break;
+    case CANMAT_EMCY_CODE_TEMP:               status = "temp";               break;
+    case CANMAT_EMCY_CODE_TEMP_AMBIENT:       status = "temp_ambient";       break;
+    case CANMAT_EMCY_CODE_TEMP_DEVICE:        status = "temp_device";        break;
+    case CANMAT_EMCY_CODE_HARDWARE:           status = "hardware";           break;
+    case CANMAT_EMCY_CODE_SOFTWARE:           status = "software";           break;
+    case CANMAT_EMCY_CODE_SOFTWARE_INTERNAL:  status = "software_internal";  break;
+    case CANMAT_EMCY_CODE_SOFTWARE_USER:      status = "software_user";      break;
+    case CANMAT_EMCY_CODE_SOFTWARE_DATA:      status = "software_data";      break;
+    case CANMAT_EMCY_CODE_ADDITIONAL_MODULES: status = "additional_modules"; break;
+    case CANMAT_EMCY_CODE_MONITORING:         status = "monitoring";         break;
+    case CANMAT_EMCY_CODE_MONITORING_COMM:    status = "monitoring_comm";    break;
+    case CANMAT_EMCY_CODE_MONITORING_PROTO:   status = "monitoring_proto";   break;
+    case CANMAT_EMCY_CODE_EXTERNAL:           status = "external";           break;
+    case CANMAT_EMCY_CODE_ADDITIONAL_FUNC:    status = "additional_func";    break;
+    case CANMAT_EMCY_CODE_DEVICE_SPECIFIC:    status = "device_specific";    break;
+    }
+
+    printf( "emcy (0x%03x), node 0x%02x eec %s (0x%02x) er 0x%x \n",
+            func, node, status, eec, er);
 }
 
 /* ex: set shiftwidth=4 tabstop=4 expandtab: */
