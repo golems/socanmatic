@@ -199,6 +199,22 @@ static void display_sdo( const canmat_dict_t *dict, const struct can_frame *can 
 static void display_nmt( const struct can_frame *can )  {
     assert( CANMAT_FUNC_NMT == can->can_id );
 
+    if( can->can_dlc >= 2 ) {
+        const char *action = "unknown";
+        switch( can->data[0] ) {
+        case CANMAT_NMT_START_REMOTE: action = "start";      break;
+        case CANMAT_NMT_STOP_REMOTE:  action = "stop";       break;
+        case CANMAT_NMT_PRE_OP:       action = "pre-op";     break;
+        case CANMAT_NMT_RESET_NODE:   action = "reset-node"; break;
+        case CANMAT_NMT_RESET_COM:    action = "reset-com";  break;
+        }
+        printf("nmt, node 0x%"PRIx8" %s (0x%"PRIx8")\n",
+               can->data[1], action, can->data[0]);
+    } else {
+        display_malformed(can);
+    }
+
+
 }
 
 static void display_nmt_err( const struct can_frame *can ) {
@@ -214,7 +230,6 @@ static void display_nmt_err( const struct can_frame *can ) {
     }
 
     const char *status = "unknown";
-
 
     switch(can->data[0]) {
     case CANMAT_NMT_ERR_BOOT:     status = "boot";

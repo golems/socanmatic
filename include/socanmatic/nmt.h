@@ -73,7 +73,6 @@ extern "C" {
 /*********************/
 
 typedef enum canmat_nmt_msg {
-    CANMAT_NMT_INVAL        = -1,
     CANMAT_NMT_START_REMOTE = 0x1,
     CANMAT_NMT_STOP_REMOTE  = 0x2,
     CANMAT_NMT_PRE_OP       = 0x80,
