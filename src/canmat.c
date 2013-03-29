@@ -385,6 +385,10 @@ int cmd_pollin( void (printer)(struct can_frame*) ) {
 
         // print all available data
         for( size_t i = 0; i < canset.n; i ++ ) {
+            hard_assert( 0 == ((canset.pfd[i].revents & POLLERR) ||
+                               (canset.pfd[i].revents & POLLHUP) ||
+                               (canset.pfd[i].revents & POLLNVAL) ),
+                         "Error on iface %s\n", canset.iface[i] );
             if( canset.pfd[i].revents & POLLIN ) {
                 struct can_frame can;
                 // read the actual message
