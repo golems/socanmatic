@@ -1,8 +1,8 @@
-/*
- * Copyright (c) 2013, Georgia Tech Research Corporation
+/* Copyright (c) 2008-2013, Georgia Tech Research Corporation
  * All rights reserved.
  *
  * Author(s): Neil T. Dantam <ntd@gatech.edu>
+ *
  * Georgia Tech Humanoid Robotics Lab
  * Under Direction of Prof. Mike Stilman <mstilman@cc.gatech.edu>
  *
@@ -38,26 +38,54 @@
  *
  */
 
-#ifndef SOCANMATIC_H
-#define SOCANMATIC_H
-
-#include <stdio.h>
-#include <inttypes.h>
-
-#include <sys/socket.h>
-#include <linux/can.h>
-#include <linux/can/raw.h>
+#ifndef SOCANMATIC_IFACE_H
+#define SOCANMATIC_IFACE_H
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#include "socanmatic/status.h"
-#include "socanmatic/iface.h"
-#include "socanmatic/byteorder.h"
-#include "socanmatic/dict.h"
-#include "socanmatic/nmt.h"
-#include "socanmatic/emcy.h"
-#include "socanmatic/sdo.h"
-#include "socanmatic/ds301.h"
-#include "socanmatic/ds402.h"
+struct canmat_iface;
 
-#endif //SOCANMATIC_H
+struct canmat_iface_vtable {
+    canmat_status_t (*send)( struct canmat_iface *cif, const struct can_frame *frame );
+    canmat_status_t (*recv)( struct canmat_iface *cif, struct can_frame *frame );
+    canmat_status_t (*destroy)( struct canmat_iface *cif );
+    const char *(*strerror)( struct canmat_iface *cif );
+};
+
+typedef struct canmat_iface {
+    struct canmat_iface_vtable vtable;
+    int fd;
+    int err;
+} canmat_iface_t;
+
+
+canmat_status_t canmat_iface_open_socketcan( struct canmat_iface *cif, const char *name );
+
+static inline canmat_status_t canmat_iface_send( struct canmat_iface *cif, const struct can_frame *frame ) {
+    return cif->vtable.send(cif,frame);
+}
+static inline canmat_status_t canmat_iface_recv( struct canmat_iface *cif, struct can_frame *frame ) {
+    return cif->vtable.recv(cif,frame);
+}
+static inline canmat_status_t canmat_iface_destroy( struct canmat_iface *cif ) {
+    return cif->vtable.destroy(cif);
+}
+static inline const char *canmat_iface_strerror( struct canmat_iface *cif ) {
+    return cif->vtable.strerror(cif);
+}
+
+#ifdef __cplusplus
+}
+#endif
+
+/* ex: set shiftwidth=4 tabstop=4 expandtab: */
+/* Local Variables:                          */
+/* mode: c                                   */
+/* c-basic-offset: 4                         */
+/* indent-tabs-mode:  nil                    */
+/* End:                                      */
+
+#endif //SOCANMATIC_IFACE_H

@@ -102,15 +102,15 @@ typedef struct canmat_sdo_msg {
 } canmat_sdo_msg_t;
 
 /// Send and SDO request and wait for the response
-ssize_t canmat_sdo_query( int fd, const canmat_sdo_msg_t *req,
-                          canmat_sdo_msg_t *resp );
+canmat_status_t canmat_sdo_query( canmat_iface_t *cif, const canmat_sdo_msg_t *req,
+                                  canmat_sdo_msg_t *resp );
 
 /// Send an SDO query
-ssize_t canmat_sdo_query_send( int fd, const canmat_sdo_msg_t *req );
+canmat_status_t canmat_sdo_query_send( canmat_iface_t *cif, const canmat_sdo_msg_t *req );
 
 /// Receive and SDO query response
-ssize_t canmat_sdo_query_recv( int fd, canmat_sdo_msg_t *resp,
-                               const canmat_sdo_msg_t *req );
+canmat_status_t canmat_sdo_query_recv( canmat_iface_t *cif, canmat_sdo_msg_t *resp,
+                                       const canmat_sdo_msg_t *req );
 
 static inline uint8_t canmat_sdo_cmd_byte( const canmat_sdo_msg_t *sdo ) {
     return (uint8_t) ( (sdo->cmd.s ? 1 : 0)            |
@@ -126,7 +126,7 @@ int canmat_sdo_print( FILE *f, const canmat_sdo_msg_t *sdo );
  * These messages are only sent by slave devices, so this is mainly
  * for testing.
  */
-ssize_t canmat_sdo_query_resp( int fd, const canmat_sdo_msg_t *resp );
+canmat_status_t canmat_sdo_query_resp( canmat_iface_t *cif, const canmat_sdo_msg_t *resp );
 
 
 #define CANMAT_SDO_GEN_SET_DATA( CTYPE, BITS, C )                       \
@@ -182,71 +182,83 @@ void canmat_sdo_set_ex_dl( canmat_sdo_msg_t *sdo,
 /*********/
 /* 8-bit */
 /*********/
-ssize_t canmat_sdo_dl_u8( int fd, uint8_t *rccs,
-                          uint8_t node,
-                          uint16_t index, uint8_t subindex,
-                          uint8_t value );
+canmat_status_t canmat_sdo_dl_u8(
+    canmat_iface_t *cif, uint8_t *rccs,
+    uint8_t node,
+    uint16_t index, uint8_t subindex,
+    uint8_t value );
 
-ssize_t canmat_sdo_ul_u8( int fd, uint8_t *rccs,
-                          uint8_t *value,
-                          uint8_t node,
-                          uint16_t index, uint8_t subindex );
+canmat_status_t canmat_sdo_ul_u8(
+    canmat_iface_t *cif, uint8_t *rccs,
+    uint8_t *value,
+    uint8_t node,
+    uint16_t index, uint8_t subindex );
 
-ssize_t canmat_sdo_dl_i8( int fd, uint8_t *rccs,
-                          uint8_t node,
-                          uint16_t index, uint8_t subindex,
-                          int8_t value );
+canmat_status_t canmat_sdo_dl_i8(
+    canmat_iface_t *cif, uint8_t *rccs,
+    uint8_t node,
+    uint16_t index, uint8_t subindex,
+    int8_t value );
 
-ssize_t canmat_sdo_ul_i8( int fd, uint8_t *rccs,
-                          int8_t *value,
-                          uint8_t node,
-                          uint16_t index, uint8_t subindex );
+canmat_status_t canmat_sdo_ul_i8(
+    canmat_iface_t *cif, uint8_t *rccs,
+    int8_t *value,
+    uint8_t node,
+    uint16_t index, uint8_t subindex );
 
 /**********/
 /* 16-bit */
 /**********/
-ssize_t canmat_sdo_dl_u16( int fd, uint8_t *rccs,
-                           uint8_t node,
-                           uint16_t index, uint8_t subindex,
-                           uint16_t value );
+canmat_status_t canmat_sdo_dl_u16(
+    canmat_iface_t *cif, uint8_t *rccs,
+    uint8_t node,
+    uint16_t index, uint8_t subindex,
+    uint16_t value );
 
-ssize_t canmat_sdo_ul_u16( int fd, uint8_t *rccs,
-                           uint16_t *value,
-                           uint8_t node,
-                           uint16_t index, uint8_t subindex );
+canmat_status_t canmat_sdo_ul_u16(
+    canmat_iface_t *cif, uint8_t *rccs,
+    uint16_t *value,
+    uint8_t node,
+    uint16_t index, uint8_t subindex );
 
-ssize_t canmat_sdo_dl_i16( int fd, uint8_t *rccs,
-                           uint8_t node,
-                           uint16_t index, uint8_t subindex,
-                           int16_t value );
+canmat_status_t canmat_sdo_dl_i16(
+    canmat_iface_t *cif, uint8_t *rccs,
+    uint8_t node,
+    uint16_t index, uint8_t subindex,
+    int16_t value );
 
-ssize_t canmat_sdo_ul_i16( int fd, uint8_t *rccs,
-                           int16_t *value,
-                           uint8_t node,
-                           uint16_t index, uint8_t subindex );
+canmat_status_t canmat_sdo_ul_i16(
+    canmat_iface_t *cif, uint8_t *rccs,
+    int16_t *value,
+    uint8_t node,
+    uint16_t index, uint8_t subindex );
 
 /**********/
 /* 32-bit */
 /**********/
-ssize_t canmat_sdo_dl_u32( int fd, uint8_t *rccs,
-                           uint8_t node,
-                           uint16_t index, uint8_t subindex,
-                           uint32_t value );
+canmat_status_t canmat_sdo_dl_u32(
+    canmat_iface_t *cif, uint8_t *rccs,
+    uint8_t node,
+    uint16_t index, uint8_t subindex,
+    uint32_t value );
 
-ssize_t canmat_sdo_ul_u32( int fd, uint8_t *rccs,
-                           uint32_t *value,
-                           uint8_t node,
-                           uint16_t index, uint8_t subindex );
+canmat_status_t canmat_sdo_ul_u32(
+    canmat_iface_t *cif, uint8_t *rccs,
+    uint32_t *value,
+    uint8_t node,
+    uint16_t index, uint8_t subindex );
 
-ssize_t canmat_sdo_dl_i32( int fd, uint8_t *rccs,
-                           uint8_t node,
-                           uint16_t index, uint8_t subindex,
-                           int32_t value );
+canmat_status_t canmat_sdo_dl_i32(
+    canmat_iface_t *cif, uint8_t *rccs,
+    uint8_t node,
+    uint16_t index, uint8_t subindex,
+    int32_t value );
 
-ssize_t canmat_sdo_ul_i32( int fd, uint8_t *rccs,
-                           int32_t *value,
-                           uint8_t node,
-                           uint16_t index, uint8_t subindex );
+canmat_status_t canmat_sdo_ul_i32(
+    canmat_iface_t *cif, uint8_t *rccs,
+    int32_t *value,
+    uint8_t node,
+    uint16_t index, uint8_t subindex );
 
 
 /** Return a string describing the error status of SDO */

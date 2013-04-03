@@ -81,7 +81,7 @@ canmat_obj_t *canmat_dict_search_index( const struct canmat_dict *dict, uint16_t
                                       dict_compar_index );
 }
 
-canmat_status_t canmat_obj_ul( int fd, uint8_t node, const canmat_obj_t *obj, canmat_scalar_t *val ) {
+canmat_status_t canmat_obj_ul( canmat_iface_t *cif, uint8_t node, const canmat_obj_t *obj, canmat_scalar_t *val ) {
     if( NULL == obj  ||
         CANMAT_OBJ_CODE_VAR != obj->object_type )
     {
@@ -92,37 +92,37 @@ canmat_status_t canmat_obj_ul( int fd, uint8_t node, const canmat_obj_t *obj, ca
     ssize_t r;
     switch(obj->data_type) {
     case CANMAT_DATA_TYPE_INTEGER8:
-        r = canmat_sdo_ul_i8( fd, &rccs,
+        r = canmat_sdo_ul_i8( cif, &rccs,
                              &val->i8,
                              node,
                              obj->index, obj->subindex );
         break;
     case CANMAT_DATA_TYPE_INTEGER16:
-        r = canmat_sdo_ul_i16( fd, &rccs,
+        r = canmat_sdo_ul_i16( cif, &rccs,
                               &val->i16,
                               node,
                               obj->index, obj->subindex );
         break;
     case CANMAT_DATA_TYPE_INTEGER32:
-        r = canmat_sdo_ul_i32( fd, &rccs,
+        r = canmat_sdo_ul_i32( cif, &rccs,
                               &val->i32,
                               node,
                               obj->index, obj->subindex );
         break;
     case CANMAT_DATA_TYPE_UNSIGNED8:
-        r = canmat_sdo_ul_u8( fd, &rccs,
+        r = canmat_sdo_ul_u8( cif, &rccs,
                              &val->u8,
                              node,
                              obj->index, obj->subindex );
         break;
     case CANMAT_DATA_TYPE_UNSIGNED16:
-        r = canmat_sdo_ul_u16( fd, &rccs,
+        r = canmat_sdo_ul_u16( cif, &rccs,
                               &val->u16,
                               node,
                               obj->index, obj->subindex );
         break;
     case CANMAT_DATA_TYPE_UNSIGNED32:
-        r = canmat_sdo_ul_u32( fd, &rccs,
+        r = canmat_sdo_ul_u32( cif, &rccs,
                               &val->u32,
                               node,
                               obj->index, obj->subindex );
@@ -134,7 +134,8 @@ canmat_status_t canmat_obj_ul( int fd, uint8_t node, const canmat_obj_t *obj, ca
 }
 
 
-canmat_status_t canmat_obj_dl( int fd, uint8_t node, const canmat_obj_t *obj, const canmat_scalar_t *val ) {
+canmat_status_t canmat_obj_dl( canmat_iface_t *cif,
+                               uint8_t node, const canmat_obj_t *obj, const canmat_scalar_t *val ) {
     if( NULL == obj  || CANMAT_OBJ_CODE_VAR != obj->object_type )
     {
         return CANMAT_ERR_PARAM;
@@ -144,37 +145,37 @@ canmat_status_t canmat_obj_dl( int fd, uint8_t node, const canmat_obj_t *obj, co
     ssize_t r;
     switch(obj->data_type) {
     case CANMAT_DATA_TYPE_INTEGER8:
-        r = canmat_sdo_dl_i8( fd, &rccs,
+        r = canmat_sdo_dl_i8( cif, &rccs,
                              node,
                              obj->index, obj->subindex,
                              val->i8 );
         break;
     case CANMAT_DATA_TYPE_INTEGER16:
-        r = canmat_sdo_dl_i16( fd, &rccs,
+        r = canmat_sdo_dl_i16( cif, &rccs,
                               node,
                               obj->index, obj->subindex,
                               val->i16 );
         break;
     case CANMAT_DATA_TYPE_INTEGER32:
-        r = canmat_sdo_dl_i32( fd, &rccs,
+        r = canmat_sdo_dl_i32( cif, &rccs,
                               node,
                               obj->index, obj->subindex,
                               val->i32 );
         break;
     case CANMAT_DATA_TYPE_UNSIGNED8:
-        r = canmat_sdo_dl_u8( fd, &rccs,
+        r = canmat_sdo_dl_u8( cif, &rccs,
                              node,
                              obj->index, obj->subindex,
                              val->u8 );
         break;
     case CANMAT_DATA_TYPE_UNSIGNED16:
-        r = canmat_sdo_dl_u16( fd, &rccs,
+        r = canmat_sdo_dl_u16( cif, &rccs,
                               node,
                               obj->index, obj->subindex,
                               val->u16 );
         break;
     case CANMAT_DATA_TYPE_UNSIGNED32:
-        r = canmat_sdo_dl_u32( fd, &rccs,
+        r = canmat_sdo_dl_u32( cif, &rccs,
                               node,
                               obj->index, obj->subindex,
                               val->u32 );
@@ -186,7 +187,7 @@ canmat_status_t canmat_obj_dl( int fd, uint8_t node, const canmat_obj_t *obj, co
 }
 
 
-canmat_status_t canmat_obj_dl_str( int fd, uint8_t node, const canmat_obj_t *obj, const char *val ) {
+canmat_status_t canmat_obj_dl_str( canmat_iface_t *cif, uint8_t node, const canmat_obj_t *obj, const char *val ) {
     if( NULL == obj ) return CANMAT_ERR_PARAM;
 
     canmat_scalar_t sval;
@@ -194,7 +195,7 @@ canmat_status_t canmat_obj_dl_str( int fd, uint8_t node, const canmat_obj_t *obj
         return CANMAT_ERR_PARAM;
     }
 
-    return canmat_obj_dl( fd, node, obj, &sval );
+    return canmat_obj_dl( cif, node, obj, &sval );
 }
 
 canmat_status_t canmat_typed_parse( canmat_data_type_t type, const char *str, canmat_scalar_t *val ) {

@@ -17,23 +17,21 @@ pkginclude_HEADERS = 	                     \
 
 noinst_HEADERS = include/socanmatic_private.h
 
-lib_LTLIBRARIES = libsocanmatic.la libsocanmatic_socketcan.la libsocanmatic402.la
+lib_LTLIBRARIES = libsocanmatic.la libsocanmatic402.la
 m4_dnl bin_PROGRAMS = esdcantool
 
 bin_PROGRAMS = canmat
 noinst_PROGRAMS = test_sdo
 
-libsocanmatic_la_SOURCES = src/sdo.c src/ds301.c src/error.c src/dict.c src/util.c
-
-libsocanmatic_socketcan_la_SOURCES = src/socketcan.c
+libsocanmatic_la_SOURCES = src/sdo.c src/ds301.c src/error.c src/dict.c src/util.c src/iface/iface_socketcan.c
 
 libsocanmatic402_la_SOURCES = dict402.c
 
 test_sdo_SOURCES = src/test_sdo.c
-test_sdo_LDADD = libsocanmatic.la libsocanmatic_socketcan.la libsocanmatic402.la
+test_sdo_LDADD = libsocanmatic.la  libsocanmatic402.la
 
 canmat_SOURCES = src/canmat.c src/display.c
-canmat_LDADD = libsocanmatic.la libsocanmatic_socketcan.la libsocanmatic402.la
+canmat_LDADD = libsocanmatic.la libsocanmatic402.la
 
 dict402.c: $(top_srcdir)/canmatc $(top_srcdir)/eds/dsp301.eds $(top_srcdir)/eds/dsp402.eds
 	$(top_srcdir)/canmatc -n canmat_dict402 -o dict402.c $(top_srcdir)/eds/dsp301.eds $(top_srcdir)/eds/dsp402.eds

@@ -148,8 +148,7 @@ def print_dict( name, output, odict ):
     s = ''
     s += '#include <stdint.h>\n'
     s += '#include <unistd.h>\n'
-    s += '#include "socanmatic/status.h"\n'
-    s += '#include "socanmatic/dict.h"\n'
+    s += '#include "socanmatic.h"\n'
 
     s += "canmat_dict_t %s = {\n" % name
 

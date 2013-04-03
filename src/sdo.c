@@ -103,32 +103,32 @@ void canmat_can2sdo( canmat_sdo_msg_t *dst, const struct can_frame *src ) {
 
 
 /// Send and SDO request and wait for the response
-ssize_t canmat_sdo_query( int fd, const canmat_sdo_msg_t *req,
-                          canmat_sdo_msg_t *resp ) {
-    ssize_t r = canmat_sdo_query_send( fd, req );
+canmat_status_t canmat_sdo_query( canmat_iface_t *cif, const canmat_sdo_msg_t *req,
+                                  canmat_sdo_msg_t *resp ) {
+    canmat_status_t r = canmat_sdo_query_send( cif, req );
     if( r >= 0 ) {
-        return canmat_sdo_query_recv( fd, resp, req );
+        return canmat_sdo_query_recv( cif, resp, req );
     } else {
         return r;
     }
 }
 
 /// Send an SDO query
-ssize_t canmat_sdo_query_send( int fd, const canmat_sdo_msg_t *req ) {
+canmat_status_t canmat_sdo_query_send( canmat_iface_t *cif, const canmat_sdo_msg_t *req ) {
     struct can_frame can;
     canmat_sdo2can( &can, req, 0 );
-    return  canmat_can_send( fd, &can );
+    return canmat_iface_send( cif, &can );
 }
 
 /// Receive and SDO query response
-ssize_t canmat_sdo_query_recv( int fd, canmat_sdo_msg_t *resp,
+canmat_status_t canmat_sdo_query_recv( canmat_iface_t *cif, canmat_sdo_msg_t *resp,
                                const canmat_sdo_msg_t *req ) {
 
-    ssize_t r;
+    canmat_status_t r;
     struct can_frame can;
     do {
-        r = canmat_can_recv( fd, &can );
-        if( ! canmat_can_ok( r ) )
+        r = canmat_iface_recv( cif, &can );
+        if( CANMAT_OK ==  r )
             return r;
     } while ( can.can_id != (canid_t)CANMAT_SDO_RESP_ID(req->node) );
 
@@ -138,10 +138,10 @@ ssize_t canmat_sdo_query_recv( int fd, canmat_sdo_msg_t *resp,
 }
 
 
-ssize_t canmat_sdo_query_resp( int fd, const canmat_sdo_msg_t *resp ) {
+canmat_status_t canmat_sdo_query_resp( canmat_iface_t *cif, const canmat_sdo_msg_t *resp ) {
     struct can_frame can;
     canmat_sdo2can( &can, resp, 1 );
-    return  canmat_can_send( fd, &can );
+    return  canmat_iface_send( cif, &can );
 }
 
 void canmat_sdo_set_ex_dl( canmat_sdo_msg_t *sdo,
@@ -162,16 +162,17 @@ void canmat_sdo_set_ex_dl( canmat_sdo_msg_t *sdo,
 
 
 #define DEF_SDO_DL( VAL_TYPE, SUFFIX )                                  \
-    ssize_t canmat_sdo_dl_ ## SUFFIX( int fd, uint8_t *rccs,            \
-                                      uint8_t node,                     \
-                                      uint16_t idx, uint8_t subindex,   \
-                                      VAL_TYPE value ) {                \
+    canmat_status_t canmat_sdo_dl_ ## SUFFIX( canmat_iface_t *cif,      \
+                                              uint8_t *rccs,            \
+                                              uint8_t node,             \
+                                              uint16_t idx, uint8_t subindex, \
+                                              VAL_TYPE value ) {        \
         canmat_sdo_msg_t req, resp;                                     \
         canmat_sdo_set_data_ ## SUFFIX( &req, value );                  \
         canmat_sdo_set_ex_dl( &req, node,                               \
                               idx, subindex );                          \
-        ssize_t r = canmat_sdo_query( fd, &req, &resp );                \
-        if ( canmat_can_ok(r) ) *rccs = resp.cmd.ccs;                   \
+        canmat_status_t r = canmat_sdo_query( cif, &req, &resp );       \
+        if ( CANMAT_OK == r ) *rccs = resp.cmd.ccs;                     \
         return r;                                                       \
     }                                                                   \
 
@@ -190,9 +191,9 @@ DEF_SDO_DL(  int32_t, i32 )
  *
  * Expedited only
  */
-static ssize_t sdo_ul( int fd,
-                       canmat_sdo_msg_t *resp,
-                       uint8_t node, uint16_t idx, uint8_t subindex ) {
+static canmat_status_t sdo_ul( canmat_iface_t *cif,
+                               canmat_sdo_msg_t *resp,
+                               uint8_t node, uint16_t idx, uint8_t subindex ) {
     canmat_sdo_msg_t req;
     // Build SDO Message
     req.cmd.ccs = CANMAT_EX_UL;
@@ -205,22 +206,22 @@ static ssize_t sdo_ul( int fd,
     req.subindex = subindex;
     req.length = 0;
     // Query
-    ssize_t r = canmat_sdo_query( fd, &req, resp );
+    canmat_status_t r = canmat_sdo_query( cif, &req, resp );
 
     // Result
     return r;
 }
 
 #define DEF_SDO_UL( VAL_TYPE, IS_SIGNED, SUFFIX )                       \
-    ssize_t canmat_sdo_ul_ ## SUFFIX( int fd,                           \
-                                      uint8_t *rccs, VAL_TYPE *value,   \
-                                      uint8_t node,                     \
-                                      uint16_t idx, uint8_t subindex )  \
+    canmat_status_t canmat_sdo_ul_ ## SUFFIX( canmat_iface_t *cif,      \
+                                              uint8_t *rccs, VAL_TYPE *value, \
+                                              uint8_t node,             \
+                                              uint16_t idx, uint8_t subindex ) \
     {                                                                   \
         canmat_sdo_msg_t resp;                                          \
-        ssize_t r;                                                      \
-        r = sdo_ul(fd, &resp, node, idx, subindex);                     \
-        if( canmat_can_ok(r) ) {                                        \
+        canmat_status_t r;                                              \
+        r = sdo_ul(cif, &resp, node, idx, subindex);                    \
+        if( CANMAT_OK == r ) {                                          \
             *rccs = resp.cmd.ccs;                                       \
             *value = canmat_sdo_get_data_ ## SUFFIX( &resp );           \
         }                                                               \

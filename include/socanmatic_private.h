@@ -41,11 +41,6 @@
 #ifndef CANMAT_PRIVATE_H
 #define CANMAT_PRIVATE_H
 
-_Bool canmat_can_ok( ssize_t result );
-ssize_t canmat_can_send( int fd, const struct can_frame *f );
-ssize_t canmat_can_recv( int fd, struct can_frame *f );
-int canmat_can_open ( const char *name );
-
 
 void canmat_dump_frame (FILE *f, const struct can_frame *can );
 void canmat_display( const canmat_dict_t *dict, const struct can_frame *can );

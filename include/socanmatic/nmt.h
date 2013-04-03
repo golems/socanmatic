@@ -96,7 +96,7 @@ typedef enum canmat_nmt_err_msg {
 
 /**  Send an NMT Message.
  */
-int canmat_send_nmt( int fd, uint8_t node,
+int canmat_send_nmt( canmat_iface_t *cif, uint8_t node,
                      canmat_nmt_msg_t nmt_msg );
 
 
