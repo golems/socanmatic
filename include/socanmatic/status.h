@@ -46,7 +46,8 @@ typedef enum canmat_status {
     CANMAT_ERR_OS         = -1,
     CANMAT_ERR_OVERFLOW   = -2,
     CANMAT_ERR_UNDERFLOW  = -3,
-    CANMAT_ERR_PARAM      = -4
+    CANMAT_ERR_PARAM      = -4,
+    CANMAT_ERR_NOT_SUP    = -5,
 } canmat_status_t;
 
 const char *canmat_strerror( canmat_status_t status );

@@ -53,6 +53,7 @@ struct canmat_iface_vtable {
     canmat_status_t (*send)( struct canmat_iface *cif, const struct can_frame *frame );
     canmat_status_t (*recv)( struct canmat_iface *cif, struct can_frame *frame );
     canmat_status_t (*destroy)( struct canmat_iface *cif );
+    canmat_status_t (*set_kbps)( struct canmat_iface *cif, unsigned kbps );
     const char *(*strerror)( struct canmat_iface *cif );
 };
 
@@ -65,6 +66,9 @@ typedef struct canmat_iface {
 
 canmat_iface_t * canmat_iface_new_socketcan( void );
 
+#ifdef _ntcan_h
+struct canmat_iface *canmat_iface_new_ntcan( void );
+#endif //_ntcan_h
 
 
 static inline canmat_status_t canmat_iface_open( struct canmat_iface *cif, const char *name ) {

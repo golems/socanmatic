@@ -17,7 +17,7 @@ pkginclude_HEADERS = 	                     \
 
 noinst_HEADERS = include/socanmatic_private.h
 
-lib_LTLIBRARIES = libsocanmatic.la libsocanmatic402.la
+lib_LTLIBRARIES = libsocanmatic.la libsocanmatic402.la libsocanmatic_ntcan.la
 m4_dnl bin_PROGRAMS = esdcantool
 
 bin_PROGRAMS = canmat
@@ -26,6 +26,8 @@ noinst_PROGRAMS = test_sdo
 libsocanmatic_la_SOURCES = src/sdo.c src/ds301.c src/error.c src/dict.c src/util.c src/iface/iface_socketcan.c
 
 libsocanmatic402_la_SOURCES = dict402.c
+
+libsocanmatic_ntcan_la_SOURCES = src/iface/iface_ntcan.c
 
 test_sdo_SOURCES = src/test_sdo.c
 test_sdo_LDADD = libsocanmatic.la  libsocanmatic402.la
