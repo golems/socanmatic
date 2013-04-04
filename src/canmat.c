@@ -118,9 +118,9 @@ void hard_assert( _Bool test , const char fmt[], ...)  {
 }
 
 int try_open( canmat_iface_t **cif, const char *iface) {
-    *cif = (canmat_iface_t*)malloc(sizeof(**cif));
+    *cif = canmat_iface_new_socketcan();
 
-    int r = canmat_iface_open_socketcan(*cif, iface);
+    int r = canmat_iface_open(*cif, iface);
     if( opt_verbosity ) {
         if( CANMAT_OK == r ) {
             fprintf(stderr, "Opened iface %s, fd %d\n", iface, (*cif)->fd);
@@ -399,7 +399,7 @@ int cmd_pollin( void (printer)(struct can_frame*) ) {
                 struct can_frame can;
                 // read the actual message
                 canmat_status_t r = canmat_iface_recv( canset.cif[i], &can );
-                if( CANMAT_OK == 0 ) {
+                if( CANMAT_OK == r ) {
                     fprintf( stdout, "%s: ", canset.name[i] );
                     printer( &can );
                 } else {

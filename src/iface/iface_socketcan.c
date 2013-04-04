@@ -52,17 +52,26 @@
 
 
 
+static canmat_status_t v_open( struct canmat_iface *cif, const char *name );
 static canmat_status_t v_send( struct canmat_iface *cif, const struct can_frame *frame );
 static canmat_status_t v_recv( struct canmat_iface *cif, struct can_frame *frame );
 static canmat_status_t v_destroy( struct canmat_iface *cif );
 static const char *v_strerror( struct canmat_iface *cif );
 
 static struct canmat_iface_vtable vtable = {
+    .open=v_open,
     .send=v_send,
     .recv=v_recv,
     .destroy=v_destroy,
     .strerror=v_strerror,
 };
+
+
+canmat_iface_t * canmat_iface_new_socketcan( void ) {
+    canmat_iface_t *cif = (canmat_iface_t*)malloc(sizeof(canmat_iface_t));
+    cif->vtable = &vtable;
+    return cif;
+}
 
 static inline canmat_status_t set_err( struct canmat_iface *cif ) {
     cif->err = errno;
@@ -70,6 +79,7 @@ static inline canmat_status_t set_err( struct canmat_iface *cif ) {
 }
 
 static canmat_status_t v_send( struct canmat_iface *cif, const struct can_frame *frame ) {
+    if( cif->vtable != &vtable ) return CANMAT_ERR_PARAM;
     ssize_t bytes = 0;
     do {
         ssize_t r = write( cif->fd, (uint8_t*)frame + bytes, (sizeof(*frame) - (size_t)bytes) );
@@ -87,6 +97,7 @@ static canmat_status_t v_send( struct canmat_iface *cif, const struct can_frame 
 }
 
 static canmat_status_t v_recv( struct canmat_iface *cif, struct can_frame *frame ) {
+    if( cif->vtable != &vtable ) return CANMAT_ERR_PARAM;
     ssize_t bytes = 0;
     do {
         ssize_t r = read( cif->fd, (uint8_t*)frame + bytes, (sizeof(*frame) - (size_t)bytes) );
@@ -104,6 +115,7 @@ static canmat_status_t v_recv( struct canmat_iface *cif, struct can_frame *frame
 }
 
 static canmat_status_t v_destroy( struct canmat_iface *cif ) {
+    if( cif->vtable != &vtable ) return CANMAT_ERR_PARAM;
     if( close(cif->fd) ) {
         return set_err(cif);
     }
@@ -111,11 +123,12 @@ static canmat_status_t v_destroy( struct canmat_iface *cif ) {
 }
 
 static const char *v_strerror( struct canmat_iface *cif ) {
+    if( cif->vtable != &vtable ) return "?";
     return strerror(cif->err);
 }
 
-canmat_status_t canmat_iface_open_socketcan( struct canmat_iface *cif, const char *name ) {
-    cif->vtable = vtable;
+static canmat_status_t v_open( struct canmat_iface *cif, const char *name ) {
+    if( cif->vtable != &vtable ) return CANMAT_ERR_PARAM;
     int s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
     if( s < 0 ) {
         return set_err(cif);

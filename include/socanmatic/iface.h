@@ -49,6 +49,7 @@ extern "C" {
 struct canmat_iface;
 
 struct canmat_iface_vtable {
+    canmat_status_t (*open)( struct canmat_iface *cif, const char *name );
     canmat_status_t (*send)( struct canmat_iface *cif, const struct can_frame *frame );
     canmat_status_t (*recv)( struct canmat_iface *cif, struct can_frame *frame );
     canmat_status_t (*destroy)( struct canmat_iface *cif );
@@ -56,25 +57,30 @@ struct canmat_iface_vtable {
 };
 
 typedef struct canmat_iface {
-    struct canmat_iface_vtable vtable;
+    struct canmat_iface_vtable *vtable;
     int fd;
     int err;
 } canmat_iface_t;
 
 
-canmat_status_t canmat_iface_open_socketcan( struct canmat_iface *cif, const char *name );
+canmat_iface_t * canmat_iface_new_socketcan( void );
 
+
+
+static inline canmat_status_t canmat_iface_open( struct canmat_iface *cif, const char *name ) {
+    return cif->vtable->open(cif,name);
+}
 static inline canmat_status_t canmat_iface_send( struct canmat_iface *cif, const struct can_frame *frame ) {
-    return cif->vtable.send(cif,frame);
+    return cif->vtable->send(cif,frame);
 }
 static inline canmat_status_t canmat_iface_recv( struct canmat_iface *cif, struct can_frame *frame ) {
-    return cif->vtable.recv(cif,frame);
+    return cif->vtable->recv(cif,frame);
 }
 static inline canmat_status_t canmat_iface_destroy( struct canmat_iface *cif ) {
-    return cif->vtable.destroy(cif);
+    return cif->vtable->destroy(cif);
 }
 static inline const char *canmat_iface_strerror( struct canmat_iface *cif ) {
-    return cif->vtable.strerror(cif);
+    return cif->vtable->strerror(cif);
 }
 
 #ifdef __cplusplus
