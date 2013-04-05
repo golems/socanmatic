@@ -111,6 +111,7 @@ int cmd_dict_dl( can_set_t *canset, size_t n, const char **args );
 int cmd_dict_ul( can_set_t *canset, size_t n, const char **args );
 int cmd_display( can_set_t *canset, size_t n, const char **args );
 int cmd_info( can_set_t *canset, size_t n, const char **args );
+int cmd_set( can_set_t *canset, size_t n, const char **args );
 
 /***********/
 /* HELPERS */
@@ -140,6 +141,18 @@ unsigned long parse_uhex( const char *arg, uint64_t max ) {
     return u;
 }
 
+
+unsigned long parse_u( const char *arg, uint64_t max ) {
+    char *endptr;
+    errno = 0;
+    unsigned long u  = strtoul( arg, &endptr, 0 );
+
+    hard_assert( 0 == errno, "Invalid hex argument: %s (%s)\n", arg, strerror(errno) );
+    hard_assert( u <= max, "Argument %s too big\n", arg );
+
+    return u;
+}
+
 void invalid_arg( const char *arg ) {
     hard_assert( 0, "Invalid argument: %s\n", arg );
 }
@@ -159,6 +172,7 @@ cmd_fun_t posarg_cmd( const char *arg ) {
                  {"dict-dl", cmd_dict_dl},
                  {"dict-ul", cmd_dict_ul},
                  {"info", cmd_info},
+                 {"set", cmd_set},
                  {NULL, NULL} };
     size_t i;
     for( i = 0; cmds[i].name != NULL; i ++ ) {
@@ -252,6 +266,7 @@ int main( int argc, char ** argv ) {
                   "  canmat dl-resp node idx subidx               Simulate node download response\n"
                   "  canmat ul node idx subidx                    Upload SDO from node\n"
                   "  canmat ul-resp node idx subidx bytes-or-val  Simulate node upload response\n"
+                  "  canmat set bitrate value                     Set bitrate in kbps\n"
                   "\n"
                   "Report bugs to <ntd@gatech.edu>"
                 );
@@ -542,5 +557,30 @@ int cmd_info( can_set_t *canset, size_t n, const char **arg) {
         canmat_status_t r = canmat_iface_print_info(canset->cif[i], stdout);
         hard_assert( CANMAT_OK == r, "Couldn't show info: %s\n", canmat_iface_strerror(canset->cif[i],r) );
     }
+    return 0;
+}
+
+int cmd_set( can_set_t *canset, size_t n, const char **arg) {
+    hard_assert( !(n < 2), "Insufficient arguments\n");
+    hard_assert( !(n > 2), "Extra arguments\n");
+
+    const char *var = arg[0];
+    const char *val = arg[1];
+
+    if( 0 == strcasecmp( "bitrate", var ) ||
+        0 == strcasecmp( "baud", var ) ||
+        0 == strcasecmp( "kbps", var ) )
+    {
+        unsigned kbps = (unsigned)parse_u( val, 1000 );
+        for( size_t i = 0; i < canset->n; i++ ) {
+            canmat_status_t r = canmat_iface_set_kpbs( canset->cif[i], kbps );
+            hard_assert( CANMAT_OK == r, "Couldn't set birate to %u kbps: %s\n",
+                         kbps, canmat_iface_strerror(canset->cif[i],r) );
+        }
+    } else {
+        fprintf( stderr, "Invalid variable: %s\n", var );
+        exit(EXIT_FAILURE);
+    }
+
     return 0;
 }

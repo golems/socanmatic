@@ -91,6 +91,9 @@ static inline canmat_status_t canmat_iface_destroy( struct canmat_iface *cif ) {
 static inline canmat_status_t canmat_iface_print_info( struct canmat_iface *cif, FILE *fptr ) {
     return cif->vtable->print_info(cif, fptr);
 }
+static inline canmat_status_t canmat_iface_set_kpbs( struct canmat_iface *cif, unsigned kbps ) {
+    return cif->vtable->set_kbps(cif, kbps);
+}
 
 const char *canmat_iface_strerror( struct canmat_iface *cif, canmat_status_t status );
 
