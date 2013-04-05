@@ -107,6 +107,7 @@ static canmat_status_t v_open( struct canmat_iface *cif, const char *name ) {
 
     cif->fd = -1;
     canmat_iface_ntcan_t *ntcif = (canmat_iface_ntcan_t*)cif;
+
     // parse name
     errno = 0;
     char *endptr = NULL;
@@ -114,17 +115,32 @@ static canmat_status_t v_open( struct canmat_iface *cif, const char *name ) {
     if( 0 != errno || endptr == name || !endptr || '\0' != endptr[0] ) return CANMAT_ERR_PARAM;
 
     // open can handle
-    NTCAN_RESULT r  = canOpen( net,           //net
-                               0,             //flags
-                               256,           //txqueue
-                               256,           //rxqueue
-                               0,             //txtimeout, forever
-                               0,             //rxtimeout, forever
-                               &(ntcif->handle)  // handle
-        );
+    {
+        NTCAN_RESULT r  = canOpen( net,           //net
+                                   0,             //flags
+                                   256,           //txqueue
+                                   256,           //rxqueue
+                                   0,             //txtimeout, forever
+                                   0,             //rxtimeout, forever
+                                   &(ntcif->handle)  // handle
+            );
+        if( NTCAN_SUCCESS != r ) {
+            cif->err = r;
+            return CANMAT_ERR_OS;
+        }
+    }
 
-    //TODO: bind ids
-    return check( cif, r );
+    // bind ids
+    for( int i = 0; i <= CANMAT_COB_ID_MAX_BASE; i ++ ) {
+        NTCAN_RESULT r  = canIdAdd( ntcif->handle, i );
+        if( NTCAN_SUCCESS != r ) {
+            cif->err = r;
+            canClose( ntcif->handle ); // try to close
+            return CANMAT_ERR_OS;
+        }
+    }
+
+    return CANMAT_OK;
 }
 
 static canmat_status_t v_send( struct canmat_iface *cif, const struct can_frame *frame ) {
@@ -168,34 +184,34 @@ static canmat_status_t v_destroy( struct canmat_iface *cif ) {
 static const char *v_strerror( struct canmat_iface *cif ) {
     if( cif->vtable != &vtable ) return "?";
     switch( cif->err ) {
-    case NTCAN_SUCCESS: return "SUCCESS";
-    case NTCAN_RX_TIMEOUT: return "RX_TIMEOUT";
-    case NTCAN_TX_TIMEOUT: return "TX_TIMEOUT";
-    case NTCAN_TX_ERROR: return "TX_ERROR";
-    case NTCAN_CONTR_OFF_BUS: return "CONTR_OFF_BUS";
-    case NTCAN_CONTR_BUSY: return "CONTR_BUSY";
-    case NTCAN_CONTR_WARN: return "CONTR_WARN";
-    case NTCAN_NO_ID_ENABLED: return "_NO_ID_ENABLED";
-    case NTCAN_ID_ALREADY_ENABLED: return "ID_ALREADY_ENABLED";
-    case NTCAN_INVALID_FIRMWARE: return "INVALID_FIRMWARE";
-    case NTCAN_MESSAGE_LOST: return "MESSAGE_LOST";
-    case NTCAN_INVALID_HARDWARE: return "INVALID_HARDWARE";
-    case NTCAN_PENDING_WRITE: return "PENDING_WRITE";
-    case NTCAN_PENDING_READ: return "PENDING_READ";
-    case NTCAN_INVALID_DRIVER: return "INVALID_DRIVER";
-    case NTCAN_SOCK_CONN_TIMEOUT: return "SOCK_CONN_TIMEOUT";
-    case NTCAN_SOCK_CMD_TIMEOUT: return "SOCK_CMD_TIMEOUT";
-    case NTCAN_SOCK_HOST_NOT_FOUND: return "SOCK_HOST_NOT_FOUND";
-    case NTCAN_INVALID_PARAMETER: return "INVALID_PARAMETER";
-    case NTCAN_INVALID_HANDLE: return "INVALID_HANDLE";
-    case NTCAN_NET_NOT_FOUND: return "NET_NOT_FOUND";
-    case NTCAN_INSUFFICIENT_RESOURCES: return "INSUFFICIENT_RESOURCES";
-    case NTCAN_OPERATION_ABORTED: return "OPERATION_ABORTED";
-    case NTCAN_WRONG_DEVICE_STATE: return "WRONG_DEVICE_STATE";
-    case NTCAN_HANDLE_FORCED_CLOSE: return "HANDLE_FORCED_CLOSE";
-    case NTCAN_NOT_IMPLEMENTED: return "NOT_IMPLEMENTED";
-    case NTCAN_NOT_SUPPORTED: return "NOT_SUPPORTED";
-    case NTCAN_CONTR_ERR_PASSIVE: return "CONTR_ERR_PASSIVE";
+    case NTCAN_SUCCESS: return "NTCAN_SUCCESS";
+    case NTCAN_RX_TIMEOUT: return "NTCAN_RX_TIMEOUT";
+    case NTCAN_TX_TIMEOUT: return "NTCAN_TX_TIMEOUT";
+    case NTCAN_TX_ERROR: return "NTCAN_TX_ERROR";
+    case NTCAN_CONTR_OFF_BUS: return "NTCAN_CONTR_OFF_BUS";
+    case NTCAN_CONTR_BUSY: return "NTCAN_CONTR_BUSY";
+    case NTCAN_CONTR_WARN: return "NTCAN_CONTR_WARN";
+    case NTCAN_NO_ID_ENABLED: return "NTCAN__NO_ID_ENABLED";
+    case NTCAN_ID_ALREADY_ENABLED: return "NTCAN_ID_ALREADY_ENABLED";
+    case NTCAN_INVALID_FIRMWARE: return "NTCAN_INVALID_FIRMWARE";
+    case NTCAN_MESSAGE_LOST: return "NTCAN_MESSAGE_LOST";
+    case NTCAN_INVALID_HARDWARE: return "NTCAN_INVALID_HARDWARE";
+    case NTCAN_PENDING_WRITE: return "NTCAN_PENDING_WRITE";
+    case NTCAN_PENDING_READ: return "NTCAN_PENDING_READ";
+    case NTCAN_INVALID_DRIVER: return "NTCAN_INVALID_DRIVER";
+    case NTCAN_SOCK_CONN_TIMEOUT: return "NTCAN_SOCK_CONN_TIMEOUT";
+    case NTCAN_SOCK_CMD_TIMEOUT: return "NTCAN_SOCK_CMD_TIMEOUT";
+    case NTCAN_SOCK_HOST_NOT_FOUND: return "NTCAN_SOCK_HOST_NOT_FOUND";
+    case NTCAN_INVALID_PARAMETER: return "NTCAN_INVALID_PARAMETER";
+    case NTCAN_INVALID_HANDLE: return "NTCAN_INVALID_HANDLE";
+    case NTCAN_NET_NOT_FOUND: return "NTCAN_NET_NOT_FOUND";
+    case NTCAN_INSUFFICIENT_RESOURCES: return "NTCAN_INSUFFICIENT_RESOURCES";
+    case NTCAN_OPERATION_ABORTED: return "NTCAN_OPERATION_ABORTED";
+    case NTCAN_WRONG_DEVICE_STATE: return "NTCAN_WRONG_DEVICE_STATE";
+    case NTCAN_HANDLE_FORCED_CLOSE: return "NTCAN_HANDLE_FORCED_CLOSE";
+    case NTCAN_NOT_IMPLEMENTED: return "NTCAN_NOT_IMPLEMENTED";
+    case NTCAN_NOT_SUPPORTED: return "NTCAN_NOT_SUPPORTED";
+    case NTCAN_CONTR_ERR_PASSIVE: return "NTCAN_CONTR_ERR_PASSIVE";
     default: return "?";
     }
 }

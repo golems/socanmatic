@@ -49,6 +49,7 @@
 #include <linux/can/raw.h>
 
 
+#define CANMAT_COB_ID_MAX_BASE 0x7FF
 
 #include "socanmatic/status.h"
 #include "socanmatic/iface.h"
