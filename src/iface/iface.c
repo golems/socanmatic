@@ -1,10 +1,8 @@
-/* -*- mode: C; c-basic-offset: 4 -*- */
-/* ex: set shiftwidth=4 tabstop=4 expandtab: */
-/*
- * Copyright (c) 2008-2013, Georgia Tech Research Corporation
+/* Copyright (c) 2013, Georgia Tech Research Corporation
  * All rights reserved.
  *
  * Author(s): Neil T. Dantam <ntd@gatech.edu>
+ *
  * Georgia Tech Humanoid Robotics Lab
  * Under Direction of Prof. Mike Stilman <mstilman@cc.gatech.edu>
  *
@@ -40,9 +38,89 @@
  *
  */
 
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <net/if.h>
 #include <errno.h>
+#include <unistd.h>
 #include <string.h>
+
+#include <dlfcn.h>
+
 #include "socanmatic.h"
+#include "socanmatic_private.h"
+
+
+struct fun_desc {
+    const char *type;
+    canmat_iface_new_fun *fun;
+    struct fun_desc *next;
+};
+
+static struct fun_desc *desc = NULL;
+
+static struct fun_desc *lookup( const char *type ) {
+    for( struct fun_desc *d = desc; NULL != d;  d = d->next ) {
+        if( 0 == strcmp(type, d->type) ) return d;
+    }
+    return NULL;
+}
+
+static void load( const char *type ) {
+    const char prefix[] = "libsocanmatic_iface_";
+    const char suffix[] = ".so";
+    char buf[strlen(prefix) + strlen(suffix) + strlen(type) + 1];
+
+    strcpy(buf,prefix);
+    strcat(buf,type);
+    strcat(buf,suffix);
+
+    void *p = dlopen(buf, RTLD_NOW);
+
+    if( !p ) return;
+
+    canmat_iface_new_fun *fun;
+    fun = (canmat_iface_new_fun*)dlsym( p, "canmat_iface_new_module" );
+
+    if( ! fun ) return ;
+
+    struct fun_desc *d = (struct fun_desc*)malloc(sizeof(struct fun_desc));
+    d->type = strdup(type);
+    d->fun = fun;
+    d->next = desc;
+    desc = d;
+
+    return;
+}
+
+canmat_iface_t* canmat_iface_new( const char *type ) {
+    struct fun_desc *d = lookup(type);
+    if( ! d ) {
+        load(type);
+        d = lookup(type);
+    }
+
+    if( d ) {
+        return d->fun();
+    } else {
+        return NULL;
+    }
+}
+
+const char *canmat_iface_strerror( canmat_iface_t *cif, canmat_status_t status ) {
+    switch (status) {
+    case CANMAT_OK:            return "OK";
+    case CANMAT_ERR_OS:        return cif->vtable->strerror(cif);
+    case CANMAT_ERR_OVERFLOW:  return "overflow error";
+    case CANMAT_ERR_UNDERFLOW: return "underflow error";
+    case CANMAT_ERR_PARAM:     return "invalid parameter";
+    case CANMAT_ERR_NOT_SUP:   return "not supported";
+    }
+    return "unknown status";
+}
+
 
 /* ex: set shiftwidth=4 tabstop=4 expandtab: */
 /* Local Variables:                          */

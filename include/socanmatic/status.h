@@ -50,6 +50,4 @@ typedef enum canmat_status {
     CANMAT_ERR_NOT_SUP    = -5,
 } canmat_status_t;
 
-const char *canmat_strerror( canmat_status_t status );
-
 #endif //SOCANMATIC_STATUS_H

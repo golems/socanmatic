@@ -63,6 +63,10 @@ typedef struct canmat_iface {
     int err;
 } canmat_iface_t;
 
+typedef canmat_iface_t* canmat_iface_new_fun( void );
+
+canmat_iface_t* canmat_iface_new( const char *type );
+canmat_iface_t* canmat_iface_new_module( void );
 
 canmat_iface_t * canmat_iface_new_socketcan( void );
 
@@ -83,9 +87,8 @@ static inline canmat_status_t canmat_iface_recv( struct canmat_iface *cif, struc
 static inline canmat_status_t canmat_iface_destroy( struct canmat_iface *cif ) {
     return cif->vtable->destroy(cif);
 }
-static inline const char *canmat_iface_strerror( struct canmat_iface *cif ) {
-    return cif->vtable->strerror(cif);
-}
+
+const char *canmat_iface_strerror( struct canmat_iface *cif, canmat_status_t status );
 
 #ifdef __cplusplus
 }

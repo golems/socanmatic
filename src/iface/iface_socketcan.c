@@ -75,6 +75,12 @@ canmat_iface_t * canmat_iface_new_socketcan( void ) {
     return cif;
 }
 
+canmat_iface_t* canmat_iface_new_module( void ) {
+    canmat_iface_t *cif = (canmat_iface_t*)malloc(sizeof(canmat_iface_t));
+    cif->vtable = &vtable;
+    return cif;
+}
+
 static inline canmat_status_t set_err( struct canmat_iface *cif ) {
     cif->err = errno;
     return CANMAT_ERR_OS;;

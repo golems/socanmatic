@@ -84,6 +84,12 @@ struct canmat_iface_ntcan *canmat_iface_ntcan_new() {
     return cif;
 }
 
+canmat_iface_t* canmat_iface_new_module( ) {
+    canmat_iface_ntcan_t *cif = (canmat_iface_ntcan_t*)malloc(sizeof(canmat_iface_ntcan_t));
+    cif->cif.vtable = &vtable;
+    return (canmat_iface_t*) cif;
+}
+
 static canmat_status_t check( struct canmat_iface *cif, NTCAN_RESULT r ) {
     if( cif->vtable != &vtable ) return CANMAT_ERR_PARAM;
     if( NTCAN_SUCCESS == r ) {
