@@ -58,6 +58,7 @@ static canmat_status_t v_recv( struct canmat_iface *cif, struct can_frame *frame
 static canmat_status_t v_destroy( struct canmat_iface *cif );
 static const char *v_strerror( struct canmat_iface *cif );
 static canmat_status_t v_set_kbps( struct canmat_iface *cif, unsigned kbps );
+static canmat_status_t v_print_info( struct canmat_iface *cif, FILE *fptr );
 
 static struct canmat_iface_vtable vtable = {
     .open=v_open,
@@ -66,6 +67,7 @@ static struct canmat_iface_vtable vtable = {
     .destroy=v_destroy,
     .strerror=v_strerror,
     .set_kbps=v_set_kbps,
+    .print_info=v_print_info
 };
 
 
@@ -162,6 +164,10 @@ static canmat_status_t v_open( struct canmat_iface *cif, const char *name ) {
 
 static canmat_status_t v_set_kbps( struct canmat_iface *cif, unsigned kbps ) {
     // TODO
+    return CANMAT_ERR_NOT_SUP;
+}
+
+static canmat_status_t v_print_info( struct canmat_iface *cif, FILE *fptr ) {
     return CANMAT_ERR_NOT_SUP;
 }
 

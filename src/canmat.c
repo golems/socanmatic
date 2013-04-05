@@ -65,18 +65,22 @@
 
 const char *opt_cmd = NULL;
 const char *opt_verbosity = 0;
-uint16_t opt_canid = 0;
-uint8_t opt_can_dlc = 0;
-uint8_t opt_can_data[8];
-
-canmat_sdo_msg_t opt_sdo = {0};
-
-
-
-uint8_t opt_node;
-const char *opt_dict_param_name;
-const char *opt_dict_param_value;
 const char *opt_api = "socketcan";
+
+const char **opt_pos = NULL;
+size_t opt_npos = 0;
+
+//uint16_t opt_canid = 0;
+//uint8_t opt_can_dlc = 0;
+//uint8_t opt_can_data[8];
+//
+//canmat_sdo_msg_t opt_sdo = {0};
+
+
+
+//uint8_t opt_node;
+//const char *opt_dict_param_name;
+//const char *opt_dict_param_value;
 
 //char const ** opt_ifaces = NULL;
 //size_t opt_n_ifaces;
@@ -94,18 +98,19 @@ typedef struct can_set {
     struct pollfd *pfd;
 } can_set_t;
 
-typedef int (*cmd_fun_t)(can_set_t*);
+typedef int (*cmd_fun_t)(can_set_t*,size_t, const char**);
 cmd_fun_t opt_command = NULL;
 
-int cmd_send( can_set_t *canset );
-int cmd_dump( can_set_t *canset );
-int cmd_ul( can_set_t *canset );
-int cmd_ul_resp( can_set_t *canset );
-int cmd_dl( can_set_t *canset );
-int cmd_dl_resp( can_set_t *canset );
-int cmd_dict_dl( can_set_t *canset );
-int cmd_dict_ul( can_set_t *canset );
-int cmd_display( can_set_t *canset );
+int cmd_send( can_set_t *canset, size_t n, const char **args );
+int cmd_dump( can_set_t *canset, size_t n, const char **args );
+int cmd_ul( can_set_t *canset, size_t n, const char **args );
+int cmd_ul_resp( can_set_t *canset, size_t n, const char **args );
+int cmd_dl( can_set_t *canset, size_t n, const char **args );
+int cmd_dl_resp( can_set_t *canset, size_t n, const char **args );
+int cmd_dict_dl( can_set_t *canset, size_t n, const char **args );
+int cmd_dict_ul( can_set_t *canset, size_t n, const char **args );
+int cmd_display( can_set_t *canset, size_t n, const char **args );
+int cmd_info( can_set_t *canset, size_t n, const char **args );
 
 /***********/
 /* HELPERS */
@@ -120,68 +125,6 @@ void hard_assert( _Bool test , const char fmt[], ...)  {
         exit(EXIT_FAILURE);
     }
 }
-
-/* int try_open( canmat_iface_t **cif, const char *iface) { */
-/*     *cif = canmat_iface_new_socketcan(); */
-
-/*     int r = canmat_iface_open(*cif, iface); */
-/*     if( opt_verbosity ) { */
-/*         if( CANMAT_OK == r ) { */
-/*             fprintf(stderr, "Opened iface %s, fd %d\n", iface, (*cif)->fd); */
-/*         } */
-/*     } */
-/*     if( CANMAT_OK != r ) { */
-/*         free(*cif); */
-/*     } */
-/*     return r; */
-/* } */
-
-/* void can_open( can_set_t *canset ) { */
-/*     if( opt_ifaces ) { */
-
-/*         canset->n = opt_n_ifaces; */
-/*         canset->cif = (canmat_iface_t**)malloc(sizeof(canset->cif[0])*canset->n); */
-/*         canset->name = opt_ifaces; */
-
-/*         for( size_t i = 0; i < canset->n; i ++ ) { */
-/*             canmat_status_t r = try_open( &(canset->cif[i]), canset->name[i] ); */
-/*             hard_assert( CANMAT_OK == r, "Couldn't open %s: %s\n", */
-/*                          canset->name[i], canmat_iface_strerror(canset->cif[i]) ); */
-/*         } */
-/*     } else { */
-/*         // try some defaults */
-/*         canset->n = 1; */
-/*         canset->cif = (canmat_iface_t**)malloc(sizeof(canset->cif[0])*canset->n); */
-/*         canset->name = (const char**)malloc(sizeof(char*)*canset->n); */
-
-/*         if( CANMAT_OK == try_open( &(canset->cif[0]), "can0" ) ) { */
-/*             canset->name[0] = "can0"; */
-/*         } else if( CANMAT_OK ==  try_open( &(canset->cif[0]), "vcan0" ) ) { */
-/*             canset->name[0] = "vcan0"; */
-/*         } else { */
-/*             hard_assert( 0, "Couldn't open CAN: %s\n", strerror(errno) ); */
-/*         } */
-/*     } */
-
-/*     // TODO: check fds if multiple interfaces */
-
-/*     // allocate poll fds */
-/*     canset-> pfd = (struct pollfd*) calloc( canset->n , sizeof(canset->pfd[0]) ); */
-/*     for( size_t i = 0; i < canset->n; i ++ ) { */
-/*         canset->pfd[i].fd = canset->cif[i]->fd; */
-/*     } */
-
-/* } */
-
-static void set_cmd( int (*cmd_fun)(can_set_t*) ) {
-    if( NULL == opt_command ) {
-        opt_command = cmd_fun;
-    }else {
-        fprintf(stderr, "Can only specify one command\n");
-        exit(EXIT_FAILURE);
-    }
-}
-
 /***************/
 /* ARG PARSING */
 /***************/
@@ -201,57 +144,6 @@ void invalid_arg( const char *arg ) {
     hard_assert( 0, "Invalid argument: %s\n", arg );
 }
 
-void posarg_send( const char *arg, int i ) {
-    if( 1 == i) {
-        opt_canid = (uint16_t)parse_uhex( arg, 0x7FF );
-    } else if (i > 1 && i < 10 ) {
-        opt_can_data[opt_can_dlc++] = (uint8_t)parse_uhex( arg, 0xFF );
-    } else {
-        invalid_arg( arg );
-    }
-}
-
-void posarg_dict( const char *arg, int i ) {
-    switch(i) {
-    case 1:
-        opt_node = (uint8_t)parse_uhex( arg, CANMAT_NODE_MASK );
-        break;
-    case 2:
-        opt_dict_param_name = strdup( arg );
-        break;
-    case 3:
-        if( opt_command == cmd_dict_dl ) {
-            opt_dict_param_name = strdup( arg );
-        } else {
-            invalid_arg( arg );
-        }
-        break;
-    default:
-        invalid_arg( arg );
-    }
-}
-
-void posarg_sdo( const char *arg, int i ) {
-    switch(i) {
-    case 1:
-        opt_sdo.node = (uint8_t)parse_uhex( arg, CANMAT_NODE_MASK );
-        break;
-    case 2:
-        opt_sdo.index = (uint16_t)parse_uhex( arg, 0xFFFF );
-        break;
-    case 3:
-        opt_sdo.subindex = (uint8_t)parse_uhex( arg, 0xFF );
-        break;
-    default:
-        if( (cmd_dl == opt_command || cmd_ul_resp == opt_command) &&
-            i >= 4 && i <= 8 ) {
-            assert( opt_sdo.length == i - 4 );
-            opt_sdo.data[ opt_sdo.length++ ] = (uint8_t)parse_uhex( arg, 0xFF );
-        } else {
-            invalid_arg( arg );
-        }
-    }
-}
 
 cmd_fun_t posarg_cmd( const char *arg ) {
     static const struct  {
@@ -266,6 +158,7 @@ cmd_fun_t posarg_cmd( const char *arg ) {
                  {"ul-resp", cmd_ul_resp},
                  {"dict-dl", cmd_dict_dl},
                  {"dict-ul", cmd_dict_ul},
+                 {"info", cmd_info},
                  {NULL, NULL} };
     size_t i;
     for( i = 0; cmds[i].name != NULL; i ++ ) {
@@ -282,25 +175,16 @@ void posarg( const char *arg, int i ) {
         if( opt_verbosity ) {
             fprintf( stderr, "Setting command: %s\n", arg );
         }
-        set_cmd( posarg_cmd(arg) );
-    } else if( cmd_send == opt_command ) {
-        posarg_send( arg, i );
-    } else if( cmd_dl == opt_command ||
-               cmd_ul == opt_command ||
-               cmd_dl_resp == opt_command ||
-               cmd_ul_resp == opt_command ) {
-        posarg_sdo( arg, i );
-    } else if( cmd_dict_dl == opt_command ||
-               cmd_dict_ul == opt_command ) {
-        posarg_dict( arg, i );
+        opt_command = posarg_cmd(arg);
     } else {
-        invalid_arg( arg );
+        opt_pos = (const char**) realloc( opt_pos, sizeof(opt_pos[0]) * (opt_npos+1) );
+        opt_pos[opt_npos++] = arg;
     }
 }
 
 void open_iface( can_set_t *canset, const char *type, const char *name ) {
-    canset->cif = (canmat_iface_t**)realloc(canset->cif, sizeof(canset->cif[0]) * canset->n+1);
-    canset->name = (const char**)realloc( (void*)canset->name, sizeof(char*) * canset->n+1 );
+    canset->cif = (canmat_iface_t**) realloc( canset->cif, sizeof(canset->cif[0]) * (canset->n+1) );
+    canset->name = (const char**) realloc( (void*)canset->name, sizeof(char*) * (canset->n+1) );
 
     canset->cif[canset->n] = canmat_iface_new( type );
     hard_assert( canset->cif[canset->n], "Couldn't create interface of type: %s\n", type );
@@ -323,7 +207,7 @@ int main( int argc, char ** argv ) {
     can_set_t canset = {0};
 
     int c, i = 0;
-    while( (c = getopt( argc, argv, "vhH?Vf:")) != -1 ) {
+    while( (c = getopt( argc, argv, "vhH?Vf:a:")) != -1 ) {
         switch(c) {
         case 'V':   /* version     */
             puts( "canmat " PACKAGE_VERSION "\n"
@@ -338,6 +222,9 @@ int main( int argc, char ** argv ) {
         case 'v':   /* verbose  */
             opt_verbosity++;
             break;
+        case 'a':   /* api  */
+            opt_api = optarg;
+            break;
         case 'f':   /* interface  */
             open_iface( &canset, opt_api, optarg );
             break;
@@ -349,12 +236,14 @@ int main( int argc, char ** argv ) {
                   "\n"
                   "Options:\n"
                   "  -v,                       Make output more verbose\n"
+                  "  -a api_type,              CAN API, e.g, socketcan, ntcan\n"
                   "  -f interface,             CAN interface (multiple allowed)\n"
                   "  -?,                       Give program help list\n"
                   "  -V,                       Print program version\n"
                   "\n"
                   "Examples:\n"
                   "  canmat dump                                  Print CAN messages to standard output\n"
+                  "  canmat info                                  Print info about interface\n"
                   "  canmat display                               Pretty-print CAN messages to standard output\n"
                   "  canmat send id b0 ... b7                     Send a can message (values in hex)\n"
                   "  canmat dict-dl node param-name value         Download SDO to node\n"
@@ -382,12 +271,17 @@ int main( int argc, char ** argv ) {
     // TODO: check fds if multiple interfaces
 
     // allocate poll fds
-    canset.pfd = (struct pollfd*) calloc( canset.n , sizeof(canset.pfd[0]) );
-    for( size_t j = 0; j < canset.n; j ++ ) {
-        canset.pfd[j].fd = canset.cif[j]->fd;
+    if( canset.n > 1 ) {
+        canset.pfd = (struct pollfd*) calloc( canset.n , sizeof(canset.pfd[0]) );
+        for( size_t j = 0; j < canset.n; j ++ ) {
+            canset.pfd[j].fd = canset.cif[j]->fd;
+            hard_assert( canset.pfd[j].fd >= 0, "Invalid fd for interface %s (%d)\n",
+                         canset.name[j], canset.pfd[j].fd );
+        }
     }
 
-    return opt_command(&canset);
+    hard_assert( canset.n, "canmat: missing interface.\nTry `canmat -H' for more information.\n");
+    return opt_command(&canset, opt_npos, opt_pos);
 
     return 0;
 }
@@ -405,7 +299,27 @@ static void pollin_display( struct can_frame *can ) {
     canmat_display( &canmat_dict402, can );
 }
 
+static void pollin1( const char *name, canmat_iface_t *cif, void (printer)(struct can_frame*) ) {
+    struct can_frame can;
+    // read the actual message
+    canmat_status_t r = canmat_iface_recv( cif, &can );
+
+    hard_assert( CANMAT_OK == r, "Couldn't recv frame: %s\n", canmat_iface_strerror(cif, r) );
+
+    if( CANMAT_OK == r ) {
+        fprintf( stdout, "%s: ", name );
+        printer( &can );
+    }
+}
+
 int cmd_pollin( can_set_t *canset, void (printer)(struct can_frame*) ) {
+
+    if( 1 == canset->n ) {
+        while(1) {
+            pollin1( canset->name[0], canset->cif[0], printer );
+        }
+    }
+
     // set events
     for( size_t i = 0; i < canset->n; i ++ ) {
         canset->pfd[i].events = POLLIN;
@@ -426,28 +340,22 @@ int cmd_pollin( can_set_t *canset, void (printer)(struct can_frame*) ) {
                                (canset->pfd[i].revents & POLLNVAL) ),
                          "Error on iface %s\n", canset->name[i] );
             if( canset->pfd[i].revents & POLLIN ) {
-                struct can_frame can;
-                // read the actual message
-                canmat_status_t r = canmat_iface_recv( canset->cif[i], &can );
-                if( CANMAT_OK == r ) {
-                    fprintf( stdout, "%s: ", canset->name[i] );
-                    printer( &can );
-                } else {
-                    perror("Couldn't recv frame");
-                    exit(EXIT_FAILURE);
-                }
+                pollin1( canset->name[i], canset->cif[i], printer );
             }
         }
     }
 }
 
 
-int cmd_dump( can_set_t *canset ) {
+int cmd_dump( can_set_t *canset, size_t n, const char **arg ) {
+    hard_assert( 0 == n && NULL == arg, "Extra arguments\n");
+
     cmd_pollin( canset, pollin_raw );
     return 0;
 }
 
-int cmd_display( can_set_t *canset ) {
+int cmd_display( can_set_t *canset, size_t n, const char **arg ) {
+    hard_assert( 0 == n && NULL == arg, "Extra arguments\n");
     cmd_pollin( canset, pollin_display );
     return 0;
 }
@@ -467,12 +375,27 @@ int send_frame( can_set_t *canset, struct can_frame *can ) {
     return 0;
 }
 
-int query_sdo( can_set_t *canset ) {
+
+int cmd_send( can_set_t *canset, size_t n, const char **arg ) {
+    hard_assert( n >= 1, "Insufficient arguments\n");
+    hard_assert( n <= 1 + 8, "Extra arguments\n");
+
+    struct can_frame can;
+    can.can_id = (uint16_t)parse_uhex( arg[0], 0x7FF );
+    can.can_dlc = (uint8_t)(n - 1);
+    for( size_t i = 1; i < n; i ++ ) {
+        can.data[i-1] = (uint8_t)parse_uhex(arg[i], 0xFF);
+    }
+
+    return send_frame( canset, &can );
+}
+
+static int query_sdo( can_set_t *canset, canmat_sdo_msg_t *sdo ) {
 
     for( size_t i = 0; i < canset->n; i ++ ) {
         canmat_sdo_msg_t resp;
 
-        ssize_t r = canmat_sdo_query( canset->cif[i], &opt_sdo, &resp );
+        ssize_t r = canmat_sdo_query( canset->cif[i], sdo, &resp );
 
         if( CANMAT_OK != r ) {
             fprintf( stderr, "Couldn't send frame: %s\n", strerror(errno) );
@@ -483,84 +406,108 @@ int query_sdo( can_set_t *canset ) {
     return 0;
 }
 
-int cmd_send( can_set_t *canset ) {
-    struct can_frame can;
-    can.can_id = opt_canid;
-    can.can_dlc = opt_can_dlc;
-    memcpy(can.data, opt_can_data, opt_can_dlc);
+void parse_arg_sdo( size_t n, const char **arg, canmat_sdo_msg_t *sdo ) {
+    hard_assert( n >= 3, "Insufficient arguments\n");
+    hard_assert( n <= 3 + 4, "Extra arguments\n");
 
+    sdo->node = (uint8_t)parse_uhex( arg[0], CANMAT_NODE_MASK );
+    sdo->index = (uint16_t)parse_uhex( arg[1], 0xFFFF );
+    sdo->subindex = (uint8_t)parse_uhex( arg[2], 0xFF );
+
+    sdo->length = (uint8_t)(n - 3);
+
+    for( size_t i = 3; i < n; i ++ ) {
+        hard_assert( (cmd_dl == opt_command || cmd_ul_resp == opt_command),
+                     "Extra arguments: %s\n", arg[i] );
+        sdo->data[ i-3 ] = (uint8_t)parse_uhex( arg[i], 0xFF );
+    }
+}
+
+int cmd_ul( can_set_t *canset, size_t n, const char **arg ) {
+    canmat_sdo_msg_t sdo;
+
+    sdo.cmd.ccs = CANMAT_EX_UL;
+    sdo.cmd.e = 1;
+    sdo.cmd.n = 0;
+    sdo.cmd.s = 0;
+
+    parse_arg_sdo( n, arg, &sdo );
+
+    return query_sdo( canset, &sdo );
+}
+
+int cmd_ul_resp( can_set_t *canset, size_t n, const char **arg ) {
+    canmat_sdo_msg_t sdo;
+    parse_arg_sdo( n, arg, &sdo );
+
+    sdo.cmd.ccs = CANMAT_EX_UL;
+    sdo.cmd.e = 1;
+    sdo.cmd.n = (unsigned char)((4 - sdo.length) & 0x3);
+    sdo.cmd.s = 1;
+
+    struct can_frame can;
+
+    canmat_sdo2can( &can, &sdo, 1 );
     return send_frame( canset, &can );
 }
 
-int cmd_ul( can_set_t *canset ) {
-    opt_sdo.cmd.ccs = CANMAT_EX_UL;
-    opt_sdo.cmd.e = 1;
-    opt_sdo.cmd.n = 0;
-    opt_sdo.cmd.s = 0;
+int cmd_dl( can_set_t *canset, size_t n, const char **arg ) {
+    canmat_sdo_msg_t sdo;
+    parse_arg_sdo( n, arg, &sdo );
 
-    return query_sdo( canset );
+    canmat_sdo_set_ex_dl( &sdo,
+                          sdo.node, sdo.index, sdo.subindex );
+
+    return query_sdo( canset, &sdo );
 }
 
-int cmd_ul_resp( can_set_t *canset ) {
-    hard_assert( opt_sdo.length > 0 && opt_sdo.length < 5,
-                 "Invalid data length\n" );
+int cmd_dl_resp( can_set_t *canset, size_t n, const char **arg ) {
+    canmat_sdo_msg_t sdo;
+    parse_arg_sdo( n, arg, &sdo );
+
+    sdo.cmd.ccs = CANMAT_EX_DL;
+    sdo.cmd.e = 1;
+    sdo.cmd.n = 0;
+    sdo.cmd.s = 0;
+
 
     struct can_frame can;
-
-    opt_sdo.cmd.ccs = CANMAT_EX_UL;
-    opt_sdo.cmd.e = 1;
-    opt_sdo.cmd.n = (unsigned char)((4 - opt_sdo.length) & 0x3);
-    opt_sdo.cmd.s = 1;
-
-    canmat_sdo2can( &can, &opt_sdo, 1 );
+    canmat_sdo2can( &can, &sdo, 1 );
     return send_frame( canset, &can );
 }
 
-int cmd_dl( can_set_t *canset ) {
-    hard_assert( opt_sdo.length > 0 && opt_sdo.length < 5,
-                 "Invalid data length\n" );
+int cmd_dict_dl( can_set_t *canset, size_t n, const char **arg) {
+    hard_assert( !(n < 3), "Insufficient arguments\n");
+    hard_assert( !(n > 3), "Extra arguments\n");
 
-    canmat_sdo_set_ex_dl( &opt_sdo,
-                         opt_sdo.node, opt_sdo.index, opt_sdo.subindex );
+    const char *param = arg[0];
+    uint8_t node = (uint8_t)parse_uhex( arg[0], CANMAT_NODE_MASK );
 
-    return query_sdo( canset );
-}
+    canmat_obj_t *obj = canmat_dict_search_name( &canmat_dict402, arg[0] );
 
-int cmd_dl_resp( can_set_t *canset ) {
-    hard_assert( 0 == opt_sdo.length,
-                 "Invalid data length\n" );
-
-    opt_sdo.cmd.ccs = CANMAT_EX_DL;
-    opt_sdo.cmd.e = 1;
-    opt_sdo.cmd.n = 0;
-    opt_sdo.cmd.s = 0;
-
-    struct can_frame can;
-    canmat_sdo2can( &can, &opt_sdo, 1 );
-    return send_frame( canset, &can );
-}
-
-int cmd_dict_dl( can_set_t *canset) {
-    canmat_obj_t *obj = canmat_dict_search_name( &canmat_dict402, opt_dict_param_name );
-
-    hard_assert( obj, "Object `%s' not found\n", opt_dict_param_name );
-
+    hard_assert( obj, "Object `%s' not found\n", param );
     hard_assert( 1 == canset->n, "Can only send on 1 interface\n" );
 
-    canmat_status_t r = canmat_obj_dl_str( canset->cif[0], opt_node, obj, opt_dict_param_value );
+    canmat_status_t r = canmat_obj_dl_str( canset->cif[0], node, obj, param );
     hard_assert( CANMAT_OK == r, "Failed download: %s\n", canmat_iface_strerror(canset->cif[0],r) );
 
     return 0;
 }
 
-int cmd_dict_ul( can_set_t *canset ) {
-    canmat_obj_t *obj = canmat_dict_search_name( &canmat_dict402, opt_dict_param_name );
-    hard_assert( obj, "Object `%s' not found\n", opt_dict_param_name );
+int cmd_dict_ul( can_set_t *canset, size_t n, const char **arg ) {
+    hard_assert( !(n < 2), "Insufficient arguments\n");
+    hard_assert( !(n > 2), "Extra arguments\n");
+
+    const char *param = arg[0];
+    uint8_t node = (uint8_t)parse_uhex( arg[0], CANMAT_NODE_MASK );
+
+    canmat_obj_t *obj = canmat_dict_search_name( &canmat_dict402, param );
+    hard_assert( obj, "Object `%s' not found\n", param );
 
     hard_assert( 1 == canset->n, "Can only send on 1 interface\n" );
 
     canmat_scalar_t val;
-    canmat_status_t r = canmat_obj_ul( canset->cif[0], opt_node, obj, &val );
+    canmat_status_t r = canmat_obj_ul( canset->cif[0], node, obj, &val );
     hard_assert( CANMAT_OK == r, "Failed upload: %s\n", canmat_iface_strerror(canset->cif[0],r) );
     switch(obj->data_type) {
 
@@ -585,5 +532,15 @@ int cmd_dict_ul( can_set_t *canset ) {
     default: return CANMAT_ERR_PARAM;
     }
 
+    return 0;
+}
+
+int cmd_info( can_set_t *canset, size_t n, const char **arg) {
+    hard_assert( 0 == n && NULL == arg, "Extra arguments\n");
+    for( size_t i = 0; i < canset->n; i++ ) {
+        printf("> %s\n", canset->name[i] );
+        canmat_status_t r = canmat_iface_print_info(canset->cif[i], stdout);
+        hard_assert( CANMAT_OK == r, "Couldn't show info: %s\n", canmat_iface_strerror(canset->cif[i],r) );
+    }
     return 0;
 }

@@ -54,6 +54,7 @@ struct canmat_iface_vtable {
     canmat_status_t (*recv)( struct canmat_iface *cif, struct can_frame *frame );
     canmat_status_t (*destroy)( struct canmat_iface *cif );
     canmat_status_t (*set_kbps)( struct canmat_iface *cif, unsigned kbps );
+    canmat_status_t (*print_info)( struct canmat_iface *cif, FILE *fptr );
     const char *(*strerror)( struct canmat_iface *cif );
 };
 
@@ -86,6 +87,9 @@ static inline canmat_status_t canmat_iface_recv( struct canmat_iface *cif, struc
 }
 static inline canmat_status_t canmat_iface_destroy( struct canmat_iface *cif ) {
     return cif->vtable->destroy(cif);
+}
+static inline canmat_status_t canmat_iface_print_info( struct canmat_iface *cif, FILE *fptr ) {
+    return cif->vtable->print_info(cif, fptr);
 }
 
 const char *canmat_iface_strerror( struct canmat_iface *cif, canmat_status_t status );

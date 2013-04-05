@@ -63,6 +63,7 @@ static canmat_status_t v_recv( struct canmat_iface *cif, struct can_frame *frame
 static canmat_status_t v_destroy( struct canmat_iface *cif );
 static const char *v_strerror( struct canmat_iface *cif );
 static canmat_status_t v_set_kbps( struct canmat_iface *cif, unsigned kbps );
+static canmat_status_t v_print_info( struct canmat_iface *cif, FILE *fptr );
 
 typedef struct canmat_iface_ntcan {
     struct canmat_iface cif;
@@ -75,7 +76,8 @@ static struct canmat_iface_vtable vtable = {
     .recv=v_recv,
     .destroy=v_destroy,
     .strerror=v_strerror,
-    .set_kbps=v_set_kbps
+    .set_kbps=v_set_kbps,
+    .print_info=v_print_info
 };
 
 struct canmat_iface_ntcan *canmat_iface_ntcan_new() {
@@ -103,6 +105,7 @@ static canmat_status_t check( struct canmat_iface *cif, NTCAN_RESULT r ) {
 static canmat_status_t v_open( struct canmat_iface *cif, const char *name ) {
     if( cif->vtable != &vtable ) return CANMAT_ERR_PARAM;
 
+    cif->fd = -1;
     canmat_iface_ntcan_t *ntcif = (canmat_iface_ntcan_t*)cif;
     // parse name
     errno = 0;
@@ -112,10 +115,10 @@ static canmat_status_t v_open( struct canmat_iface *cif, const char *name ) {
     // open can handle
     NTCAN_RESULT r  = canOpen( net,           //net
                                0,             //flags
-                               10,            //txqueue
-                               100,           //rxqueue
-                               1000,          //txtimeout
-                               1000,          //rxtimeout
+                               256,           //txqueue
+                               256,           //rxqueue
+                               0,             //txtimeout, forever
+                               0,             //rxtimeout, forever
                                &(ntcif->handle)  // handle
         );
 
@@ -197,6 +200,7 @@ static const char *v_strerror( struct canmat_iface *cif ) {
 }
 
 static canmat_status_t v_set_kbps( struct canmat_iface *cif, unsigned kbps ) {
+    if( cif->vtable != &vtable ) return CANMAT_ERR_PARAM;
     uint32_t baudcode;
     switch(kbps) {
     case 1000: baudcode = NTCAN_BAUD_1000;  break;
@@ -214,6 +218,86 @@ static canmat_status_t v_set_kbps( struct canmat_iface *cif, unsigned kbps ) {
     NTCAN_RESULT r = canSetBaudrate( ((canmat_iface_ntcan_t*)cif)->handle, baudcode );
 
     return check(cif,r);
+}
+
+
+static void print_version(FILE *f, uint16_t u){
+    int rev = u & 0xff;
+    int min = (u >> 8) & 0xf;
+    int maj = (u >> 12) & 0xf;
+    fprintf(f, "%d.%d.%d", maj, min, rev);
+}
+
+
+static int bitset( uint16_t u, int bit ) {
+    return (u >> bit) & 1;
+}
+static void try_feature( FILE *f, CAN_IF_STATUS *status, int bit, const char *name){
+    if( bitset( status->features, bit ) )
+        fprintf(f, " %s", name );
+}
+
+
+/// convert NTCAN baud code to baud in kbps
+static int ntcan_baud_kbps( uint32_t ntcan_baud ) {
+    switch(ntcan_baud) {
+    case NTCAN_BAUD_1000:
+        return 1000;
+    case NTCAN_BAUD_800:
+        return 800;
+    case NTCAN_BAUD_500:
+        return 500;
+    case NTCAN_BAUD_250:
+        return 250;
+    case NTCAN_BAUD_125:
+        return 125;
+    case NTCAN_BAUD_100:
+        return 100;
+    case NTCAN_BAUD_50:
+        return 50;
+    case NTCAN_BAUD_10:
+        return 10;
+    default:
+        return -1;
+    }
+}
+
+static canmat_status_t v_print_info( struct canmat_iface *cif, FILE *fptr ) {
+    if( cif->vtable != &vtable ) return CANMAT_ERR_PARAM;
+
+    CAN_IF_STATUS status = {0};
+    cif->err =  canStatus(((canmat_iface_ntcan_t*)cif)->handle, &status);
+    if( NTCAN_SUCCESS != cif->err ) return CANMAT_ERR_OS;
+
+    uint32_t baud;
+    cif->err =  canGetBaudrate(((canmat_iface_ntcan_t*)cif)->handle, &baud);
+    if( NTCAN_SUCCESS != cif->err ) return CANMAT_ERR_OS;
+
+
+    fprintf( fptr,
+             " ESD CAN STATUS\n"
+             "---------------\n");
+
+    fprintf( fptr, "status:   %u (%s)\n", status.boardstatus,
+            (0==status.boardstatus)?"OK":"ERROR" );
+    fprintf( fptr, "Baudrate: %d kbps\n", ntcan_baud_kbps( baud ) );
+    fprintf( fptr, "id:       %s", status.boardid );
+    fprintf( fptr, "\nhardware: "); print_version(fptr,status.hardware);
+    fprintf( fptr, "\nfirmware: "); print_version(fptr,status.firmware);
+    fprintf( fptr, "\ndriver:   "); print_version(fptr,status.driver);
+    fprintf( fptr, "\ndll:      "); print_version(fptr,status.dll);
+    fprintf( fptr, "\nfeatures: 0x%x -", status.features);
+    try_feature(fptr, &status, 0, "FULL_CAN");
+    try_feature(fptr, &status, 1, "CAN_20B");
+    try_feature(fptr, &status, 2, "DEVICE_NET");
+    try_feature(fptr, &status, 3, "CYCLIC_TX");
+    try_feature(fptr, &status, 4, "RX_OBJECT_MODE");
+    try_feature(fptr, &status, 5, "TIMESTAMP");
+    try_feature(fptr, &status, 6, "LISTEN_ONLY_MODE");
+    try_feature(fptr, &status, 7, "SMART_DISCONNECT");
+    fprintf(fptr, "\n\n");
+
+    return CANMAT_OK;
 }
 
 
