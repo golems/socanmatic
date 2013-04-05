@@ -109,8 +109,9 @@ static canmat_status_t v_open( struct canmat_iface *cif, const char *name ) {
     canmat_iface_ntcan_t *ntcif = (canmat_iface_ntcan_t*)cif;
     // parse name
     errno = 0;
-    int32_t net = (int32_t)strtol(name, NULL, 0);
-    if( 0 != errno ) return CANMAT_ERR_PARAM;
+    char *endptr = NULL;
+    int32_t net = (int32_t)strtol(name, &endptr, 0);
+    if( 0 != errno || endptr == name || !endptr || '\0' != endptr[0] ) return CANMAT_ERR_PARAM;
 
     // open can handle
     NTCAN_RESULT r  = canOpen( net,           //net
