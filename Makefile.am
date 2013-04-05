@@ -27,7 +27,15 @@ m4_dnl bin_PROGRAMS = esdcantool
 bin_PROGRAMS = canmat
 noinst_PROGRAMS = test_sdo
 
-libsocanmatic_la_SOURCES = src/sdo.c src/ds301.c src/error.c src/dict.c src/util.c src/iface/iface.c
+libsocanmatic_la_SOURCES =                   \
+	src/sdo.c                            \
+	src/ds301.c                          \
+	src/error.c                          \
+	src/dict.c                           \
+	src/util.c                           \
+	src/iface/iface.c                    \
+	src/nmt.c
+
 libsocanmatic_la_LIBADD = -ldl
 
 libsocanmatic402_la_SOURCES = dict402.c

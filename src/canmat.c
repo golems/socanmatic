@@ -112,6 +112,7 @@ int cmd_dict_ul( can_set_t *canset, size_t n, const char **args );
 int cmd_display( can_set_t *canset, size_t n, const char **args );
 int cmd_info( can_set_t *canset, size_t n, const char **args );
 int cmd_set( can_set_t *canset, size_t n, const char **args );
+int cmd_nmt( can_set_t *canset, size_t n, const char **args );
 
 /***********/
 /* HELPERS */
@@ -173,6 +174,7 @@ cmd_fun_t posarg_cmd( const char *arg ) {
                  {"dict-ul", cmd_dict_ul},
                  {"info", cmd_info},
                  {"set", cmd_set},
+                 {"nmt", cmd_nmt},
                  {NULL, NULL} };
     size_t i;
     for( i = 0; cmds[i].name != NULL; i ++ ) {
@@ -245,7 +247,7 @@ int main( int argc, char ** argv ) {
         case '?':   /* help     */
         case 'h':
         case 'H':
-            puts( "Usage: canmat [OPTION...] [dump]\n"
+            puts( "Usage: canmat [OPTIONS...] COMMAND [command-args...]\n"
                   "Shell tool for CANopen\n"
                   "\n"
                   "Options:\n"
@@ -267,6 +269,8 @@ int main( int argc, char ** argv ) {
                   "  canmat ul node idx subidx                    Upload SDO from node\n"
                   "  canmat ul-resp node idx subidx bytes-or-val  Simulate node upload response\n"
                   "  canmat set bitrate value                     Set bitrate in kbps\n"
+                  "  canmat nmt node (start|stop|preop|reset-(node|com))\n"
+                  "                                               Send an NMT message\n"
                   "\n"
                   "Report bugs to <ntd@gatech.edu>"
                 );
@@ -328,6 +332,8 @@ static void pollin1( const char *name, canmat_iface_t *cif, void (printer)(struc
 }
 
 int cmd_pollin( can_set_t *canset, void (printer)(struct can_frame*) ) {
+
+    // TODO: use threads for interfaces without a file descriptor
 
     if( 1 == canset->n ) {
         while(1) {
@@ -496,9 +502,9 @@ int cmd_dict_dl( can_set_t *canset, size_t n, const char **arg) {
     hard_assert( !(n > 3), "Extra arguments\n");
 
     const char *param = arg[0];
-    uint8_t node = (uint8_t)parse_uhex( arg[0], CANMAT_NODE_MASK );
+    uint8_t node = (uint8_t)parse_uhex( arg[1], CANMAT_NODE_MASK );
 
-    canmat_obj_t *obj = canmat_dict_search_name( &canmat_dict402, arg[0] );
+    canmat_obj_t *obj = canmat_dict_search_name( &canmat_dict402, arg[2] );
 
     hard_assert( obj, "Object `%s' not found\n", param );
     hard_assert( 1 == canset->n, "Can only send on 1 interface\n" );
@@ -514,7 +520,7 @@ int cmd_dict_ul( can_set_t *canset, size_t n, const char **arg ) {
     hard_assert( !(n > 2), "Extra arguments\n");
 
     const char *param = arg[0];
-    uint8_t node = (uint8_t)parse_uhex( arg[0], CANMAT_NODE_MASK );
+    uint8_t node = (uint8_t)parse_uhex( arg[1], CANMAT_NODE_MASK );
 
     canmat_obj_t *obj = canmat_dict_search_name( &canmat_dict402, param );
     hard_assert( obj, "Object `%s' not found\n", param );
@@ -581,6 +587,40 @@ int cmd_set( can_set_t *canset, size_t n, const char **arg) {
         fprintf( stderr, "Invalid variable: %s\n", var );
         exit(EXIT_FAILURE);
     }
+
+    return 0;
+}
+
+int cmd_nmt( can_set_t *canset, size_t n, const char **arg) {
+    hard_assert( !(n < 2), "Insufficient arguments\n");
+    hard_assert( !(n > 2), "Extra arguments\n");
+
+    hard_assert( 1 == canset->n, "Only one CAN interface supported\n");
+
+    uint8_t node = (uint8_t)parse_uhex( arg[0], CANMAT_NODE_MASK );
+    const char *msg = arg[1];
+
+    canmat_nmt_msg_t nmt;
+    if( 0 == strcasecmp( "start", msg ) ) {
+        nmt = CANMAT_NMT_START_REMOTE;
+    } else if( 0 == strcasecmp( "stop", msg ) ) {
+        nmt = CANMAT_NMT_STOP_REMOTE;
+    } else if( 0 == strcasecmp( "preop", msg ) ) {
+        nmt = CANMAT_NMT_PRE_OP;
+    } else if( 0 == strcasecmp( "reset-node", msg ) ) {
+        nmt = CANMAT_NMT_RESET_NODE;
+    } else if( 0 == strcasecmp( "reset-com", msg ) ) {
+        nmt = CANMAT_NMT_RESET_COM;
+    } else {
+        fprintf(stderr,
+                "Unrecognized NMT message: '%s'\n"
+                "Wanted one of {start,stop,preop,reset-node,reset-com} for NMT message\n",
+                msg);
+        exit(EXIT_FAILURE);
+    }
+
+    canmat_status_t r = canmat_send_nmt( canset->cif[0], node, nmt );
+    hard_assert( CANMAT_OK == r, "Could not send NMT: %s\n", canmat_iface_strerror(canset->cif[0],r) );
 
     return 0;
 }
