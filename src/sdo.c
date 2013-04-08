@@ -74,8 +74,7 @@ void canmat_sdo2can (struct can_frame *dst, const canmat_sdo_msg_t *src, const i
     memset( dst->data + 4 + src->length, 0, (size_t)(4 - src->length) );
 }
 
-// NOTE: Does this translation stand correct if the dst message does not
-// use the entire data?
+// TODO: segmented messages
 
 // Create a canmat_sdo_msg_t from a struct can_frame
 void canmat_can2sdo( canmat_sdo_msg_t *dst, const struct can_frame *src ) {
@@ -83,20 +82,34 @@ void canmat_can2sdo( canmat_sdo_msg_t *dst, const struct can_frame *src ) {
 
     assert( src->can_dlc <= 8 );
 
+    // command
     uint8_t cmd = src->data[0];
     dst->cmd.s = cmd & 0x1;
     dst->cmd.e = (cmd >> 1) & 0x1;
     dst->cmd.n = (uint8_t) ((cmd >> 2) & 0x3);
     dst->cmd.ccs = (enum canmat_command_spec) ((cmd >> 5) & 0x7);
 
+    // node
     dst->node = (uint8_t)(src->can_id & CANMAT_NODE_MASK);
 
-    dst->length = (uint8_t)(src->can_dlc - 4);
-
-
-
+    // indices
     dst->index = (uint16_t)(src->data[1] + (src->data[2] << 8));
     dst->subindex = src->data[3];
+
+    // length
+    uint8_t msgbytes = (uint8_t)(src->can_dlc - 4);
+    if( dst->cmd.s ) {
+        /* If LENGTH-IN-CMD bit is set, take the smaller of n and the
+         * total message size.  It is probably wrong for msgbytes to
+         * be smaller than n, but let us be liberal in what we accept.
+         */
+        dst->length = (uint8_t)(( dst->cmd.n < msgbytes ) ?
+                                dst->cmd.n : msgbytes );
+    } else {
+        dst->length = msgbytes;
+    }
+
+    // data
     memcpy( &(dst->data[0]), &(src->data[4]), dst->length );
     memset( &(dst->data[ dst->length ]), 0, (size_t)(4 - dst->length) );
 }

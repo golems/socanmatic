@@ -109,7 +109,8 @@ static int sdo_check_length( const canmat_sdo_msg_t *sdo, size_t len  ) {
         printf(" overflow");
         sdo_bytes(sdo);
         return -1;
-    } else if ( len > sdo->length ) {
+    } else
+        if ( len > sdo->length ) {
         printf(" underflow");
         sdo_bytes(sdo);
         return -1;
@@ -163,32 +164,32 @@ static void display_sdo( const canmat_dict_t *dict, const struct can_frame *can 
             switch( obj->data_type ) {
             case CANMAT_DATA_TYPE_INTEGER8:
                 if( sdo_check_length(&sdo, 1) ) break;
-                printf( " %"PRId8"\n",
+                printf( " %"PRId8,
                         canmat_sdo_get_data_i8(&sdo) );
                 break;
             case CANMAT_DATA_TYPE_INTEGER16:
                 if( sdo_check_length(&sdo, 2) ) break;
-                printf( " %"PRId16"\n",
+                printf( " %"PRId16,
                         canmat_sdo_get_data_i16(&sdo) );
                 break;
             case CANMAT_DATA_TYPE_INTEGER32:
                 if( sdo_check_length(&sdo, 4) ) break;
-                printf( " %"PRId32"\n",
+                printf( " %"PRId32,
                         canmat_sdo_get_data_i32(&sdo) );
                 break;
             case CANMAT_DATA_TYPE_UNSIGNED8:
                 if( sdo_check_length(&sdo, 1) ) break;
-                printf( " 0x%"PRIx8"\n",
+                printf( " 0x%"PRIx8,
                         canmat_sdo_get_data_u8(&sdo) );
                 break;
             case CANMAT_DATA_TYPE_UNSIGNED16:
                 if( sdo_check_length(&sdo, 2) ) break;
-                printf( " 0x%"PRIx16"\n",
+                printf( " 0x%"PRIx16,
                         canmat_sdo_get_data_u16(&sdo) );
                 break;
             case CANMAT_DATA_TYPE_UNSIGNED32:
                 if( sdo_check_length(&sdo, 4) ) break;
-                printf( " 0x%"PRIx32"\n",
+                printf( " 0x%"PRIx32,
                         canmat_sdo_get_data_u32(&sdo) );
                 break;
             default:
