@@ -106,7 +106,7 @@ void canmat_can2sdo( canmat_sdo_msg_t *dst, const struct can_frame *src ) {
 canmat_status_t canmat_sdo_query( canmat_iface_t *cif, const canmat_sdo_msg_t *req,
                                   canmat_sdo_msg_t *resp ) {
     canmat_status_t r = canmat_sdo_query_send( cif, req );
-    if( r >= 0 ) {
+    if( CANMAT_OK == r ) {
         return canmat_sdo_query_recv( cif, resp, req );
     } else {
         return r;
@@ -128,11 +128,10 @@ canmat_status_t canmat_sdo_query_recv( canmat_iface_t *cif, canmat_sdo_msg_t *re
     struct can_frame can;
     do {
         r = canmat_iface_recv( cif, &can );
-        if( CANMAT_OK ==  r )
-            return r;
-    } while ( can.can_id != (canid_t)CANMAT_SDO_RESP_ID(req->node) );
+    } while ( CANMAT_OK == r &&
+              can.can_id != (canid_t)CANMAT_SDO_RESP_ID(req->node) );
 
-    canmat_can2sdo( resp, &can );
+    if( CANMAT_OK == r ) canmat_can2sdo( resp, &can );
     return r;
 
 }

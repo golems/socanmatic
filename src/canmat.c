@@ -501,15 +501,16 @@ int cmd_dict_dl( can_set_t *canset, size_t n, const char **arg) {
     hard_assert( !(n < 3), "Insufficient arguments\n");
     hard_assert( !(n > 3), "Extra arguments\n");
 
-    const char *param = arg[0];
-    uint8_t node = (uint8_t)parse_uhex( arg[1], CANMAT_NODE_MASK );
+    uint8_t node = (uint8_t)parse_uhex( arg[0], CANMAT_NODE_MASK );
+    const char *param = arg[1];
+    const char *val = arg[2];
 
-    canmat_obj_t *obj = canmat_dict_search_name( &canmat_dict402, arg[2] );
+    canmat_obj_t *obj = canmat_dict_search_name( &canmat_dict402, param );
 
     hard_assert( obj, "Object `%s' not found\n", param );
     hard_assert( 1 == canset->n, "Can only send on 1 interface\n" );
 
-    canmat_status_t r = canmat_obj_dl_str( canset->cif[0], node, obj, param );
+    canmat_status_t r = canmat_obj_dl_str( canset->cif[0], node, obj, val );
     hard_assert( CANMAT_OK == r, "Failed download: %s\n", canmat_iface_strerror(canset->cif[0],r) );
 
     return 0;
@@ -519,8 +520,8 @@ int cmd_dict_ul( can_set_t *canset, size_t n, const char **arg ) {
     hard_assert( !(n < 2), "Insufficient arguments\n");
     hard_assert( !(n > 2), "Extra arguments\n");
 
-    const char *param = arg[0];
-    uint8_t node = (uint8_t)parse_uhex( arg[1], CANMAT_NODE_MASK );
+    uint8_t node = (uint8_t)parse_uhex( arg[0], CANMAT_NODE_MASK );
+    const char *param = arg[1];
 
     canmat_obj_t *obj = canmat_dict_search_name( &canmat_dict402, param );
     hard_assert( obj, "Object `%s' not found\n", param );
@@ -530,8 +531,8 @@ int cmd_dict_ul( can_set_t *canset, size_t n, const char **arg ) {
     canmat_scalar_t val;
     canmat_status_t r = canmat_obj_ul( canset->cif[0], node, obj, &val );
     hard_assert( CANMAT_OK == r, "Failed upload: %s\n", canmat_iface_strerror(canset->cif[0],r) );
-    switch(obj->data_type) {
 
+    switch(obj->data_type) {
     case CANMAT_DATA_TYPE_INTEGER8:
         printf("%"PRId8"\n", val.i8);
         break;
@@ -550,7 +551,8 @@ int cmd_dict_ul( can_set_t *canset, size_t n, const char **arg ) {
     case CANMAT_DATA_TYPE_UNSIGNED32:
         printf("0x%"PRIx32"\n", val.u32);
         break;
-    default: return CANMAT_ERR_PARAM;
+    default: fprintf(stderr, "Unknown data type (%x)\n", obj->data_type );
+        exit(EXIT_FAILURE);
     }
 
     return 0;

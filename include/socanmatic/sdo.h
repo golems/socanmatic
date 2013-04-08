@@ -63,7 +63,12 @@ typedef enum canmat_command_byte {
     CANMAT_SDO_CMD_DL1 = 0x2f,
     CANMAT_SDO_CMD_DL2 = 0x2b,
     CANMAT_SDO_CMD_DL3 = 0x27,
-    CANMAT_SDO_CMD_DL4 = 0x23
+    CANMAT_SDO_CMD_DL4 = 0x23,
+
+    CANMAT_SDO_CMD_UL1 = 0x4F,
+    CANMAT_SDO_CMD_UL2 = 0x4B,
+    CANMAT_SDO_CMD_UL3 = 0x47,
+    CANMAT_SDO_CMD_UL4 = 0x43
 } canmat_command_byte_t;
 
 /** Container struct for SDO requests.
