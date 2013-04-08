@@ -263,6 +263,7 @@ enum canmat_402_polarity_mask {
 #define CANMAT_402_POLARITY_FACTOR_POS(polarity) \
     CANMAT_402_POLARITY_FACTOR( (polarity) & CANMAT_402_POLARITY_MASK_POS )
 
+canmat_obj_print_fun* canmat_402_print_lookup( const char *name );
 
 #ifdef __cplusplus
 }

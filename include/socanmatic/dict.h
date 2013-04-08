@@ -191,6 +191,9 @@ canmat_status_t canmat_obj_dl_str (
 /* Parse str based on provided type and store in val */
 canmat_status_t canmat_typed_parse( canmat_data_type_t type, const char *str, canmat_scalar_t *val );
 
+typedef int canmat_obj_print_fun(canmat_scalar_t);
+
+
 #ifdef __cplusplus
 }
 #endif

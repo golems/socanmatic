@@ -532,27 +532,32 @@ int cmd_dict_ul( can_set_t *canset, size_t n, const char **arg ) {
     canmat_status_t r = canmat_obj_ul( canset->cif[0], node, obj, &val );
     hard_assert( CANMAT_OK == r, "Failed upload: %s\n", canmat_iface_strerror(canset->cif[0],r) );
 
-    switch(obj->data_type) {
-    case CANMAT_DATA_TYPE_INTEGER8:
-        printf("%"PRId8"\n", val.i8);
-        break;
-    case CANMAT_DATA_TYPE_INTEGER16:
-        printf("%"PRId16"\n", val.i16);
-        break;
-    case CANMAT_DATA_TYPE_INTEGER32:
-        printf("%"PRId32"\n", val.i32);
-        break;
-    case CANMAT_DATA_TYPE_UNSIGNED8:
-        printf("0x%"PRIx8"\n", val.u8);
-        break;
-    case CANMAT_DATA_TYPE_UNSIGNED16:
-        printf("0x%"PRIx16"\n", val.u16);
-        break;
-    case CANMAT_DATA_TYPE_UNSIGNED32:
-        printf("0x%"PRIx32"\n", val.u32);
-        break;
-    default: fprintf(stderr, "Unknown data type (%x)\n", obj->data_type );
-        exit(EXIT_FAILURE);
+    canmat_obj_print_fun *fun = canmat_402_print_lookup( param );
+    if( fun ) {
+        fun( val );
+    } else {
+        switch(obj->data_type) {
+        case CANMAT_DATA_TYPE_INTEGER8:
+            printf("%"PRId8"\n", val.i8);
+            break;
+        case CANMAT_DATA_TYPE_INTEGER16:
+            printf("%"PRId16"\n", val.i16);
+            break;
+        case CANMAT_DATA_TYPE_INTEGER32:
+            printf("%"PRId32"\n", val.i32);
+            break;
+        case CANMAT_DATA_TYPE_UNSIGNED8:
+            printf("0x%"PRIx8"\n", val.u8);
+            break;
+        case CANMAT_DATA_TYPE_UNSIGNED16:
+            printf("0x%"PRIx16"\n", val.u16);
+            break;
+        case CANMAT_DATA_TYPE_UNSIGNED32:
+            printf("0x%"PRIx32"\n", val.u32);
+            break;
+        default: fprintf(stderr, "Unknown data type (%x)\n", obj->data_type );
+            exit(EXIT_FAILURE);
+        }
     }
 
     return 0;
