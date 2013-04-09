@@ -51,16 +51,13 @@
 /**********/
 
 // Create a struct can_frame from a canmat_sdo_msg_t
-void canmat_sdo2can (struct can_frame *dst, const canmat_sdo_msg_t *src, const int is_response ) {
+void canmat_sdo2can (struct can_frame *dst, const canmat_sdo_msg_t *src, const int is_tx ) {
     // FIXME: better message validation
     assert( src->length <= 4 );
 
     // Set the message ID and the length
-    dst->can_id = (canid_t)(is_response ? CANMAT_SDO_RESP_ID(src->node) : CANMAT_SDO_REQ_ID(src->node));
-    dst->can_dlc = (uint8_t)(src->length + 4);   // 4 due to "len" (1), "msg_lost" (1) and "reserved" (2) fields
+    dst->can_id = (canid_t)(is_tx ? CANMAT_SDO_RESP_ID(src->node) : CANMAT_SDO_REQ_ID(src->node));
 
-    // set command byte
-    dst->data[0] = canmat_sdo_cmd_byte( src );;
 
     // set indices
     dst->data[1] = (uint8_t)(src->index & 0xFF);
@@ -68,87 +65,147 @@ void canmat_sdo2can (struct can_frame *dst, const canmat_sdo_msg_t *src, const i
     dst->data[3] = src->subindex;
 
     // set sdo data
-    memcpy( &(dst->data[4]), &(src->data[0]), src->length );
+    uint8_t len = 0;
+    switch( src->data_type ) {
+        // size 4
+    case CANMAT_DATA_TYPE_REAL32:
+    case CANMAT_DATA_TYPE_UNSIGNED32:
+    case CANMAT_DATA_TYPE_INTEGER32:
+        len = 4;
+        canmat_byte_stle32( dst->data+4, src->data.u32 );
+        break;
+        // size 2
+    case CANMAT_DATA_TYPE_UNSIGNED16:
+    case CANMAT_DATA_TYPE_INTEGER16:
+        len = 2;
+        canmat_byte_stle16( dst->data+4, src->data.u16 );
+        break;
+        // size 1
+    case CANMAT_DATA_TYPE_UNSIGNED8:
+    case CANMAT_DATA_TYPE_INTEGER8:
+        len = 1;
+        dst->data[4] = src->data.u8;
+        break;
+    case CANMAT_DATA_TYPE_VOID:
+        len = 0;
+        break;
+    default:
+        // unhandled
+        // FIXME
+        assert(0);
+    }
 
-    // Reset the rest of the data that is not filled
-    memset( dst->data + 4 + src->length, 0, (size_t)(4 - src->length) );
+    // set command byte
+    dst->data[0] = canmat_sdo_cmd_byte( 1, 1, len, src->cmd_spec );
+
+    // set command byte
+    dst->can_dlc = (uint8_t)(len + 4);
 }
+
 
 // TODO: segmented messages
 
 // Create a canmat_sdo_msg_t from a struct can_frame
-void canmat_can2sdo( canmat_sdo_msg_t *dst, const struct can_frame *src ) {
-    // FIXME: better message validation, check that message is actually an SDO
+void canmat_can2sdo( canmat_sdo_msg_t *dst, const struct can_frame *src, enum canmat_data_type data_type ) {
+    // FIXME: better message validation, check that message is actually an SDO, sufficient size
 
     assert( src->can_dlc <= 8 );
 
     // command
     uint8_t cmd = src->data[0];
-    dst->cmd.s = cmd & 0x1;
-    dst->cmd.e = (cmd >> 1) & 0x1;
-    dst->cmd.n = (uint8_t) ((cmd >> 2) & 0x3);
-    dst->cmd.ccs = (enum canmat_command_spec) ((cmd >> 5) & 0x7);
+    int s = cmd & 0x1;
+    int e = (cmd >> 1) & 0x1;
+    assert(e);
+    uint8_t n = (uint8_t) ((cmd >> 2) & 0x3);
+    dst->cmd_spec = (enum canmat_command_spec) ((cmd >> 5) & 0x7);
+    if( s ) {
+        dst->length = (uint8_t)n;
+    } else {
+        dst->length = src->can_dlc - 4;
+    }
 
     // node
     dst->node = (uint8_t)(src->can_id & CANMAT_NODE_MASK);
 
     // indices
-    dst->index = (uint16_t)(src->data[1] + (src->data[2] << 8));
-    dst->subindex = src->data[3];
-
-    // length
-    uint8_t msgbytes = (uint8_t)(src->can_dlc - 4);
-    if( dst->cmd.s ) {
-        /* If LENGTH-IN-CMD bit is set, take the smaller of n and the
-         * total message size.  It is probably wrong for msgbytes to
-         * be smaller than n, but let us be liberal in what we accept.
-         */
-        dst->length = (uint8_t)(( dst->cmd.n < msgbytes ) ?
-                                dst->cmd.n : msgbytes );
-    } else {
-        dst->length = msgbytes;
-    }
+    dst->index = canmat_can2sdo_index( src );
+    dst->subindex = canmat_can2sdo_subindex( src );
 
     // data
-    memcpy( &(dst->data[0]), &(src->data[4]), dst->length );
-    memset( &(dst->data[ dst->length ]), 0, (size_t)(4 - dst->length) );
+
+    if( CANMAT_ABORT == dst->cmd_spec ) data_type = CANMAT_DATA_TYPE_UNSIGNED32;
+
+    // FIXME: check that size matches
+    switch( data_type ) {
+        // size 4
+    case CANMAT_DATA_TYPE_REAL32:
+    case CANMAT_DATA_TYPE_UNSIGNED32:
+    case CANMAT_DATA_TYPE_INTEGER32:
+        dst->data.u32 = canmat_byte_ldle32( src->data+4 );
+        break;
+        // size 2
+    case CANMAT_DATA_TYPE_UNSIGNED16:
+    case CANMAT_DATA_TYPE_INTEGER16:
+        dst->data.u16 = canmat_byte_ldle16( src->data+4 );
+        break;
+        // size 1
+    case CANMAT_DATA_TYPE_UNSIGNED8:
+    case CANMAT_DATA_TYPE_INTEGER8:
+        dst->data.u8 = src->data[4];
+        break;
+    default:
+        // unhandled
+        // FIXME
+        assert(0);
+    }
 }
 
 
 /// Send and SDO request and wait for the response
-canmat_status_t canmat_sdo_query( canmat_iface_t *cif, const canmat_sdo_msg_t *req,
-                                  canmat_sdo_msg_t *resp ) {
-    canmat_status_t r = canmat_sdo_query_send( cif, req );
-    if( CANMAT_OK == r ) {
-        return canmat_sdo_query_recv( cif, resp, req );
-    } else {
+static canmat_status_t canmat_sdo_query(
+    canmat_iface_t *cif, const canmat_sdo_msg_t *req,
+    canmat_sdo_msg_t *resp, enum canmat_data_type resp_data_type ) {
+    // send
+    {
+        struct can_frame can;
+        canmat_sdo2can( &can, req, 0 );
+        canmat_status_t r  = canmat_iface_send( cif, &can );
+        if( CANMAT_OK != r ) return r;
+    }
+    // recv
+    {
+        canmat_status_t r;
+        struct can_frame can;
+        do {
+            r = canmat_iface_recv( cif, &can );
+        } while ( CANMAT_OK == r &&
+                  can.can_id != (canid_t)CANMAT_SDO_RESP_ID(req->node) );
+
+        if( CANMAT_OK == r ) canmat_can2sdo( resp, &can, resp_data_type );
+
         return r;
     }
 }
 
-/// Send an SDO query
-canmat_status_t canmat_sdo_query_send( canmat_iface_t *cif, const canmat_sdo_msg_t *req ) {
-    struct can_frame can;
-    canmat_sdo2can( &can, req, 0 );
-    return canmat_iface_send( cif, &can );
+canmat_status_t canmat_sdo_dl(
+    canmat_iface_t *cif,
+    const canmat_sdo_msg_t *req, canmat_sdo_msg_t *resp )
+{
+    canmat_sdo_msg_t req1;
+    memcpy(&req1, req, sizeof(req1));
+    req1.cmd_spec = CANMAT_EX_DL;
+    return canmat_sdo_query( cif, &req1, resp, CANMAT_DATA_TYPE_VOID );
 }
 
-/// Receive and SDO query response
-canmat_status_t canmat_sdo_query_recv( canmat_iface_t *cif, canmat_sdo_msg_t *resp,
-                               const canmat_sdo_msg_t *req ) {
-
-    canmat_status_t r;
-    struct can_frame can;
-    do {
-        r = canmat_iface_recv( cif, &can );
-    } while ( CANMAT_OK == r &&
-              can.can_id != (canid_t)CANMAT_SDO_RESP_ID(req->node) );
-
-    if( CANMAT_OK == r ) canmat_can2sdo( resp, &can );
-    return r;
-
+canmat_status_t canmat_sdo_ul(
+    canmat_iface_t *cif,
+    const canmat_sdo_msg_t *req, canmat_sdo_msg_t *resp, enum canmat_data_type resp_data_type )
+{
+    canmat_sdo_msg_t req1;
+    memcpy(&req1, req, sizeof(req1));
+    req1.cmd_spec = CANMAT_EX_UL;
+    return canmat_sdo_query( cif, &req1, resp, resp_data_type );
 }
-
 
 canmat_status_t canmat_sdo_query_resp( canmat_iface_t *cif, const canmat_sdo_msg_t *resp ) {
     struct can_frame can;
@@ -156,110 +213,15 @@ canmat_status_t canmat_sdo_query_resp( canmat_iface_t *cif, const canmat_sdo_msg
     return  canmat_iface_send( cif, &can );
 }
 
-void canmat_sdo_set_ex_dl( canmat_sdo_msg_t *sdo,
-                           uint8_t node, uint16_t idx, uint8_t subindex ) {
-
-    /* Set values */
-    sdo->index = idx;
-    sdo->subindex = subindex;
-    sdo->node = node;
-
-    /* Set Command */
-    sdo->cmd.n = (unsigned char) ((4 - sdo->length) & 0x3);
-    sdo->cmd.e = 1;
-    sdo->cmd.s = 1;
-    sdo->cmd.ccs = CANMAT_EX_DL;
-}
-
-
-
-#define DEF_SDO_DL( VAL_TYPE, SUFFIX )                                  \
-    canmat_status_t canmat_sdo_dl_ ## SUFFIX( canmat_iface_t *cif,      \
-                                              uint8_t *rccs,            \
-                                              uint8_t node,             \
-                                              uint16_t idx, uint8_t subindex, \
-                                              VAL_TYPE value ) {        \
-        canmat_sdo_msg_t req, resp;                                     \
-        canmat_sdo_set_data_ ## SUFFIX( &req, value );                  \
-        canmat_sdo_set_ex_dl( &req, node,                               \
-                              idx, subindex );                          \
-        canmat_status_t r = canmat_sdo_query( cif, &req, &resp );       \
-        if ( CANMAT_OK == r ) *rccs = resp.cmd.ccs;                     \
-        return r;                                                       \
-    }                                                                   \
-
-DEF_SDO_DL(  uint8_t, u8 )
-DEF_SDO_DL(   int8_t, i8 )
-
-DEF_SDO_DL( uint16_t, u16 )
-DEF_SDO_DL(  int16_t, i16 )
-
-DEF_SDO_DL( uint32_t, u32 )
-DEF_SDO_DL(  int32_t, i32 )
-
-
-
-/* precondition: sdo contains message data and length
- *
- * Expedited only
- */
-static canmat_status_t sdo_ul( canmat_iface_t *cif,
-                               canmat_sdo_msg_t *resp,
-                               uint8_t node, uint16_t idx, uint8_t subindex ) {
-    canmat_sdo_msg_t req;
-    // Build SDO Message
-    req.cmd.ccs = CANMAT_EX_UL;
-    req.cmd.e = 1;
-    req.cmd.n = 0;
-    req.cmd.s = 0;
-
-    req.node = node;
-    req.index = idx;
-    req.subindex = subindex;
-    req.length = 0;
-    // Query
-    canmat_status_t r = canmat_sdo_query( cif, &req, resp );
-
-    // Result
-    return r;
-}
-
-#define DEF_SDO_UL( VAL_TYPE, IS_SIGNED, SUFFIX )                       \
-    canmat_status_t canmat_sdo_ul_ ## SUFFIX( canmat_iface_t *cif,      \
-                                              uint8_t *rccs, VAL_TYPE *value, \
-                                              uint8_t node,             \
-                                              uint16_t idx, uint8_t subindex ) \
-    {                                                                   \
-        canmat_sdo_msg_t resp;                                          \
-        canmat_status_t r;                                              \
-        r = sdo_ul(cif, &resp, node, idx, subindex);                    \
-        if( CANMAT_OK == r ) {                                          \
-            *rccs = resp.cmd.ccs;                                       \
-            *value = canmat_sdo_get_data_ ## SUFFIX( &resp );           \
-        }                                                               \
-        return r;                                                       \
-    }
-
-DEF_SDO_UL(  uint8_t, 0, u8 )
-DEF_SDO_UL(   int8_t, 1, i8 )
-
-DEF_SDO_UL( uint16_t, 0, u16 )
-DEF_SDO_UL(  int16_t, 1, i16 )
-
-DEF_SDO_UL( uint32_t, 0, u32 )
-DEF_SDO_UL(  int32_t, 1, i32 )
-
-
 int canmat_sdo_print( FILE *f, const canmat_sdo_msg_t *sdo ) {
-    fprintf(f, "%02x.%02x(%d:%d:%d:%d)[%04x.%02x]",
-            sdo->node,
-            canmat_sdo_cmd_byte(sdo), sdo->cmd.e, sdo->cmd.s, sdo->cmd.e, sdo->cmd.ccs,
+    fprintf(f, "%02x.%02x[%04x.%02x]",
+            sdo->node, sdo->cmd_spec,
             sdo->index, sdo->subindex);
     int i;
     for( i = 0; i < sdo->length; i++ ) {
         fprintf(f,"%c%02x",
                 i ? ':' : ' ',
-                sdo->data[i] );
+                sdo->data.byte[i] );
 
     }
     fputc('\n', f);
@@ -267,8 +229,7 @@ int canmat_sdo_print( FILE *f, const canmat_sdo_msg_t *sdo ) {
 }
 
 const char *canmat_sdo_strerror( const canmat_sdo_msg_t *sdo ) {
-    uint32_t e = canmat_sdo_get_data_u32(sdo);
-    switch (e)
+    switch (sdo->data.u32)
     {
     case 0x00000000:
         return "Error Reset or no Error";

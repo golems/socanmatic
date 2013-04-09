@@ -99,7 +99,7 @@ static void display_malformed( const struct can_frame *can ) {
 
 static void sdo_bytes( const canmat_sdo_msg_t *sdo  ) {
     for( size_t i = 0; i < sdo->length; i++) {
-        printf("%c%02x", i ? ':' : ' ', sdo->data[i] );
+        printf("%c%02x", i ? ':' : ' ', sdo->data.byte[i] );
     }
 }
 
@@ -125,14 +125,18 @@ static void display_sdo( const canmat_dict_t *dict, const struct can_frame *can 
     assert( CANMAT_FUNC_SDO_RX == func ||
             CANMAT_FUNC_SDO_TX == func );
 
-    canmat_sdo_msg_t sdo;
-    canmat_can2sdo( &sdo, can );
+    uint16_t index = canmat_can2sdo_index( can );
+    uint8_t subindex = canmat_can2sdo_subindex( can );
 
-    canmat_obj_t *obj = canmat_dict_search_index( dict, sdo.index, sdo.subindex );
+    canmat_obj_t *obj = canmat_dict_search_index( dict, index, subindex );
+
+    canmat_sdo_msg_t sdo;
+    canmat_can2sdo( &sdo, can, obj ? obj->data_type : CANMAT_DATA_TYPE_UNSIGNED32 );
+
     const char *param = obj ? obj->parameter_name : "unknown";
 
     const char *cs = "unknown";
-    switch( sdo.cmd.ccs ) {
+    switch( sdo.cmd_spec ) {
     case CANMAT_SEG_DL: cs = "SEG_DL"; break;
     case CANMAT_EX_DL:  cs = "EX_DL";  break;
     case CANMAT_EX_UL:  cs = "EX_UL";  break;
@@ -147,50 +151,44 @@ static void display_sdo( const canmat_dict_t *dict, const struct can_frame *can 
         );
 
     // print data
-    if ( CANMAT_ABORT == sdo.cmd.ccs ) {
+    if ( CANMAT_ABORT == sdo.cmd_spec ) {
         if( 4 == sdo.length ) {
             printf( " '%s' (0x%04"PRIx32")",
                     canmat_sdo_strerror(&sdo),
-                    canmat_sdo_get_data_u32(&sdo) );
+                    sdo.data.u32 );
         } else {
             printf(" bad length");
             sdo_bytes(&sdo);
         }
     } else if( (CANMAT_FUNC_SDO_RX == func &&
-         CANMAT_EX_DL == sdo.cmd.ccs) ||
+         CANMAT_EX_DL == sdo.cmd_spec) ||
         (CANMAT_FUNC_SDO_TX == func &&
-         CANMAT_EX_UL == sdo.cmd.ccs) ) {
+         CANMAT_EX_UL == sdo.cmd_spec) ) {
         if( obj ) {
             switch( obj->data_type ) {
             case CANMAT_DATA_TYPE_INTEGER8:
                 if( sdo_check_length(&sdo, 1) ) break;
-                printf( " %"PRId8,
-                        canmat_sdo_get_data_i8(&sdo) );
+                printf( " %"PRId8, sdo.data.i8 );
                 break;
             case CANMAT_DATA_TYPE_INTEGER16:
                 if( sdo_check_length(&sdo, 2) ) break;
-                printf( " %"PRId16,
-                        canmat_sdo_get_data_i16(&sdo) );
+                printf( " %"PRId16, sdo.data.i16 );
                 break;
             case CANMAT_DATA_TYPE_INTEGER32:
                 if( sdo_check_length(&sdo, 4) ) break;
-                printf( " %"PRId32,
-                        canmat_sdo_get_data_i32(&sdo) );
+                printf( " %"PRId32, sdo.data.i32 );
                 break;
             case CANMAT_DATA_TYPE_UNSIGNED8:
                 if( sdo_check_length(&sdo, 1) ) break;
-                printf( " 0x%"PRIx8,
-                        canmat_sdo_get_data_u8(&sdo) );
+                printf( " 0x%"PRIx8, sdo.data.u8 );
                 break;
             case CANMAT_DATA_TYPE_UNSIGNED16:
                 if( sdo_check_length(&sdo, 2) ) break;
-                printf( " 0x%"PRIx16,
-                        canmat_sdo_get_data_u16(&sdo) );
+                printf( " 0x%"PRIx16, sdo.data.u16 );
                 break;
             case CANMAT_DATA_TYPE_UNSIGNED32:
                 if( sdo_check_length(&sdo, 4) ) break;
-                printf( " 0x%"PRIx32,
-                        canmat_sdo_get_data_u32(&sdo) );
+                printf( " 0x%"PRIx32, sdo.data.u32 );
                 break;
             default:
                 printf(" unhandled type");

@@ -104,8 +104,14 @@ typedef enum canmat_data_type {
     CANMAT_DATA_TYPE_PDO_COM         = 0x0020,
     CANMAT_DATA_TYPE_PDO_MAP         = 0x0021,
     CANMAT_DATA_TYPE_SDO_PARM        = 0x0022,
-    CANMAT_DATA_TYPE_IDENTITY        = 0x0023
+    CANMAT_DATA_TYPE_IDENTITY        = 0x0023,
     /* 0x0024 - 0x003F are reserved */
+    /* 0x0040 - 0x005F are mfr specific */
+    /* 0x0060 - 0x025F are device profile specific */
+
+    /* some magic data types */
+    CANMAT_DATA_TYPE_VOID            = 0xFFFF + 1,
+    CANMAT_DATA_TYPE_UNKNOWN         = 0xFFFF + 2
 } canmat_data_type_t;
 
 /** Description of a CiA Object */
@@ -169,6 +175,8 @@ typedef union canmat_scalar {
     int32_t  i32;
 
     float r32;
+
+    uint8_t  byte[4];
 } canmat_scalar_t;
 
 

@@ -88,49 +88,17 @@ canmat_status_t canmat_obj_ul( canmat_iface_t *cif, uint8_t node, const canmat_o
         return CANMAT_ERR_PARAM;
     }
 
-    uint8_t rccs;
-    ssize_t r;
-    switch(obj->data_type) {
-    case CANMAT_DATA_TYPE_INTEGER8:
-        r = canmat_sdo_ul_i8( cif, &rccs,
-                             &val->i8,
-                             node,
-                             obj->index, obj->subindex );
-        break;
-    case CANMAT_DATA_TYPE_INTEGER16:
-        r = canmat_sdo_ul_i16( cif, &rccs,
-                              &val->i16,
-                              node,
-                              obj->index, obj->subindex );
-        break;
-    case CANMAT_DATA_TYPE_INTEGER32:
-        r = canmat_sdo_ul_i32( cif, &rccs,
-                              &val->i32,
-                              node,
-                              obj->index, obj->subindex );
-        break;
-    case CANMAT_DATA_TYPE_UNSIGNED8:
-        r = canmat_sdo_ul_u8( cif, &rccs,
-                             &val->u8,
-                             node,
-                             obj->index, obj->subindex );
-        break;
-    case CANMAT_DATA_TYPE_UNSIGNED16:
-        r = canmat_sdo_ul_u16( cif, &rccs,
-                              &val->u16,
-                              node,
-                              obj->index, obj->subindex );
-        break;
-    case CANMAT_DATA_TYPE_UNSIGNED32:
-        r = canmat_sdo_ul_u32( cif, &rccs,
-                              &val->u32,
-                              node,
-                              obj->index, obj->subindex );
-        break;
-    default: return CANMAT_ERR_PARAM;
-    }
-    if( r < 0 ) return CANMAT_ERR_OS;
-    else return CANMAT_OK;
+    canmat_sdo_msg_t req = {
+        .node = node,
+        .index = obj->index,
+        .subindex = obj->subindex,
+        .data_type = CANMAT_DATA_TYPE_VOID
+    };
+    memcpy( &req.data, val, sizeof(req.data) );
+    canmat_sdo_msg_t resp;
+
+    return canmat_sdo_ul( cif, &req, &resp, obj->data_type );
+
 }
 
 
@@ -141,49 +109,16 @@ canmat_status_t canmat_obj_dl( canmat_iface_t *cif,
         return CANMAT_ERR_PARAM;
     }
 
-    uint8_t rccs;
-    ssize_t r;
-    switch(obj->data_type) {
-    case CANMAT_DATA_TYPE_INTEGER8:
-        r = canmat_sdo_dl_i8( cif, &rccs,
-                             node,
-                             obj->index, obj->subindex,
-                             val->i8 );
-        break;
-    case CANMAT_DATA_TYPE_INTEGER16:
-        r = canmat_sdo_dl_i16( cif, &rccs,
-                              node,
-                              obj->index, obj->subindex,
-                              val->i16 );
-        break;
-    case CANMAT_DATA_TYPE_INTEGER32:
-        r = canmat_sdo_dl_i32( cif, &rccs,
-                              node,
-                              obj->index, obj->subindex,
-                              val->i32 );
-        break;
-    case CANMAT_DATA_TYPE_UNSIGNED8:
-        r = canmat_sdo_dl_u8( cif, &rccs,
-                             node,
-                             obj->index, obj->subindex,
-                             val->u8 );
-        break;
-    case CANMAT_DATA_TYPE_UNSIGNED16:
-        r = canmat_sdo_dl_u16( cif, &rccs,
-                              node,
-                              obj->index, obj->subindex,
-                              val->u16 );
-        break;
-    case CANMAT_DATA_TYPE_UNSIGNED32:
-        r = canmat_sdo_dl_u32( cif, &rccs,
-                              node,
-                              obj->index, obj->subindex,
-                              val->u32 );
-        break;
-    default: return CANMAT_ERR_PARAM;
-    }
-    if( r < 0 ) return CANMAT_ERR_OS;
-    else return CANMAT_OK;
+    canmat_sdo_msg_t req = {
+        .node = node,
+        .index = obj->index,
+        .subindex = obj->subindex,
+        .data_type = obj->data_type
+    };
+    memcpy( &req.data, val, sizeof(req.data) );
+    canmat_sdo_msg_t resp;
+
+    return canmat_sdo_dl( cif, &req, &resp );
 }
 
 

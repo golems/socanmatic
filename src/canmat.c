@@ -422,22 +422,6 @@ int cmd_send( can_set_t *canset, size_t n, const char **arg ) {
     return send_frame( canset, &can );
 }
 
-static int query_sdo( can_set_t *canset, canmat_sdo_msg_t *sdo ) {
-
-    for( size_t i = 0; i < canset->n; i ++ ) {
-        canmat_sdo_msg_t resp;
-
-        ssize_t r = canmat_sdo_query( canset->cif[i], sdo, &resp );
-
-        if( CANMAT_OK != r ) {
-            fprintf( stderr, "Couldn't send frame: %s\n", strerror(errno) );
-        }
-        canmat_sdo_print( stdout, &resp );
-    }
-
-    return 0;
-}
-
 void parse_arg_sdo( size_t n, const char **arg, canmat_sdo_msg_t *sdo ) {
     hard_assert( n >= 3, "Insufficient arguments\n");
     hard_assert( n <= 3 + 4, "Extra arguments\n");
@@ -451,32 +435,19 @@ void parse_arg_sdo( size_t n, const char **arg, canmat_sdo_msg_t *sdo ) {
     for( size_t i = 3; i < n; i ++ ) {
         hard_assert( (cmd_dl == opt_command || cmd_ul_resp == opt_command),
                      "Extra arguments: %s\n", arg[i] );
-        sdo->data[ i-3 ] = (uint8_t)parse_uhex( arg[i], 0xFF );
+        sdo->data.byte[ i-3 ] = (uint8_t)parse_uhex( arg[i], 0xFF );
     }
 }
 
 int cmd_ul( can_set_t *canset, size_t n, const char **arg ) {
-    canmat_sdo_msg_t sdo;
-
-    sdo.cmd.ccs = CANMAT_EX_UL;
-    sdo.cmd.e = 1;
-    sdo.cmd.n = 0;
-    sdo.cmd.s = 0;
-
-    parse_arg_sdo( n, arg, &sdo );
-
-    return query_sdo( canset, &sdo );
+    // FIXME
+    assert(0);
 }
 
 int cmd_ul_resp( can_set_t *canset, size_t n, const char **arg ) {
     canmat_sdo_msg_t sdo;
     parse_arg_sdo( n, arg, &sdo );
-
-    sdo.cmd.ccs = CANMAT_EX_UL;
-    sdo.cmd.e = 1;
-    sdo.cmd.n = (unsigned char)((4 - sdo.length) & 0x3);
-    sdo.cmd.s = 1;
-
+    sdo.cmd_spec = CANMAT_EX_UL;
     struct can_frame can;
 
     canmat_sdo2can( &can, &sdo, 1 );
@@ -484,25 +455,14 @@ int cmd_ul_resp( can_set_t *canset, size_t n, const char **arg ) {
 }
 
 int cmd_dl( can_set_t *canset, size_t n, const char **arg ) {
-    canmat_sdo_msg_t sdo;
-    parse_arg_sdo( n, arg, &sdo );
-
-    canmat_sdo_set_ex_dl( &sdo,
-                          sdo.node, sdo.index, sdo.subindex );
-
-    return query_sdo( canset, &sdo );
+    // FIXME
+    assert(0);
 }
 
 int cmd_dl_resp( can_set_t *canset, size_t n, const char **arg ) {
     canmat_sdo_msg_t sdo;
     parse_arg_sdo( n, arg, &sdo );
-
-    sdo.cmd.ccs = CANMAT_EX_DL;
-    sdo.cmd.e = 1;
-    sdo.cmd.n = 0;
-    sdo.cmd.s = 0;
-
-
+    sdo.cmd_spec = CANMAT_EX_DL;
     struct can_frame can;
     canmat_sdo2can( &can, &sdo, 1 );
     return send_frame( canset, &can );
