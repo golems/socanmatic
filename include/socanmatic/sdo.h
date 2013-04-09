@@ -64,11 +64,13 @@ typedef enum canmat_command_byte {
     CANMAT_SDO_CMD_DL2 = 0x2b,
     CANMAT_SDO_CMD_DL3 = 0x27,
     CANMAT_SDO_CMD_DL4 = 0x23,
+    CANMAT_SDO_CMD_DL0 = 0x22,
 
     CANMAT_SDO_CMD_UL1 = 0x4F,
     CANMAT_SDO_CMD_UL2 = 0x4B,
     CANMAT_SDO_CMD_UL3 = 0x47,
-    CANMAT_SDO_CMD_UL4 = 0x43
+    CANMAT_SDO_CMD_UL4 = 0x43,
+    CANMAT_SDO_CMD_UL0 = 0x42
 } canmat_command_byte_t;
 
 typedef enum canmat_abort {
@@ -129,11 +131,15 @@ static inline uint8_t canmat_can2sdo_subindex( const struct can_frame *src ) {
     return src->data[3];
 }
 
+static inline enum canmat_command_spec canmat_can2sdo_cmd_spec( const struct can_frame *src ) {
+    return (enum canmat_command_spec) ( (src->data[0] >> 5) & 0x7 );
+}
+
 /// Create a canmat_sdo_msg_t from a struct can_frame
 void canmat_can2sdo( canmat_sdo_msg_t *dst, const struct can_frame *src, enum canmat_data_type data_type );
 
 canmat_status_t canmat_sdo_ul( canmat_iface_t *cif, const canmat_sdo_msg_t *req,
-                               canmat_sdo_msg_t *resp, enum canmat_data_type expected_data_type );
+                               canmat_sdo_msg_t *resp );
 
 canmat_status_t canmat_sdo_dl( canmat_iface_t *cif, const canmat_sdo_msg_t *req,
                                canmat_sdo_msg_t *resp );

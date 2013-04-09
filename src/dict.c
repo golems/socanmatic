@@ -92,12 +92,12 @@ canmat_status_t canmat_obj_ul( canmat_iface_t *cif, uint8_t node, const canmat_o
         .node = node,
         .index = obj->index,
         .subindex = obj->subindex,
-        .data_type = CANMAT_DATA_TYPE_VOID
+        .data_type = obj->data_type
     };
     memcpy( &req.data, val, sizeof(req.data) );
     canmat_sdo_msg_t resp;
 
-    return canmat_sdo_ul( cif, &req, &resp, obj->data_type );
+    return canmat_sdo_ul( cif, &req, &resp );
 
 }
 

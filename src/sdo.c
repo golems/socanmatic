@@ -58,47 +58,53 @@ void canmat_sdo2can (struct can_frame *dst, const canmat_sdo_msg_t *src, const i
     // Set the message ID and the length
     dst->can_id = (canid_t)(is_tx ? CANMAT_SDO_RESP_ID(src->node) : CANMAT_SDO_REQ_ID(src->node));
 
-
     // set indices
     dst->data[1] = (uint8_t)(src->index & 0xFF);
     dst->data[2] = (uint8_t)((src->index >> 8) & 0xFF);
     dst->data[3] = src->subindex;
 
+    _Bool is_dl = (CANMAT_EX_DL == src->cmd_spec);
+
     // set sdo data
     uint8_t len = 0;
-    switch( src->data_type ) {
-        // size 4
-    case CANMAT_DATA_TYPE_REAL32:
-    case CANMAT_DATA_TYPE_UNSIGNED32:
-    case CANMAT_DATA_TYPE_INTEGER32:
-        len = 4;
-        canmat_byte_stle32( dst->data+4, src->data.u32 );
-        break;
-        // size 2
-    case CANMAT_DATA_TYPE_UNSIGNED16:
-    case CANMAT_DATA_TYPE_INTEGER16:
-        len = 2;
-        canmat_byte_stle16( dst->data+4, src->data.u16 );
-        break;
-        // size 1
-    case CANMAT_DATA_TYPE_UNSIGNED8:
-    case CANMAT_DATA_TYPE_INTEGER8:
-        len = 1;
-        dst->data[4] = src->data.u8;
-        break;
-    case CANMAT_DATA_TYPE_VOID:
-        len = 0;
-        break;
-    default:
-        // unhandled
-        // FIXME
-        assert(0);
+    if( is_dl ) {
+        switch( src->data_type ) {
+            // size 4
+        case CANMAT_DATA_TYPE_REAL32:
+        case CANMAT_DATA_TYPE_UNSIGNED32:
+        case CANMAT_DATA_TYPE_INTEGER32:
+            len = 4;
+            canmat_byte_stle32( dst->data+4, src->data.u32 );
+            break;
+            // size 2
+        case CANMAT_DATA_TYPE_UNSIGNED16:
+        case CANMAT_DATA_TYPE_INTEGER16:
+            len = 2;
+            canmat_byte_stle16( dst->data+4, src->data.u16 );
+            break;
+            // size 1
+        case CANMAT_DATA_TYPE_UNSIGNED8:
+        case CANMAT_DATA_TYPE_INTEGER8:
+            len = 1;
+            dst->data[4] = src->data.u8;
+            break;
+        case CANMAT_DATA_TYPE_VOID:
+            len = 0;
+            break;
+        default:
+            // unhandled
+            // FIXME
+            assert(0);
+        }
     }
 
     // set command byte
-    dst->data[0] = canmat_sdo_cmd_byte( 1, 1, len, src->cmd_spec );
+    if( !is_dl && ! is_tx )  {
+        dst->data[0] = canmat_sdo_cmd_byte( 0, 1, 4-len, src->cmd_spec );
+    } else {
+        dst->data[0] = canmat_sdo_cmd_byte( 1, 1, 4-len, src->cmd_spec );
+    }
 
-    // set command byte
     dst->can_dlc = (uint8_t)(len + 4);
 }
 
@@ -114,14 +120,14 @@ void canmat_can2sdo( canmat_sdo_msg_t *dst, const struct can_frame *src, enum ca
     // command
     uint8_t cmd = src->data[0];
     int s = cmd & 0x1;
-    int e = (cmd >> 1) & 0x1;
+    //int e = (cmd >> 1) & 0x1;
     //assert(e);
     uint8_t n = (uint8_t) ((cmd >> 2) & 0x3);
     dst->cmd_spec = (enum canmat_command_spec) ((cmd >> 5) & 0x7);
     if( s ) {
-        dst->length = (uint8_t)n;
+        dst->length = (uint8_t) (4 - n);
     } else {
-        dst->length = src->can_dlc - 4;
+        dst->length = (uint8_t) (src->can_dlc - 4);
     }
 
     // node
@@ -164,7 +170,7 @@ void canmat_can2sdo( canmat_sdo_msg_t *dst, const struct can_frame *src, enum ca
 /// Send and SDO request and wait for the response
 static canmat_status_t canmat_sdo_query(
     canmat_iface_t *cif, const canmat_sdo_msg_t *req,
-    canmat_sdo_msg_t *resp, enum canmat_data_type resp_data_type ) {
+    canmat_sdo_msg_t *resp ) {
     // send
     {
         struct can_frame can;
@@ -181,7 +187,12 @@ static canmat_status_t canmat_sdo_query(
         } while ( CANMAT_OK == r &&
                   can.can_id != (canid_t)CANMAT_SDO_RESP_ID(req->node) );
 
-        if( CANMAT_OK == r ) canmat_can2sdo( resp, &can, resp_data_type );
+        if( CANMAT_OK == r ) {
+            enum canmat_command_spec cmd_spec = canmat_can2sdo_cmd_spec(&can);
+            canmat_can2sdo( resp, &can,
+                            (CANMAT_ABORT == cmd_spec) ?
+                            CANMAT_DATA_TYPE_UNSIGNED32 : req->data_type );
+        }
 
         return r;
     }
@@ -194,18 +205,17 @@ canmat_status_t canmat_sdo_dl(
     canmat_sdo_msg_t req1;
     memcpy(&req1, req, sizeof(req1));
     req1.cmd_spec = CANMAT_EX_DL;
-    return canmat_sdo_query( cif, &req1, resp, CANMAT_DATA_TYPE_VOID );
+    return canmat_sdo_query( cif, &req1, resp );
 }
 
 canmat_status_t canmat_sdo_ul(
     canmat_iface_t *cif,
-    const canmat_sdo_msg_t *req, canmat_sdo_msg_t *resp, enum canmat_data_type resp_data_type )
+    const canmat_sdo_msg_t *req, canmat_sdo_msg_t *resp )
 {
     canmat_sdo_msg_t req1;
     memcpy(&req1, req, sizeof(req1));
     req1.cmd_spec = CANMAT_EX_UL;
-    req1.data_type = CANMAT_DATA_TYPE_VOID;
-    return canmat_sdo_query( cif, &req1, resp, resp_data_type );
+    return canmat_sdo_query( cif, &req1, resp );
 }
 
 canmat_status_t canmat_sdo_query_resp( canmat_iface_t *cif, const canmat_sdo_msg_t *resp ) {
