@@ -64,7 +64,7 @@
 
 
 const char *opt_cmd = NULL;
-const char *opt_verbosity = 0;
+int opt_verbosity = 0;
 const char *opt_api = "socketcan";
 
 const char **opt_pos = NULL;
@@ -86,6 +86,9 @@ size_t opt_npos = 0;
 //size_t opt_n_ifaces;
 
 void hard_assert( _Bool test , const char fmt[], ...)          ATTR_PRINTF(2,3);
+
+
+static void verbf( int level , const char fmt[], ...)          ATTR_PRINTF(2,3);
 
 struct iface_list {
     struct iface_list *next;
@@ -127,6 +130,18 @@ void hard_assert( _Bool test , const char fmt[], ...)  {
         exit(EXIT_FAILURE);
     }
 }
+
+
+static void verbf( int level , const char fmt[], ...) {
+    if( level <= opt_verbosity ) {
+        fputs("# ", stderr);
+        va_list argp;
+        va_start( argp, fmt );
+        vfprintf( stderr, fmt, argp );
+        va_end( argp );
+    }
+}
+
 /***************/
 /* ARG PARSING */
 /***************/
@@ -188,9 +203,7 @@ cmd_fun_t posarg_cmd( const char *arg ) {
 
 void posarg( const char *arg, int i ) {
     if( 0 == i ) {
-        if( opt_verbosity ) {
-            fprintf( stderr, "Setting command: %s\n", arg );
-        }
+        verbf( 1, "Setting command: %s\n", arg );
         opt_command = posarg_cmd(arg);
     } else {
         opt_pos = (const char**) realloc( opt_pos, sizeof(opt_pos[0]) * (opt_npos+1) );
@@ -209,9 +222,7 @@ void open_iface( can_set_t *canset, const char *type, const char *name ) {
     hard_assert( CANMAT_OK == r, "Couldn't open: %s, %s\n",
                  name, canmat_iface_strerror( canset->cif[canset->n], r ) );
 
-    if( opt_verbosity ) {
-        fprintf(stderr, "Opened interface %s, type %s\n", name, type);
-    }
+    verbf( 1, "Opened interface %s, type %s\n", name, type);
 
     canset->name[ canset->n ] = strdup(name);
 
@@ -383,7 +394,7 @@ int cmd_display( can_set_t *canset, size_t n, const char **arg ) {
 
 int send_frame( can_set_t *canset, struct can_frame *can ) {
     if(opt_verbosity) {
-        fprintf(stderr, "Sending ");
+        verbf(1, "Sending ");
         canmat_dump_frame( stdout, can );
     }
     for( size_t i = 0; i < canset->n; i ++  ) {
