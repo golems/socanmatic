@@ -115,7 +115,7 @@ void canmat_can2sdo( canmat_sdo_msg_t *dst, const struct can_frame *src, enum ca
     uint8_t cmd = src->data[0];
     int s = cmd & 0x1;
     int e = (cmd >> 1) & 0x1;
-    assert(e);
+    //assert(e);
     uint8_t n = (uint8_t) ((cmd >> 2) & 0x3);
     dst->cmd_spec = (enum canmat_command_spec) ((cmd >> 5) & 0x7);
     if( s ) {
@@ -204,6 +204,7 @@ canmat_status_t canmat_sdo_ul(
     canmat_sdo_msg_t req1;
     memcpy(&req1, req, sizeof(req1));
     req1.cmd_spec = CANMAT_EX_UL;
+    req1.data_type = CANMAT_DATA_TYPE_VOID;
     return canmat_sdo_query( cif, &req1, resp, resp_data_type );
 }
 
@@ -231,65 +232,65 @@ int canmat_sdo_print( FILE *f, const canmat_sdo_msg_t *sdo ) {
 const char *canmat_sdo_strerror( const canmat_sdo_msg_t *sdo ) {
     switch (sdo->data.u32)
     {
-    case 0x00000000:
+    case CANMAT_ABORT_RESET:
         return "Error Reset or no Error";
-    case 0x05030000:
+    case CANMAT_ABORT_TOGGLE_NOT_ALTERNATED:
         return "Toggle bit not alternated";
-    case 0x05040000:
+    case CANMAT_ABORT_SDO_TIMEOUT:
         return "SDO protocol timed out";
-    case 0x05040001:
+    case CANMAT_ABORT_INVALID_CMD_SPEC:
         return "Client/server command specifier not valid or unknown";
-    case 0x05040002:
+    case CANMAT_ABORT_INVALID_BLOCK_SIZE:
         return "Invalid block size (block mode only)";
-    case 0x05040003:
+    case CANMAT_ABORT_INVALID_SEQ_NO:
         return "Invalid sequence number (block mode only)";
-    case 0x05040004:
+    case CANMAT_ABORT_CRC:
         return "CRC error (block mode only)";
-    case 0x05040005:
+    case CANMAT_ABORT_OOM:
         return "Out of memory";
-    case 0x06010000:
+    case CANMAT_ABORT_UNSUPP_ACCESS:
         return "Unsupported access to an object";
-    case 0x06010001:
+    case CANMAT_ABORT_WRITE_ONLY:
         return "Attempt to read a write only object";
-    case 0x06010002:
+    case CANMAT_ABORT_READ_ONLY:
         return "Attempt to write a read only object";
-    case 0x06020000:
+    case CANMAT_ABORT_OBJ_EXIST:
         return "Object does not exist in the object dictionary";
-    case 0x06040041:
+    case CANMAT_ABORT_UNMAPPABLE:
         return "Object cannot be mapped to the PDO";
-    case 0x06040042:
+    case CANMAT_ABORT_PDO_OVERFLOW:
         return "The number and length of the objects to be mapped would exceed PDO length";
-    case 0x06040043:
+    case CANMAT_ABORT_INCOMPAT_PARAM:
         return "General parameter incompatibility reason";
-    case 0x06040047:
+    case CANMAT_ABORT_INCOMPAT_DEV:
         return "General internal incompatibility in the device";
-    case 0x06060000:
+    case CANMAT_ABORT_ERR_HW:
         return "Access failed due to an hardware error";
-    case 0x06070010:
+    case CANMAT_ABORT_DATA:
         return "Data type does not match, length of service parameter does not match";
-    case 0x06070012:
+    case CANMAT_ABORT_DATA_TOO_HI:
         return "Data type does not match, length of service parameter too high";
-    case 0x06070013:
+    case CANMAT_ABORT_DATA_TOO_LO:
         return "Data type does not match, length of service parameter too low";
-    case 0x06090011:
+    case CANMAT_ABORT_SUBINDEX_EXIST:
         return "Sub-index does not exist";
-    case 0x06090030:
+    case CANMAT_ABORT_RANGE:
         return "Value range of parameter exceeded (only for write access)";
-    case 0x06090031:
+    case CANMAT_ABORT_RANGE_TOO_HI:
         return "Value of parameter written too high";
-    case 0x06090032:
+    case CANMAT_ABORT_RANGE_TOO_LO:
         return "Value of parameter written too low";
-    case 0x06090036:
+    case CANMAT_ABORT_MAX_BELOW_MIN:
         return "Maximum value is less than minimum value";
-    case 0x08000000:
+    case CANMAT_ABORT_GENERAL:
         return "general error";
-    case 0x08000020:
+    case CANMAT_ABORT_STORE:
         return "Data cannot be transferred or stored to the application";
-    case 0x08000021:
+    case CANMAT_ABORT_STORE_LOCAL:
         return "Data cannot be transferred or stored to the application because of local control";
-    case 0x08000022:
+    case CANMAT_ABORT_STORE_DEV_STATE:
         return "Data cannot be transferred or stored to the application because of the present device state";
-    case 0x08000023:
+    case CANMAT_ABORT_DICT:
         return "Object dictionary dynamic generation fails or no object dictionary is present (e.g. object dictionary is generated from file and generation fails because of an file error)";
     default: return "Unknown";
     }
