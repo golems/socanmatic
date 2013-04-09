@@ -1,3 +1,5 @@
+/* -*- mode: C; c-basic-offset: 4 -*- */
+/* ex: set shiftwidth=4 tabstop=4 expandtab: */
 /*
  * Copyright (c) 2008-2013, Georgia Tech Research Corporation
  * All rights reserved.
@@ -38,28 +40,62 @@
  *
  */
 
-#ifndef SOCANMATIC_PDO_H
-#define SOCANMATIC_PDO_H
+#include <errno.h>
+#include <string.h>
+#include <assert.h>
+#include "socanmatic.h"
+#include "socanmatic_private.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#define PDO_MAX 8
 
-#define CANMAT_RPDO_COM_BASE  ((uint16_t)0x1400)
-#define CANMAT_TPDO_COM_BASE  ((uint16_t)0x1800)
-#define CANMAT_RPDO_MAP_BASE  ((uint16_t)0x1600)
-#define CANMAT_TPDO_MAP_BASE  ((uint16_t)0x1A00)
+canmat_status_t canmat_probe_pdo( canmat_iface_t *cif, uint8_t node ) {
+    // RPDO
+    for( uint8_t i = 0; i < PDO_MAX; i ++ ) {
+        // com size
+        uint8_t com_size;
+        {
+            canmat_sdo_msg_t resp;
+            canmat_sdo_msg_t req = { .index = CANMAT_RPDO_COM_BASE+i,
+                                     .subindex = 0,
+                                     .node = node,
+                                     .data_type = CANMAT_DATA_TYPE_UNSIGNED8 };
+            canmat_status_t  r = canmat_sdo_ul( cif, &req, &resp );
 
-#define CANMAT_RPDO_COM_COB_ID       0x1
-#define CANMAT_RPDO_COM_TRANS_TYPE   0x2
+            if( CANMAT_OK != r ) return r;
+            if( CANMAT_ABORT == resp.cmd_spec ) continue;
+            if( CANMAT_EX_UL != resp.cmd_spec ) return CANMAT_ERR_PROTO;
+            com_size = resp.data.u8;
+        }
 
-#ifdef __cplusplus
+
+        printf("RPDO %"PRIu8"\n", i );
+        printf("> com size: %d\n", com_size );
+
+        // cob cob-id
+        if( com_size > 0 ) {
+            canmat_sdo_msg_t resp;
+            canmat_sdo_msg_t req = { .index = CANMAT_RPDO_COM_BASE+i,
+                                     .subindex = 1,
+                                     .node = node,
+                                     .data_type = CANMAT_DATA_TYPE_UNSIGNED32 };
+            canmat_status_t  r = canmat_sdo_ul( cif, &req, &resp );
+
+            if( CANMAT_OK != r ) return r;
+            if( CANMAT_ABORT == resp.cmd_spec ) continue;
+            if( CANMAT_EX_UL != resp.cmd_spec ) return CANMAT_ERR_PROTO;
+
+            printf(" cob-id: 0x%x\n", resp.data.u32 & CANMAT_COBID_MASK );
+            printf(" frame: %d\n", (resp.data.u32 & CANMAT_COBID_PDO_MASK_FRAME) ? 1 : 0 );
+            printf(" valid: %d\n", (resp.data.u32 & CANMAT_COBID_PDO_MASK_VALID) ? 1 : 0 );
+        }
+
+    }
+    return CANMAT_OK;
 }
-#endif
+
 /* ex: set shiftwidth=4 tabstop=4 expandtab: */
 /* Local Variables:                          */
 /* mode: c                                   */
 /* c-basic-offset: 4                         */
 /* indent-tabs-mode:  nil                    */
 /* End:                                      */
-#endif //SOCANMATIC_PDO_H

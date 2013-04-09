@@ -116,6 +116,7 @@ int cmd_display( can_set_t *canset, size_t n, const char **args );
 int cmd_info( can_set_t *canset, size_t n, const char **args );
 int cmd_set( can_set_t *canset, size_t n, const char **args );
 int cmd_nmt( can_set_t *canset, size_t n, const char **args );
+int cmd_probe( can_set_t *canset, size_t n, const char **args );
 
 /***********/
 /* HELPERS */
@@ -190,6 +191,7 @@ cmd_fun_t posarg_cmd( const char *arg ) {
                  {"info", cmd_info},
                  {"set", cmd_set},
                  {"nmt", cmd_nmt},
+                 {"probe", cmd_probe},
                  {NULL, NULL} };
     size_t i;
     for( i = 0; cmds[i].name != NULL; i ++ ) {
@@ -315,6 +317,7 @@ int main( int argc, char ** argv ) {
 
     return 0;
 }
+
 
 /************/
 /* COMMANDS */
@@ -601,4 +604,32 @@ int cmd_nmt( can_set_t *canset, size_t n, const char **arg) {
     hard_assert( CANMAT_OK == r, "Could not send NMT: %s\n", canmat_iface_strerror(canset->cif[0],r) );
 
     return 0;
+}
+
+
+static int probe_pdo( can_set_t *canset, size_t n, const char **arg) {
+    hard_assert( !(n < 1), "Insufficient arguments\n");
+    hard_assert( !(n > 1), "Extra arguments\n");
+    uint8_t node = (uint8_t)parse_uhex( arg[0], CANMAT_NODE_MASK );
+
+    verbf( 1, "Probing PDOs on node 0x%x\n", node );
+
+    hard_assert( 1 == canset->n, "Only one CAN interface supported\n");
+
+    canmat_status_t r = canmat_probe_pdo( canset->cif[0], node );
+
+    hard_assert( CANMAT_OK == r, "Probing failed: %s\n", canmat_iface_strerror(canset->cif[0], r) );
+
+    return 0;
+}
+
+int cmd_probe( can_set_t *canset, size_t n, const char **arg ) {
+    hard_assert( n >= 1, "Insufficient arguments\n");
+
+    if( 0 == strcasecmp( "pdo", arg[0] ) ) {
+        return probe_pdo( canset, n-1, arg+1 );
+    } else {
+        fprintf(stderr, "Don't know how to probe '%s'\n", arg[0]);
+        exit(EXIT_FAILURE);
+    }
 }

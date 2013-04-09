@@ -1,8 +1,8 @@
-/*
- * Copyright (c) 2013, Georgia Tech Research Corporation
+/* Copyright (c) 2008-2013, Georgia Tech Research Corporation
  * All rights reserved.
  *
  * Author(s): Neil T. Dantam <ntd@gatech.edu>
+ *
  * Georgia Tech Humanoid Robotics Lab
  * Under Direction of Prof. Mike Stilman <mstilman@cc.gatech.edu>
  *
@@ -38,17 +38,25 @@
  *
  */
 
-#ifndef SOCANMATIC_STATUS_H
-#define SOCANMATIC_STATUS_H
+#ifndef SOCANMATIC_PROBE_H
+#define SOCANMATIC_PROBE_H
 
-typedef enum canmat_status {
-    CANMAT_OK             =  0,
-    CANMAT_ERR_OS         = -1,
-    CANMAT_ERR_OVERFLOW   = -2,
-    CANMAT_ERR_UNDERFLOW  = -3,
-    CANMAT_ERR_PARAM      = -4,
-    CANMAT_ERR_NOT_SUP    = -5,
-    CANMAT_ERR_PROTO      = -6,   ///< CANopen protocol erroro
-} canmat_status_t;
 
-#endif //SOCANMATIC_STATUS_H
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+canmat_status_t  canmat_probe_pdo( canmat_iface_t *cif, uint8_t node );
+
+#ifdef __cplusplus
+}
+#endif
+
+/* ex: set shiftwidth=4 tabstop=4 expandtab: */
+/* Local Variables:                          */
+/* mode: c                                   */
+/* c-basic-offset: 4                         */
+/* indent-tabs-mode:  nil                    */
+/* End:                                      */
+
+#endif //SOCANMATIC_EMCY_H

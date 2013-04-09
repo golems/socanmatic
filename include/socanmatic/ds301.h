@@ -126,6 +126,8 @@ typedef enum canmat_cobid_sync_gen {
      (0x71 << 16)   |                           \
      (0x64 << 24))
 
+/* 29 bits of masking */
+#define CANMAT_COBID_MASK 0x1FFFFFFF
 
 typedef enum canmat_store_param_mask {
     CANMAT_STORE_PARAM_MASK_CMD  = 1 << 0, /* device stores parameters autonomously */
@@ -143,6 +145,11 @@ typedef enum canmat_cobid_emcy_mask {
     CANMAT_COBID_EMCY_MASK_VALID = 1 << 31
 } canmat_cobid_emcy_mask_t;
 
+typedef enum canmat_cobid_pdo_mask {
+    CANMAT_COBID_PDO_MASK_FRAME = 1 << 29,
+    /* 30 is reserved */
+    CANMAT_COBID_PDO_MASK_VALID = 1 << 31
+} canmat_cobid_pdo_mask_t;
 
 #ifdef __cplusplus
 }

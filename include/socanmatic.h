@@ -58,6 +58,8 @@
 #include "socanmatic/nmt.h"
 #include "socanmatic/emcy.h"
 #include "socanmatic/sdo.h"
+#include "socanmatic/pdo.h"
+#include "socanmatic/probe.h"
 #include "socanmatic/ds301.h"
 #include "socanmatic/ds402.h"
 
