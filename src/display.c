@@ -140,7 +140,7 @@ static void display_sdo( const canmat_dict_t *dict, const struct can_frame *can 
     case CANMAT_ABORT:  cs = "ABORT";  break;
     }
 
-    printf("sdo %s, node %03x %s `%s' (%04x.%02x)",
+    printf("sdo %s, node %03x %s '%s' (%04x.%02x)",
            CANMAT_FUNC_SDO_RX == func ? "rx" : "tx",
            node, cs,
            param, sdo.index, sdo.subindex
@@ -149,7 +149,7 @@ static void display_sdo( const canmat_dict_t *dict, const struct can_frame *can 
     // print data
     if ( CANMAT_ABORT == sdo.cmd.ccs ) {
         if( 4 == sdo.length ) {
-            printf( " `%s' (0x%04"PRIx32")",
+            printf( " '%s' (0x%04"PRIx32")",
                     canmat_sdo_strerror(&sdo),
                     canmat_sdo_get_data_u32(&sdo) );
         } else {
@@ -222,7 +222,7 @@ static void display_nmt( const struct can_frame *can )  {
         case CANMAT_NMT_RESET_NODE:   action = "reset-node"; break;
         case CANMAT_NMT_RESET_COM:    action = "reset-com";  break;
         }
-        printf("nmt, node 0x%"PRIx8" %s (0x%"PRIx8")\n",
+        printf("nmt, node 0x%"PRIx8" '%s' (0x%"PRIx8")\n",
                can->data[1], action, can->data[0]);
     } else {
         display_malformed(can);
@@ -255,7 +255,7 @@ static void display_nmt_err( const struct can_frame *can ) {
         break;
     }
 
-    printf( "nmt-err (0x%03x), node 0x%02x %s (0x%02x)\n",
+    printf( "nmt-err (0x%03x), node 0x%02x '%s' (0x%02x)\n",
             func, node, status, can->data[0] );
 }
 
@@ -304,7 +304,7 @@ static void display_emcy( const struct can_frame *can ) {
     case CANMAT_EMCY_CODE_DEVICE_SPECIFIC:    status = "device_specific";    break;
     }
 
-    printf( "emcy (0x%03x), node 0x%02x eec %s (0x%02x) er 0x%x \n",
+    printf( "emcy (0x%03x), node 0x%02x, eec '%s' (0x%02x), er 0x%x \n",
             func, node, status, eec, er);
 }
 
