@@ -50,10 +50,25 @@ from optparse import OptionParser
 
 NS="CANMAT_"
 
-def config2dict( config, section ):
+def config2objdict( config, section ):
     d = {}
     for o in config.options(section):
         d[o] = config.get(section,o)
+    return d
+
+def config2enumdict( config, section ):
+    d = {}
+    def ensure_param(name):
+        if not name in d:
+            d[name] = {}
+        return d[name]
+    for o in config.options(section):
+        if re.match(r'^[a-zA-Z_]+\.value$', o):
+            name = o.split(".")[0]
+            ensure_param(name)["value"] = config.get(section,o)
+        elif re.match(r'^[a-zA-Z_]+\.description$', o):
+            name = o.split(".")[0]
+            ensure_param(name)["description"] = config.get(section,o)
     return d
 
 def is_section_index(section):
@@ -73,16 +88,18 @@ def check_eds_entry(filename, section, params):
             params['objecttype'] = 'VAR'
     return True
 
-def parse_file( accum_dict, name ):
-    '''Write all object dictaries sectons from file in accum_dict.
+def parse_file( obj_dict, enum_dict, name ):
+    '''Write all object dictaries sectons from file in obj_dict.
        Entries are indexed by EDS section.'''
     config = ConfigParser.ConfigParser()
     fp = open(name, "r")
     config.readfp( fp )
     for s in config.sections():
         if re.match(r'^[0-9a-fA-F]+(sub[0-9a-fA-F]+)?$', s):
-            accum_dict[s] = config2dict( config, s )
-            check_eds_entry(name, s, accum_dict[s])
+            obj_dict[s] = config2objdict( config, s )
+            check_eds_entry(name, s, obj_dict[s])
+        elif re.match(r'^enum:[a-zA-Z_]+$', s):
+            enum_dict[s.split(":")[1]] = config2enumdict( config, s )
 
 def datatype(s):
     s = s.upper();
@@ -95,6 +112,7 @@ def objecttype(s):
     if( re.match(r'VAR|RECORD|ARRAY',s) ):
         return NS+"OBJ_CODE_"+s
     else: return s
+
 def sect2index( section ):
     ''' Return (index,subindex)'''
     index = int( re.sub(r'sub.*', '', section), 16 )
@@ -129,7 +147,7 @@ def edsobj2cstruct( section, params ):
 
     return s
 
-def print_dict( name, output, odict ):
+def print_dict( name, output, header, odict ):
     # Sort by names
     def key_index(section):
         (index,subindex) = sect2index( section )
@@ -169,33 +187,71 @@ def print_dict( name, output, odict ):
     s += "};\n"
 
     output.write(s)
+    header.write("extern canmat_dict_t %s;\n" % name )
+
+
+def print_enum( output, header, enum_dict ):
+    s = '';
+    for typename in enum_dict.keys():
+        s += 'enum %s {\n' % typename;
+        for elementname in enum_dict[typename]:
+            val = 0;
+            desc = "?"
+            if "value" in enum_dict[typename][elementname]:
+                val = enum_dict[typename][elementname]["value"]
+            if "description" in enum_dict[typename][elementname]:
+                desc = enum_dict[typename][elementname]["description"]
+            s += "\t %s_%s = %s, /* %s */\n" % (typename.upper(), elementname.upper(), val, desc)
+        s += "};\n"
+
+
+    header.write(s)
 
 
 def main() :
     # Parse Arguments
     optparser = OptionParser()
     optparser.add_option("-o", "--output", dest="output")
+    optparser.add_option("-p", "--header", dest="header")
     optparser.add_option("-n", "--name", dest="name", default="canmat_dict")
     optparser.add_option("-V", "--version",
                          action="store_true", dest="version")
+    optparser.add_option("-x", "--exclude-dictionary",
+                         action="store_true", dest="exclude_dictionary")
+    optparser.add_option("-y", "--exclude-enum",
+                         action="store_true", dest="exclude_enum")
 
     (opts,args) = optparser.parse_args()
 
 
-    # Open output file
+    # Open output files
     if opts.output:
         output = open(opts.output, "w")
     else:
         output = sys.stdout
+    if opts.header:
+        header = open(opts.header,"w")
+    elif opts.output:
+        header = open( re.sub(r'(\.(c|cc|cpp))?$',".h", opts.output),
+                       "w")
+    else:
+        opts.header = sys.stdout
 
     # Read EDS file
-    accum_dict = {}
+    obj_dict = {}
+    enum_dict = {}
     for eds in args:
-        parse_file( accum_dict, eds )
+        parse_file( obj_dict, enum_dict, eds )
+
 
     # Output
-    print_dict( opts.name, output, accum_dict )
+    if( not opts.exclude_dictionary ):
+        print_dict( opts.name, output, header, obj_dict )
 
+    if( not opts.exclude_enum ):
+        print_enum( output, header, enum_dict )
+
+    #print enum_dict
 
 
 main()

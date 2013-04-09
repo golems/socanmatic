@@ -61,6 +61,7 @@
 #include "socanmatic/pdo.h"
 #include "socanmatic/probe.h"
 #include "socanmatic/ds301.h"
+#include "socanmatic/enum301.h"
 #include "socanmatic/ds402.h"
 
 #endif //SOCANMATIC_H

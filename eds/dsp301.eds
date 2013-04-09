@@ -58,6 +58,23 @@ DataType=UNSIGNED8
 AccessType=RO
 PDOMapping=1
 
+[enum:canmat_error_reg_mask]
+error.value           = 1 << 0
+error.description     = Generic Error
+current.value         = 1 << 1
+current.description   = Current Error
+voltage.value         = 1 << 2
+voltage.description   = Voltage Error
+temp.value            = 1 << 3
+temp.description      = Temperature Error
+comm.value            = 1 << 4
+comm.description      = Communication error (overrun, error state)
+dev_prof.value        = 1 << 5
+dev_prof.description  = Device profile specific
+; 6 reserved
+mfr.value             = 1 << 7
+mfr.description       = manufacturer-specific
+
 [1002]
 ParameterName=Manufacturer status register
 ObjectType=VAR

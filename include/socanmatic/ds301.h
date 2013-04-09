@@ -85,17 +85,6 @@ static inline uint8_t canmat_frame_node( const struct can_frame *can ) {
 
 const char *canmat_sdo_abort_code2str( uint32_t code );
 
-typedef enum canmat_error_reg_mask {
-    CANMAT_ERROR_REG_MASK_ERROR     = 1 << 0,
-    CANMAT_ERROR_REG_MASK_CURRENT   = 1 << 1,
-    CANMAT_ERROR_REG_MASK_VOLTAGE   = 1 << 2,
-    CANMAT_ERROR_REG_MASK_TEMP      = 1 << 3,
-    CANMAT_ERROR_REG_MASK_COMM      = 1 << 4,
-    CANMAT_ERROR_REG_MASK_DEV_PROF  = 1 << 5,
-    CANMAT_ERROR_REG_MASK_RESERVED  = 1 << 6,
-    CANMAT_ERROR_REG_MASK_MFR       = 1 << 7,
-} canmat_error_reg_mask_t;
-
 
 typedef enum canmat_cobid_sync_mask {
     CANMAT_COBID_SYNC_MASK_FRAME  = 1 << 29,
