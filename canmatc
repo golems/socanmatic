@@ -122,7 +122,17 @@ def sect2index( section ):
         subindex = int( re.sub(r'^[0-9a-fA-F]*sub', '', section), 16 )
     return (index,subindex)
 
-def edsobj2cstruct( section, params ):
+def map_enum( function, enum_dict, typename ):
+    for elementname in enum_dict[typename]:
+        val = 0;
+        desc = elementname
+        if "value" in enum_dict[typename][elementname]:
+            val = enum_dict[typename][elementname]["value"]
+        if "description" in enum_dict[typename][elementname]:
+            desc = enum_dict[typename][elementname]["description"]
+        function( elementname, val, desc )
+
+def edsobj2cstruct( section, params, enum_dict ):
     '''Print and EDS section as C code'''
     (index,subindex) = sect2index( section )
 
@@ -131,6 +141,10 @@ def edsobj2cstruct( section, params ):
             return '\t\t.%s=%s,\n' % (cparam, params[param])
         else:
             return ''
+
+    ss = ['']
+    def print_element( name, val, desc ):
+        ss[0] += '\t\t\t{.name = "%s", .value=(%s), .description="%s"},\n' % (name, val, desc)
 
     s =  '\t{\n'
     s += '\t\t.index=0x%04x,\n' % index
@@ -142,12 +156,20 @@ def edsobj2cstruct( section, params ):
         s += '\t\t.object_type=%s,\n' % objecttype(params['objecttype'])
     if 'accesstype' in params:
         s += '\t\t.access_type=' + NS + 'ACCESS_%s,\n' % params['accesstype'].upper()
+    if( 'maskenum' in params ) :
+        map_enum( print_element, enum_dict, params['maskenum'] )
+        print_element("NULL", "0", "NULL")
+        s += '\t\t.mask_descriptor = (struct canmat_code_descriptor[]){\n%s\t\t},\n' % ss[0]
+    if( 'valueenum' in params ) :
+        map_enum( print_element, enum_dict, params['valueenum'] )
+        print_element("NULL", "0", "NULL")
+        s += '\t\t.value_descriptor = (struct canmat_code_descriptor[]){\n%s\t\t},\n' % ss[0]
     s += '\t\t.parameter_name="%s"\n' % params['parametername']
     s += '\t},\n'
 
     return s
 
-def print_dict( name, output, header, odict ):
+def print_dict( name, output, header, odict, enum_dict ):
     # Sort by names
     def key_index(section):
         (index,subindex) = sect2index( section )
@@ -164,9 +186,6 @@ def print_dict( name, output, header, odict ):
 
     # print
     s = ''
-    s += '#include <stdint.h>\n'
-    s += '#include <unistd.h>\n'
-    s += '#include "socanmatic.h"\n'
 
     s += "canmat_dict_t %s = {\n" % name
 
@@ -181,7 +200,7 @@ def print_dict( name, output, header, odict ):
     # entries in index order
     s += "\t.obj=(canmat_obj_t[]){\n"
     for section in sections:
-        s +=  edsobj2cstruct( section, odict[section] )
+        s +=  edsobj2cstruct( section, odict[section], enum_dict )
     s += "\t}\n"
 
     s += "};\n"
@@ -190,28 +209,25 @@ def print_dict( name, output, header, odict ):
     header.write("extern canmat_dict_t %s;\n" % name )
 
 
-def print_enum( output, header, namespace, enum_dict ):
-    s = '';
+def print_enum( header, namespace, enum_dict ):
+    def decl( s ):
+        header.write(s)
+
     for typename in enum_dict.keys():
-        s += 'enum %s%s {\n' % (namespace, typename);
-        for elementname in enum_dict[typename]:
-            val = 0;
-            desc = "?"
-            if "value" in enum_dict[typename][elementname]:
-                val = enum_dict[typename][elementname]["value"]
-            if "description" in enum_dict[typename][elementname]:
-                desc = enum_dict[typename][elementname]["description"]
-            s += "\t %s%s_%s = %s, /* %s */\n" % (namespace.upper(), typename.upper(), elementname.upper(), val, desc)
-        s += "};\n"
+        decl( 'enum %s%s {\n' % (namespace, typename) )
 
+        def print_element( elementname, val, desc ):
+            decl( "\t %s%s_%s = %s, /* %s */\n" %
+                  (namespace.upper(), typename.upper(), elementname.upper(), val, desc) )
+        map_enum( print_element, enum_dict, typename )
+        decl( "};\n" )
 
-    header.write(s)
 
 
 def main() :
     # Parse Arguments
     optparser = OptionParser()
-    optparser.add_option("-o", "--output", dest="output")
+    optparser.add_option("-o", "--output", dest="output", default="canmat_eds.c")
     optparser.add_option("-p", "--header", dest="header")
     optparser.add_option("-n", "--name", dest="name", default="canmat_dict")
     optparser.add_option("-N", "--namespace", dest="namespace", default="canmat_")
@@ -226,17 +242,14 @@ def main() :
 
 
     # Open output files
-    if opts.output:
+    if( not opts.exclude_dictionary ):
         output = open(opts.output, "w")
-    else:
-        output = sys.stdout
+
     if opts.header:
-        header = open(opts.header,"w")
-    elif opts.output:
-        header = open( re.sub(r'(\.(c|cc|cpp))?$',".h", opts.output),
-                       "w")
+        header_name = opts.header
     else:
-        opts.header = sys.stdout
+        header_name = re.sub(r'(\.(c|cc|cpp))?$',".h", opts.output)
+    header = open(header_name,"w")
 
     # Read EDS file
     obj_dict = {}
@@ -244,13 +257,16 @@ def main() :
     for eds in args:
         parse_file( obj_dict, enum_dict, eds )
 
-
     # Output
     if( not opts.exclude_dictionary ):
-        print_dict( opts.name, output, header, obj_dict )
+        s = ''
+        s += '#include "socanmatic/eds.h"\n'
+        s += '#include "%s"\n' % header_name
+        output.write(s)
+        print_dict( opts.name, output, header, obj_dict, enum_dict )
 
     if( not opts.exclude_enum ):
-        print_enum( output, header, opts.namespace, enum_dict )
+        print_enum( header, opts.namespace, enum_dict )
 
     #print enum_dict
 

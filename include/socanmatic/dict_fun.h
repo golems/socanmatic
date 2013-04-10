@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Georgia Tech Research Corporation
+ * Copyright (c) 2008-2013, Georgia Tech Research Corporation
  * All rights reserved.
  *
  * Author(s): Neil T. Dantam <ntd@gatech.edu>
@@ -38,35 +38,42 @@
  *
  */
 
-#ifndef SOCANMATIC_H
-#define SOCANMATIC_H
+#ifndef SOCANMATIC_DICT_FUN_H
+#define SOCANMATIC_DICT_FUN_H
 
-#include <stdio.h>
-#include <inttypes.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#include <sys/socket.h>
-#include <linux/can.h>
-#include <linux/can/raw.h>
+/* Return the item in dict with given name */
+canmat_obj_t *canmat_dict_search_name( const struct canmat_dict *dict, const char *name );
+
+/* Return the item in dict with given index and subindex */
+canmat_obj_t *canmat_dict_search_index (
+    const struct canmat_dict *dict, uint16_t idx, uint8_t subindex );
+
+canmat_status_t canmat_obj_ul (
+    canmat_iface_t *cif, uint8_t node, const canmat_obj_t *obj, canmat_scalar_t *val );
+
+canmat_status_t canmat_obj_dl (
+    canmat_iface_t *cif, uint8_t node, const canmat_obj_t *obj, const canmat_scalar_t *val );
+
+canmat_status_t canmat_obj_dl_str (
+    canmat_iface_t *cif, uint8_t node, const canmat_obj_t *obj, const char *val );
+
+/* Parse str based on provided type and store in val */
+canmat_status_t canmat_typed_parse( enum canmat_data_type type, const char *str, canmat_scalar_t *val );
+
+typedef int canmat_obj_print_fun(canmat_scalar_t);
 
 
-#define CANMAT_COB_ID_MAX_BASE 0x7FF
-
-
-#include "socanmatic/descriptor.h"
-#include "socanmatic/enum301.h"
-#include "socanmatic/enum402.h"
-
-#include "socanmatic/status.h"
-#include "socanmatic/iface.h"
-#include "socanmatic/byteorder.h"
-#include "socanmatic/dict.h"
-#include "socanmatic/dict_fun.h"
-#include "socanmatic/nmt.h"
-#include "socanmatic/emcy.h"
-#include "socanmatic/sdo.h"
-#include "socanmatic/pdo.h"
-#include "socanmatic/probe.h"
-#include "socanmatic/ds301.h"
-#include "socanmatic/ds402.h"
-
-#endif //SOCANMATIC_H
+#ifdef __cplusplus
+}
+#endif
+/* ex: set shiftwidth=4 tabstop=4 expandtab: */
+/* Local Variables:                          */
+/* mode: c                                   */
+/* c-basic-offset: 4                         */
+/* indent-tabs-mode:  nil                    */
+/* End:                                      */
+#endif //SOCANMATIC_DICT_H

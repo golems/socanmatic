@@ -59,28 +59,23 @@ canmat_LDADD = libsocanmatic.la libsocanmatic402.la libsocanmatic_iface_ntcan.la
 BUILT_SOURCES =                              \
 	dict402.c                            \
 	socanmatic/dict402.h                 \
-	enum301.c                            \
 	socanmatic/enum301.h                 \
-	enum402.c                            \
 	socanmatic/enum402.h
 
 
 socanmatic/dict402.h dict402.c: $(top_srcdir)/canmatc $(top_srcdir)/eds/dsp301.eds $(top_srcdir)/eds/dsp402.eds
 	$(top_srcdir)/canmatc --exclude-enum -n canmat_dict402 -o dict402.c --header socanmatic/dict402.h \
 		$(top_srcdir)/eds/dsp301.eds $(top_srcdir)/eds/dsp402.eds
-socanmatic/enum402.h: enum402.c
 
-socanmatic/enum301.h enum301.c: $(top_srcdir)/canmatc $(top_srcdir)/eds/dsp301.eds
+socanmatic/enum301.h: $(top_srcdir)/canmatc $(top_srcdir)/eds/dsp301.eds
 	if ! test  -d socanmatic; then mkdir socanmatic; fi
 	$(top_srcdir)/canmatc --exclude-dictionary -o enum301.c --header socanmatic/enum301.h \
 		 $(top_srcdir)/eds/dsp301.eds
-socanmatic/enum301.h: enum301.c
 
-socanmatic/enum402.h enum402.c: $(top_srcdir)/canmatc $(top_srcdir)/eds/dsp402.eds
+socanmatic/enum402.h: $(top_srcdir)/canmatc $(top_srcdir)/eds/dsp402.eds
 	if ! test  -d socanmatic; then mkdir socanmatic; fi
 	$(top_srcdir)/canmatc --exclude-dictionary -N canmat_402_ -o enum402.c --header socanmatic/enum402.h \
 		 $(top_srcdir)/eds/dsp402.eds
-socanmatic/enum402.h: enum402.c
 
 #clean-local:
 #rm -f dict402.c

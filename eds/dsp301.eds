@@ -129,6 +129,7 @@ ObjectType=VAR
 DataType=UNSIGNED8
 AccessType=RO
 PDOMapping=1
+MaskEnum = error_reg_mask
 
 [enum:error_reg_mask]
 error.value           = 1 << 0

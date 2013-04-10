@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Georgia Tech Research Corporation
+ * Copyright (c) 2008-2013, Georgia Tech Research Corporation
  * All rights reserved.
  *
  * Author(s): Neil T. Dantam <ntd@gatech.edu>
@@ -38,35 +38,29 @@
  *
  */
 
-#ifndef SOCANMATIC_H
-#define SOCANMATIC_H
+#ifndef SOCANMATIC_DESCRIPTOR_H
+#define SOCANMATIC_DESCRIPTOR_H
 
-#include <stdio.h>
-#include <inttypes.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#include <sys/socket.h>
-#include <linux/can.h>
-#include <linux/can/raw.h>
+struct canmat_code_descriptor {
+    const char *name;
+    int value;
+    const char *description;
+};
+
+struct canmat_obj;
 
 
-#define CANMAT_COB_ID_MAX_BASE 0x7FF
-
-
-#include "socanmatic/descriptor.h"
-#include "socanmatic/enum301.h"
-#include "socanmatic/enum402.h"
-
-#include "socanmatic/status.h"
-#include "socanmatic/iface.h"
-#include "socanmatic/byteorder.h"
-#include "socanmatic/dict.h"
-#include "socanmatic/dict_fun.h"
-#include "socanmatic/nmt.h"
-#include "socanmatic/emcy.h"
-#include "socanmatic/sdo.h"
-#include "socanmatic/pdo.h"
-#include "socanmatic/probe.h"
-#include "socanmatic/ds301.h"
-#include "socanmatic/ds402.h"
-
-#endif //SOCANMATIC_H
+#ifdef __cplusplus
+}
+#endif
+/* ex: set shiftwidth=4 tabstop=4 expandtab: */
+/* Local Variables:                          */
+/* mode: c                                   */
+/* c-basic-offset: 4                         */
+/* indent-tabs-mode:  nil                    */
+/* End:                                      */
+#endif //SOCANMATIC_DESCRIPTOR_H
