@@ -78,7 +78,7 @@ socanmatic/enum301.h: enum301.c
 
 socanmatic/enum402.h enum402.c: $(top_srcdir)/canmatc $(top_srcdir)/eds/dsp402.eds
 	if ! test  -d socanmatic; then mkdir socanmatic; fi
-	$(top_srcdir)/canmatc --exclude-dictionary -o enum402.c --header socanmatic/enum402.h \
+	$(top_srcdir)/canmatc --exclude-dictionary -N canmat_402_ -o enum402.c --header socanmatic/enum402.h \
 		 $(top_srcdir)/eds/dsp402.eds
 socanmatic/enum402.h: enum402.c
 

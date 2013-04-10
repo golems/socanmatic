@@ -56,6 +56,12 @@ AccessType=RW
 PDOMapping=1
 DefaultValue=0
 
+[enum:abort_conn]
+no_action.value               = 0
+malfunction.value             = 1
+disable_voltage.value         = 2
+quick_stop.value              = 3
+
 [603F]
 ParameterName=Error Code
 ObjectType=VAR
@@ -69,6 +75,20 @@ ObjectType=VAR
 DataType=UNSIGNED16
 AccessType=RW
 PDOMapping=1
+
+[enum:motor_type]
+NON_STANDARD.value            = 0x0000
+PHASE_MODULATED_DC.value      = 0x0001
+FREQ_CONTROLLED_DC.value      = 0x0002
+PM_SYNCHRONOUS.value          = 0x0003
+FC_SYNCHRONOUS.value          = 0x0004
+SWITCHED_RELUCTANCE.value     = 0x0005
+WOUND_ROTOR.value             = 0x0006
+SQUIRREL_CAGE.value           = 0x0007
+STEPPER.value                 = 0x0008
+MICRO_STEP_STEPPER.value      = 0x0009
+SINUSOIDAL_PM_BL.value        = 0x000A
+TRAPEZOIDAL_PM_BL.value       = 0x000B
 
 [6403]
 ParameterName=Motor catalog number
@@ -115,6 +135,23 @@ DataType=UNSIGNED32
 AccessType=RO
 PDOMapping=1
 
+[enum:supported_drive_modes_mask]
+PP.value                      = 1 << 0
+PP.description                = Profile Position
+VL.value                      = 1 << 1
+VL.description                = Velocity
+PV.value                      = 1 << 2
+PV.description                = Profile Velocity
+TQ.value                      = 1 << 3
+TQ.description                = Torque
+;  bit 4 reserved
+HM.value                      = 1 << 5
+HM.description                = Homing
+IP.value                      = 1 << 6
+IP.description                = Interpolated position
+;  bits 7-15 reserved
+;  bits 16-31 manufacturer specific
+
 [6503]
 ParameterName=Drive catalog number
 ObjectType=VAR
@@ -152,7 +189,12 @@ ObjectType=VAR
 AccessType=RO
 PDOMapping=1
 
-;; Spec is unclear on object/data types for the subindices
+[enum:digital_input_mask]
+NEG_LIMIT_SW.value            = 1 << 0
+POS_LIMIT_SW.value            = 1 << 1
+HOME_SW.value                 = 1 << 2
+INTERLOCK.value               = 1 << 3
+
 [60FE]
 ParameterName=Digital outputs
 ObjectType=ARRAY
@@ -185,12 +227,48 @@ DataType=UNSIGNED16
 AccessType=RW
 PDOMapping=1
 
+[enum:ctrlmask]
+SWITCH_ON.value               = 1 <<  0
+ENABLE_VOLTAGE.value          = 1 <<  1
+QUICK_STOP.value              = 1 <<  2
+ENABLE_OPERATION.value        = 1 <<  3
+OP_MODE_SPECIFIC0.value       = 1 <<  4
+OP_MODE_SPECIFIC1.value       = 1 <<  5
+OP_MODE_SPECIFIC2.value       = 1 <<  6
+RESET_FAULT.value             = 1 <<  7
+HALT.value                    = 1 <<  8
+RESERVED0.value               = 1 <<  9
+RESERVED1.value               = 1 << 10
+MFR_SPECIFIC0.value           = 1 << 11
+MFR_SPECIFIC1.value           = 1 << 12
+MFR_SPECIFIC2.value           = 1 << 13
+MFR_SPECIFIC3.value           = 1 << 14
+MFR_SPECIFIC4.value           = 1 << 15
+
 [6041]
 ParameterName=Statusword
 ObjectType=VAR
 DataType=UNSIGNED16
 AccessType=RO
 PDOMapping=1
+
+[enum:statmask]
+READY_TO_SWITCH_ON.value      = 1 <<  0
+SWITCHED_ON.value             = 1 <<  1
+OP_ENABLED.value              = 1 <<  2
+FAULT.value                   = 1 <<  3
+VOLTAGE_ENABLED.value         = 1 <<  4
+QUICK_STOP.value              = 1 <<  5
+SWITCH_ON_DISABLED.value      = 1 <<  6
+WARNING.value                 = 1 <<  7
+MFR_SPECIFIC0.value           = 1 <<  8
+REMOTE.value                  = 1 <<  9
+TARGET_REACHED.value          = 1 << 10
+INTERNAL_LIMIT_ACTIVE.value   = 1 << 11
+OP_MODE_SPECIFIC0.value       = 1 << 12
+OP_MODE_SPECIFIC1.value       = 1 << 13
+MFR_SPECIFIC1.value           = 1 << 14
+MFR_SPECIFIC2.value           = 1 << 15
 
 
 [605E]
@@ -202,6 +280,13 @@ AccessType=RW
 PDOMapping=0
 DefaultValue=2
 
+[enum:fault_reaction]
+DISABLE.value                 = 0
+SLOW_DOWN_RAMP.value          = 1
+QUICK_STOP_RAMP.value         = 2
+CURRENT_LIMIT.value           = 3
+VOLTAGE_LIMIT.value           = 4
+
 
 [6060]
 ; Switches to the chosen mode
@@ -210,6 +295,20 @@ ObjectType=VAR
 DataType=INTEGER8
 AccessType=RW
 PDOMapping=1
+
+[enum:op_mode]
+POSITION.value                = 0x1
+VELOCITY.value                = 0x3
+CURRENT.value                 = 0x4
+RESERVED1.value               = 0x5
+HOMING.value                  = 0x6
+PVT.value                     = 0x7
+PVT.description               = Interpolated Position
+CYCLIC_SYNC_POSITION.value    = 0x8
+CYCLIC_SYNC_VELOCITY.value    = 0x9
+CYCLIC_SYNC_TORQUE.value      = 0x9
+; 11 ... 127 reserved
+CUSTOM.value                  = 0xFF
 
 [6061]
 ; shows the current mode

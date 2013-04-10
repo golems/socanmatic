@@ -53,6 +53,7 @@
 
 
 #include "socanmatic/enum301.h"
+#include "socanmatic/enum402.h"
 
 #include "socanmatic/status.h"
 #include "socanmatic/iface.h"
