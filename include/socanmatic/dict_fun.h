@@ -64,6 +64,8 @@ canmat_status_t canmat_obj_dl_str (
 /* Parse str based on provided type and store in val */
 canmat_status_t canmat_typed_parse( enum canmat_data_type type, const char *str, canmat_scalar_t *val );
 
+int canmat_obj_print( FILE *f, const canmat_obj_t *obj, canmat_scalar_t *val );
+
 typedef int canmat_obj_print_fun(canmat_scalar_t);
 
 

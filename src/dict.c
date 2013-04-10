@@ -178,6 +178,99 @@ canmat_status_t canmat_typed_parse( enum canmat_data_type type, const char *str,
 }
 
 
+static int print_masks( struct canmat_code_descriptor fmt[], unsigned u ) {
+
+    int r = 0;
+    size_t maxlen = 0;
+    for( size_t i = 0; fmt[i].value && fmt[i].name; i ++ ) {
+        size_t n = strlen(fmt[i].name);
+        if( n > maxlen ) maxlen = n;
+    }
+
+    printf("0x%x\n", u );
+    for( size_t i = 0; fmt[i].value && fmt[i].name; i ++ ) {
+        size_t space_size = maxlen + 1 - strlen(fmt[i].name);
+        char space[ space_size + 1 ];
+        memset( space, ' ', space_size );
+        space[space_size] = '\0';
+        r += printf( "> %s:%s%d, (0x%08x)\n", fmt[i].name,  space,
+                     (u & (unsigned)fmt[i].value) ? 1 : 0, (unsigned)(fmt[i].value));
+    }
+    return r;
+}
+
+// FIXME: some fiddly issues with signs here
+
+static int print_enum( struct canmat_code_descriptor fmt[], int64_t u ) {
+    printf("%"PRId64" (0x%"PRIx64")\n", u, (uint64_t)u );
+    for( size_t i = 0; fmt[i].name; i ++ ) {
+        if( u == fmt[i].value ) {
+            if( 0 != strcmp( fmt[i].name, fmt[i].description ) ) {
+                printf( "> %s: %s\n",
+                        fmt[i].name, fmt[i].description );
+            } else {
+                printf( "> %s\n", fmt[i].name );
+            }
+        }
+    }
+    return 0;
+}
+
+canmat_status_t canmat_obj_print( FILE *f, const canmat_obj_t *obj, canmat_scalar_t *val ) {
+    switch(obj->data_type) {
+    case CANMAT_DATA_TYPE_INTEGER8:
+        if (obj->value_descriptor) {
+            print_enum( obj->value_descriptor, val->i8 );
+        } else {
+            fprintf( f, "%"PRId8"\n", val->i8 );
+        }
+        return CANMAT_OK;
+    case CANMAT_DATA_TYPE_INTEGER16:
+        if (obj->value_descriptor) {
+            print_enum( obj->value_descriptor, val->i16 );
+        } else {
+            fprintf( f, "%"PRId16"\n", val->i16 );
+        }
+        return CANMAT_OK;
+    case CANMAT_DATA_TYPE_INTEGER32:
+        if (obj->value_descriptor) {
+            print_enum( obj->value_descriptor, val->i32 );
+        } else {
+            fprintf( f, "%"PRId32"\n", val->i32 );
+        }
+        return CANMAT_OK;
+    case CANMAT_DATA_TYPE_UNSIGNED8:
+        if( obj->mask_descriptor ) {
+            print_masks( obj->mask_descriptor, val->u8 );
+        } else if (obj->value_descriptor) {
+            print_enum( obj->value_descriptor, val->u8 );
+        } else {
+            fprintf( f, "0x%"PRIx8"\n", val->u8 );
+        }
+        return CANMAT_OK;
+    case CANMAT_DATA_TYPE_UNSIGNED16:
+        if( obj->mask_descriptor ) {
+            print_masks( obj->mask_descriptor, val->u16 );
+        } else if (obj->value_descriptor) {
+            print_enum( obj->value_descriptor, val->u16 );
+        } else {
+            fprintf( f, "0x%"PRIx16"\n", val->u16 );
+        }
+        return CANMAT_OK;
+    case CANMAT_DATA_TYPE_UNSIGNED32:
+        if( obj->mask_descriptor ) {
+            print_masks( obj->mask_descriptor, val->u32 );
+        } else if (obj->value_descriptor) {
+            print_enum( obj->value_descriptor, val->u32 );
+        } else {
+            fprintf( f, "0x%"PRIx32"\n", val->u32 );
+        }
+        return CANMAT_OK;
+    default:
+        return CANMAT_ERR_PARAM;
+    }
+}
+
 
 /* ex: set shiftwidth=4 tabstop=4 expandtab: */
 /* Local Variables:                          */
