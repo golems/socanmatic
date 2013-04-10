@@ -94,11 +94,13 @@ canmat_status_t canmat_obj_ul( canmat_iface_t *cif, uint8_t node, const canmat_o
         .subindex = obj->subindex,
         .data_type = obj->data_type
     };
-    memcpy( &req.data, val, sizeof(req.data) );
     canmat_sdo_msg_t resp;
 
-    return canmat_sdo_ul( cif, &req, &resp );
-
+    canmat_status_t r = canmat_sdo_ul( cif, &req, &resp );
+    if( CANMAT_OK == r ) {
+        memcpy( val, &resp.data, sizeof(resp.data) );
+    }
+    return r;
 }
 
 
