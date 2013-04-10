@@ -83,7 +83,7 @@ canmat_obj_t *canmat_dict_search_index( const struct canmat_dict *dict, uint16_t
 
 canmat_status_t canmat_obj_ul( canmat_iface_t *cif, uint8_t node, const canmat_obj_t *obj, canmat_scalar_t *val ) {
     if( NULL == obj  ||
-        CANMAT_OBJ_CODE_VAR != obj->object_type )
+        CANMAT_OBJECT_TYPE_VAR != obj->object_type )
     {
         return CANMAT_ERR_PARAM;
     }
@@ -104,7 +104,7 @@ canmat_status_t canmat_obj_ul( canmat_iface_t *cif, uint8_t node, const canmat_o
 
 canmat_status_t canmat_obj_dl( canmat_iface_t *cif,
                                uint8_t node, const canmat_obj_t *obj, const canmat_scalar_t *val ) {
-    if( NULL == obj  || CANMAT_OBJ_CODE_VAR != obj->object_type )
+    if( NULL == obj  || CANMAT_OBJECT_TYPE_VAR != obj->object_type )
     {
         return CANMAT_ERR_PARAM;
     }
@@ -133,7 +133,7 @@ canmat_status_t canmat_obj_dl_str( canmat_iface_t *cif, uint8_t node, const canm
     return canmat_obj_dl( cif, node, obj, &sval );
 }
 
-canmat_status_t canmat_typed_parse( canmat_data_type_t type, const char *str, canmat_scalar_t *val ) {
+canmat_status_t canmat_typed_parse( enum canmat_data_type type, const char *str, canmat_scalar_t *val ) {
     unsigned long u;
     long i;
 

@@ -51,6 +51,9 @@
 
 #define CANMAT_COB_ID_MAX_BASE 0x7FF
 
+
+#include "socanmatic/enum301.h"
+
 #include "socanmatic/status.h"
 #include "socanmatic/iface.h"
 #include "socanmatic/byteorder.h"
@@ -61,7 +64,6 @@
 #include "socanmatic/pdo.h"
 #include "socanmatic/probe.h"
 #include "socanmatic/ds301.h"
-#include "socanmatic/enum301.h"
 #include "socanmatic/ds402.h"
 
 #endif //SOCANMATIC_H

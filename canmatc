@@ -63,10 +63,10 @@ def config2enumdict( config, section ):
             d[name] = {}
         return d[name]
     for o in config.options(section):
-        if re.match(r'^[a-zA-Z_]+\.value$', o):
+        if re.match(r'^[a-zA-Z0-9_]+\.value$', o):
             name = o.split(".")[0]
             ensure_param(name)["value"] = config.get(section,o)
-        elif re.match(r'^[a-zA-Z_]+\.description$', o):
+        elif re.match(r'^[a-zA-Z0-9_]+\.description$', o):
             name = o.split(".")[0]
             ensure_param(name)["description"] = config.get(section,o)
     return d
@@ -98,7 +98,7 @@ def parse_file( obj_dict, enum_dict, name ):
         if re.match(r'^[0-9a-fA-F]+(sub[0-9a-fA-F]+)?$', s):
             obj_dict[s] = config2objdict( config, s )
             check_eds_entry(name, s, obj_dict[s])
-        elif re.match(r'^enum:[a-zA-Z_]+$', s):
+        elif re.match(r'^enum:[a-zA-Z_0-9]+$', s):
             enum_dict[s.split(":")[1]] = config2enumdict( config, s )
 
 def datatype(s):
@@ -110,7 +110,7 @@ def datatype(s):
 def objecttype(s):
     s = s.upper();
     if( re.match(r'VAR|RECORD|ARRAY',s) ):
-        return NS+"OBJ_CODE_"+s
+        return NS+"OBJECT_TYPE_"+s
     else: return s
 
 def sect2index( section ):
@@ -190,10 +190,10 @@ def print_dict( name, output, header, odict ):
     header.write("extern canmat_dict_t %s;\n" % name )
 
 
-def print_enum( output, header, enum_dict ):
+def print_enum( output, header, namespace, enum_dict ):
     s = '';
     for typename in enum_dict.keys():
-        s += 'enum %s {\n' % typename;
+        s += 'enum %s%s {\n' % (namespace, typename);
         for elementname in enum_dict[typename]:
             val = 0;
             desc = "?"
@@ -201,7 +201,7 @@ def print_enum( output, header, enum_dict ):
                 val = enum_dict[typename][elementname]["value"]
             if "description" in enum_dict[typename][elementname]:
                 desc = enum_dict[typename][elementname]["description"]
-            s += "\t %s_%s = %s, /* %s */\n" % (typename.upper(), elementname.upper(), val, desc)
+            s += "\t %s%s_%s = %s, /* %s */\n" % (namespace.upper(), typename.upper(), elementname.upper(), val, desc)
         s += "};\n"
 
 
@@ -214,6 +214,7 @@ def main() :
     optparser.add_option("-o", "--output", dest="output")
     optparser.add_option("-p", "--header", dest="header")
     optparser.add_option("-n", "--name", dest="name", default="canmat_dict")
+    optparser.add_option("-N", "--namespace", dest="namespace", default="canmat_")
     optparser.add_option("-V", "--version",
                          action="store_true", dest="version")
     optparser.add_option("-x", "--exclude-dictionary",
@@ -249,7 +250,7 @@ def main() :
         print_dict( opts.name, output, header, obj_dict )
 
     if( not opts.exclude_enum ):
-        print_enum( output, header, enum_dict )
+        print_enum( output, header, opts.namespace, enum_dict )
 
     #print enum_dict
 

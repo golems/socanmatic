@@ -58,29 +58,29 @@ static void display_malformed( const struct can_frame *can ) ;
 void canmat_display( const canmat_dict_t *dict, const struct can_frame *can ) {
 
     switch( canmat_frame_func(can) ) {
-    case CANMAT_FUNC_NMT:
+    case CANMAT_FUNC_CODE_NMT:
         display_nmt( can );
         break;
-    case CANMAT_FUNC_SDO_TX:
-    case CANMAT_FUNC_SDO_RX:
+    case CANMAT_FUNC_CODE_SDO_TX:
+    case CANMAT_FUNC_CODE_SDO_RX:
         display_sdo( dict, can );
         break;
-    case CANMAT_FUNC_NMT_ERR:
+    case CANMAT_FUNC_CODE_NMT_ERR:
         display_nmt_err( can );
         break;
-    case CANMAT_FUNC_SYNC_EMCY:
+    case CANMAT_FUNC_CODE_SYNC_EMCY:
         /* TODO: display sync */
         display_emcy(can);
         break;
-    case CANMAT_FUNC_TIME:
-    case CANMAT_FUNC_PDO1_TX:
-    case CANMAT_FUNC_PDO1_RX:
-    case CANMAT_FUNC_PDO2_TX:
-    case CANMAT_FUNC_PDO2_RX:
-    case CANMAT_FUNC_PDO3_TX:
-    case CANMAT_FUNC_PDO3_RX:
-    case CANMAT_FUNC_PDO4_TX:
-    case CANMAT_FUNC_PDO4_RX:
+    case CANMAT_FUNC_CODE_TIME:
+    case CANMAT_FUNC_CODE_PDO1_TX:
+    case CANMAT_FUNC_CODE_PDO1_RX:
+    case CANMAT_FUNC_CODE_PDO2_TX:
+    case CANMAT_FUNC_CODE_PDO2_RX:
+    case CANMAT_FUNC_CODE_PDO3_TX:
+    case CANMAT_FUNC_CODE_PDO3_RX:
+    case CANMAT_FUNC_CODE_PDO4_TX:
+    case CANMAT_FUNC_CODE_PDO4_RX:
     default:
         display_raw(can);
     }
@@ -122,8 +122,8 @@ static int sdo_check_length( const canmat_sdo_msg_t *sdo, size_t len  ) {
 static void display_sdo( const canmat_dict_t *dict, const struct can_frame *can ) {
     uint16_t func = canmat_frame_func(can);
     uint8_t node = canmat_frame_node(can);
-    assert( CANMAT_FUNC_SDO_RX == func ||
-            CANMAT_FUNC_SDO_TX == func );
+    assert( CANMAT_FUNC_CODE_SDO_RX == func ||
+            CANMAT_FUNC_CODE_SDO_TX == func );
 
     uint16_t index = canmat_can2sdo_index( can );
     uint8_t subindex = canmat_can2sdo_subindex( can );
@@ -145,7 +145,7 @@ static void display_sdo( const canmat_dict_t *dict, const struct can_frame *can 
     }
 
     printf("sdo %s, node %03x %s '%s' (%04x.%02x)",
-           CANMAT_FUNC_SDO_RX == func ? "rx" : "tx",
+           CANMAT_FUNC_CODE_SDO_RX == func ? "rx" : "tx",
            node, cs,
            param, sdo.index, sdo.subindex
         );
@@ -160,9 +160,9 @@ static void display_sdo( const canmat_dict_t *dict, const struct can_frame *can 
             printf(" bad length");
             sdo_bytes(&sdo);
         }
-    } else if( (CANMAT_FUNC_SDO_RX == func &&
+    } else if( (CANMAT_FUNC_CODE_SDO_RX == func &&
          CANMAT_EX_DL == sdo.cmd_spec) ||
-        (CANMAT_FUNC_SDO_TX == func &&
+        (CANMAT_FUNC_CODE_SDO_TX == func &&
          CANMAT_EX_UL == sdo.cmd_spec) ) {
         if( obj ) {
             switch( obj->data_type ) {
@@ -209,7 +209,7 @@ static void display_sdo( const canmat_dict_t *dict, const struct can_frame *can 
 }
 
 static void display_nmt( const struct can_frame *can )  {
-    assert( CANMAT_FUNC_NMT == can->can_id );
+    assert( CANMAT_FUNC_CODE_NMT == can->can_id );
 
     if( can->can_dlc >= 2 ) {
         const char *action = "unknown";
@@ -233,7 +233,7 @@ static void display_nmt_err( const struct can_frame *can ) {
     uint16_t func = canmat_frame_func(can);
     uint8_t node = canmat_frame_node(can);
 
-    assert( CANMAT_FUNC_NMT_ERR == func );
+    assert( CANMAT_FUNC_CODE_NMT_ERR == func );
 
     if( can->can_dlc < 1 ) {
         display_malformed(can);
@@ -262,7 +262,7 @@ static void display_emcy( const struct can_frame *can ) {
     uint16_t func = canmat_frame_func(can);
     uint8_t node = canmat_frame_node(can);
 
-    assert( CANMAT_FUNC_SYNC_EMCY == func );
+    assert( CANMAT_FUNC_CODE_SYNC_EMCY == func );
 
     if( can->can_dlc < 3 ) {
         display_malformed(can);

@@ -27,3 +27,6 @@ Makefile
 doc/Makefile.in
 /dict402.c
 /canmat
+/socanmatic/*.h
+/enum301.c
+/enum402.c

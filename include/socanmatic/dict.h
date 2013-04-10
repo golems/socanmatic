@@ -56,63 +56,6 @@ typedef enum canmat_access_type {
 } canmat_access_type_t;
 
 
-/** Object Dictionary Object Definition
- *  see CiA 301
- */
-typedef enum canmat_object_type {
-    CANMAT_OBJ_CODE_NULL       = 0, ///< no data fields
-    CANMAT_OBJ_CODE_DOMAIN     = 2, ///< large variable amount of data
-    CANMAT_OBJ_CODE_DEFTYPE    = 5, ///< A type definition
-    CANMAT_OBJ_CODE_DEFSTRUCT  = 6, ///< A struct definition
-    CANMAT_OBJ_CODE_VAR        = 7, ///< A single value
-    CANMAT_OBJ_CODE_ARRAY      = 8, ///< An array
-    CANMAT_OBJ_CODE_RECORD     = 9  ///< A record type
-} canmat_object_type_t;
-
-/** Data type for an object
- *  see CiA 301
- */
-typedef enum canmat_data_type {
-    CANMAT_DATA_TYPE_BOOLEAN         = 0x0001,
-    CANMAT_DATA_TYPE_INTEGER8        = 0x0002,
-    CANMAT_DATA_TYPE_INTEGER16       = 0x0003,
-    CANMAT_DATA_TYPE_INTEGER32       = 0x0004,
-    CANMAT_DATA_TYPE_UNSIGNED8       = 0x0005,
-    CANMAT_DATA_TYPE_UNSIGNED16      = 0x0006,
-    CANMAT_DATA_TYPE_UNSIGNED32      = 0x0007,
-    CANMAT_DATA_TYPE_REAL32          = 0x0008,
-    CANMAT_DATA_TYPE_VISIBLE_STRING  = 0x0009,
-    CANMAT_DATA_TYPE_OCTET_STRING    = 0x000A,
-    CANMAT_DATA_TYPE_UNICODE_STRING  = 0x000B,
-    CANMAT_DATA_TYPE_TIME_OF_DAY     = 0x000C,
-    CANMAT_DATA_TYPE_TIME_DIFFERENCE = 0x000D,
-    /* 0x000E is reserved */
-    CANMAT_DATA_TYPE_DOMAIN          = 0x000F,
-    CANMAT_DATA_TYPE_INT24           = 0x0010,
-    CANMAT_DATA_TYPE_REAL64          = 0x0011,
-    CANMAT_DATA_TYPE_INTEGER40       = 0x0012,
-    CANMAT_DATA_TYPE_INTEGER48       = 0x0013,
-    CANMAT_DATA_TYPE_INTEGER56       = 0x0014,
-    CANMAT_DATA_TYPE_INTEGER64       = 0x0015,
-    CANMAT_DATA_TYPE_UINT24          = 0x0016,
-    /* 0x0017 is reserved */
-    CANMAT_DATA_TYPE_UNSIGNED40      = 0x0018,
-    CANMAT_DATA_TYPE_UNSIGNED48      = 0x0019,
-    CANMAT_DATA_TYPE_UNSIGNED56      = 0x001A,
-    CANMAT_DATA_TYPE_UNSIGNED64      = 0x001B,
-    /* 0x001C - 0x001F are reserved */
-    CANMAT_DATA_TYPE_PDO_COM         = 0x0020,
-    CANMAT_DATA_TYPE_PDO_MAP         = 0x0021,
-    CANMAT_DATA_TYPE_SDO_PARM        = 0x0022,
-    CANMAT_DATA_TYPE_IDENTITY        = 0x0023,
-    /* 0x0024 - 0x003F are reserved */
-    /* 0x0040 - 0x005F are mfr specific */
-    /* 0x0060 - 0x025F are device profile specific */
-
-    /* some magic data types */
-    CANMAT_DATA_TYPE_VOID            = 0xFFFF + 1,
-    CANMAT_DATA_TYPE_UNKNOWN         = 0xFFFF + 2
-} canmat_data_type_t;
 
 /** Description of a CiA Object */
 typedef struct canmat_obj {
@@ -197,7 +140,7 @@ canmat_status_t canmat_obj_dl_str (
     canmat_iface_t *cif, uint8_t node, const canmat_obj_t *obj, const char *val );
 
 /* Parse str based on provided type and store in val */
-canmat_status_t canmat_typed_parse( canmat_data_type_t type, const char *str, canmat_scalar_t *val );
+canmat_status_t canmat_typed_parse( enum canmat_data_type type, const char *str, canmat_scalar_t *val );
 
 typedef int canmat_obj_print_fun(canmat_scalar_t);
 

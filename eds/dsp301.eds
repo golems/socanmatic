@@ -17,11 +17,11 @@
 ;     disclaimer in the documentation and/or other materials provided
 ;     with the distribution.
 ;   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
-;   CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+;   CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES
 ;   INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
 ;   MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 ;   DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
-;   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+;   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL
 ;   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
 ;   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
 ;   USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
@@ -43,6 +43,78 @@ ModificationTime=23:50
 ModificationDate=03-18-2013
 ModifiedBy=Neil T. Dantam
 
+[enum:object_type]
+NULL.value            = 0
+NULL.description      = no data fields
+DOMAIN.value          = 2
+DOMAIN.description    = large variable amount of data
+DEFTYPE.value         = 5
+DEFTYPE.description   = A type definition
+DEFSTRUCT.value       = 6
+DEFSTRUCT.description = A struct definition
+VAR.value             = 7
+VAR.description       = A single value
+ARRAY.value           = 8
+ARRAY.description     = An array
+RECORD.value          = 9
+RECORD.description    = A record type
+
+[enum:data_type]
+BOOLEAN.value         = 0x0001
+INTEGER8.value        = 0x0002
+INTEGER16.value       = 0x0003
+INTEGER32.value       = 0x0004
+UNSIGNED8.value       = 0x0005
+UNSIGNED16.value      = 0x0006
+UNSIGNED32.value      = 0x0007
+REAL32.value          = 0x0008
+VISIBLE_STRING.value  = 0x0009
+OCTET_STRING.value    = 0x000A
+UNICODE_STRING.value  = 0x000B
+TIME_OF_DAY.value     = 0x000C
+TIME_DIFFERENCE.value = 0x000D
+;    /* 0x000E is reserved */
+DOMAIN.value          = 0x000F
+INT24.value           = 0x0010
+REAL64.value          = 0x0011
+INTEGER40.value       = 0x0012
+INTEGER48.value       = 0x0013
+INTEGER56.value       = 0x0014
+INTEGER64.value       = 0x0015
+UINT24.value          = 0x0016
+;   /* 0x0017 is reserved */
+UNSIGNED40.value      = 0x0018
+UNSIGNED48.value      = 0x0019
+UNSIGNED56.value      = 0x001A
+UNSIGNED64.value      = 0x001B
+;   /* 0x001C - 0x001F are reserved */
+PDO_COM.value         = 0x0020
+PDO_MAP.value         = 0x0021
+SDO_PARM.value        = 0x0022
+IDENTITY.value        = 0x0023
+;   /* 0x0024 - 0x003F are reserved */
+;   /* 0x0040 - 0x005F are mfr specific */
+;   /* 0x0060 - 0x025F are device profile specific */
+;   /* some magic data types */
+VOID.value            = 0xFFFF + 1
+UNKNOWN.value         = 0xFFFF + 2
+
+[enum:func_code]
+NMT.value       = 0x000
+SYNC_EMCY.value = 0x080
+TIME.value      = 0x100
+PDO1_TX.value   = 0x180
+PDO1_RX.value   = 0x200
+PDO2_TX.value   = 0x280
+PDO2_RX.value   = 0x300
+PDO3_TX.value   = 0x380
+PDO3_RX.value   = 0x400
+PDO4_TX.value   = 0x480
+PDO4_RX.value   = 0x500
+SDO_TX.value    = 0x580
+SDO_RX.value    = 0x600
+NMT_ERR.value   = 0x700
+
 [1000]
 ParameterName=Device type
 ObjectType=VAR
@@ -58,7 +130,7 @@ DataType=UNSIGNED8
 AccessType=RO
 PDOMapping=1
 
-[enum:canmat_error_reg_mask]
+[enum:error_reg_mask]
 error.value           = 1 << 0
 error.description     = Generic Error
 current.value         = 1 << 1
