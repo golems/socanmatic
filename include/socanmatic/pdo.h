@@ -53,6 +53,29 @@ extern "C" {
 #define CANMAT_RPDO_COM_COB_ID       0x1
 #define CANMAT_RPDO_COM_TRANS_TYPE   0x2
 
+
+struct pdo_descriptor {
+    uint32_t cob_id;          ///< CAN frame COB-ID
+    unsigned n_obj : 4;       ///< number of objects in the PDO
+    struct {
+        unsigned offset : 3;  ///< offset in frame data for this PDO
+        unsigned size   : 3;  ///< size of the object, range 1-4
+        void *ptr;            ///< pointer to where we should store the object
+    } obj[8];
+};
+
+struct pdo_descriptor_table {
+    size_t n;             ///< number of valid entries
+    size_t max;           ///< allocated size of descriptor
+    struct pdo_descriptor_table *descriptor; ///< pointer to the entries
+};
+
+/** Lookup the descriptor for can_frame in and write message data to the pointed location.
+ *
+ */
+enum canmat_status canmat_pdo_process(
+    const struct pdo_descriptor_table table, const struct can_frame );
+
 #ifdef __cplusplus
 }
 #endif
