@@ -55,15 +55,15 @@ canmat_status_t canmat_probe_pdo( canmat_iface_t *cif, uint8_t node ) {
         uint8_t com_size;
         {
             canmat_sdo_msg_t resp;
-            canmat_sdo_msg_t req = { .index = CANMAT_RPDO_COM_BASE+i,
+            canmat_sdo_msg_t req = { .index = (uint16_t)(CANMAT_RPDO_COM_BASE+i),
                                      .subindex = 0,
                                      .node = node,
                                      .data_type = CANMAT_DATA_TYPE_UNSIGNED8 };
             canmat_status_t  r = canmat_sdo_ul( cif, &req, &resp );
 
             if( CANMAT_OK != r ) return r;
-            if( CANMAT_ABORT == resp.cmd_spec ) continue;
-            if( CANMAT_EX_UL != resp.cmd_spec ) return CANMAT_ERR_PROTO;
+            if( CANMAT_CS_ABORT == resp.cmd_spec ) continue;
+            if( CANMAT_SCS_EX_UL != resp.cmd_spec ) return CANMAT_ERR_PROTO;
             com_size = resp.data.u8;
         }
 
@@ -71,22 +71,22 @@ canmat_status_t canmat_probe_pdo( canmat_iface_t *cif, uint8_t node ) {
         printf("RPDO %"PRIu8"\n", i );
         printf("> com size: %d\n", com_size );
 
-        // cob cob-id
+        // cob-id
         if( com_size > 0 ) {
             canmat_sdo_msg_t resp;
-            canmat_sdo_msg_t req = { .index = CANMAT_RPDO_COM_BASE+i,
+            canmat_sdo_msg_t req = { .index = (uint16_t)(CANMAT_RPDO_COM_BASE+i),
                                      .subindex = 1,
                                      .node = node,
                                      .data_type = CANMAT_DATA_TYPE_UNSIGNED32 };
             canmat_status_t  r = canmat_sdo_ul( cif, &req, &resp );
 
             if( CANMAT_OK != r ) return r;
-            if( CANMAT_ABORT == resp.cmd_spec ) continue;
-            if( CANMAT_EX_UL != resp.cmd_spec ) return CANMAT_ERR_PROTO;
+            if( CANMAT_CS_ABORT == resp.cmd_spec ) continue;
+            if( CANMAT_SCS_EX_UL != resp.cmd_spec ) return CANMAT_ERR_PROTO;
 
             printf(" cob-id: 0x%x\n", resp.data.u32 & CANMAT_COBID_MASK );
             printf(" frame: %d\n", (resp.data.u32 & CANMAT_COBID_PDO_MASK_FRAME) ? 1 : 0 );
-            printf(" valid: %d\n", (resp.data.u32 & CANMAT_COBID_PDO_MASK_VALID) ? 1 : 0 );
+            printf(" valid: %d\n", (resp.data.u32 & (uint32_t)CANMAT_COBID_PDO_MASK_VALID) ? 1 : 0 );
         }
 
     }

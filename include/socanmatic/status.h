@@ -42,13 +42,16 @@
 #define SOCANMATIC_STATUS_H
 
 typedef enum canmat_status {
-    CANMAT_OK             =  0,
-    CANMAT_ERR_OS         = -1,
-    CANMAT_ERR_OVERFLOW   = -2,
-    CANMAT_ERR_UNDERFLOW  = -3,
-    CANMAT_ERR_PARAM      = -4,
-    CANMAT_ERR_NOT_SUP    = -5,
-    CANMAT_ERR_PROTO      = -6,   ///< CANopen protocol erroro
+    CANMAT_OK             =  0,   ///< No error
+    CANMAT_ERR_OS         = -1,   ///< Failed system call
+    CANMAT_ERR_OVERFLOW   = -2,   ///< Too much data for buffer
+    CANMAT_ERR_UNDERFLOW  = -3,   ///< Not enough data to fill buffer
+    CANMAT_ERR_PARAM      = -4,   ///< Invalid Parameter
+    CANMAT_ERR_NOT_SUP    = -5,   ///< Operation not supported
+    CANMAT_ERR_PROTO      = -6,   ///< CANopen protocol error
+    CANMAT_ERR_ABORT      = -7,   ///< CANopen transfer aborted
 } canmat_status_t;
+
+const char *canmat_strerror( canmat_status_t status );
 
 #endif //SOCANMATIC_STATUS_H

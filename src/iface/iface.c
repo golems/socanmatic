@@ -117,6 +117,7 @@ const char *canmat_iface_strerror( canmat_iface_t *cif, canmat_status_t status )
     case CANMAT_ERR_UNDERFLOW: return "underflow error";
     case CANMAT_ERR_PARAM:     return "invalid parameter";
     case CANMAT_ERR_PROTO:     return "protocol error";
+    case CANMAT_ERR_ABORT:     return "abort";
     case CANMAT_ERR_NOT_SUP:   return "not supported";
     }
     return "unknown status";

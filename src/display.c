@@ -119,6 +119,32 @@ static int sdo_check_length( const canmat_sdo_msg_t *sdo, size_t len  ) {
     }
 }
 
+static const char *ccs2str( enum canmat_ccs cs ) {
+    switch(cs) {
+    case CANMAT_CCS_SEG_DL: return "seg_dl";
+    case CANMAT_CCS_EX_DL:  return "ex_dl";
+    case CANMAT_CCS_EX_UL:  return "ex_ul";
+    case CANMAT_CCS_SEG_UL: return "seg_ul";
+    case CANMAT_CCS_ABORT:  return "abort";
+    case CANMAT_CCS_BLK_UL: return "blk_ul";
+    case CANMAT_CCS_BLK_DL: return "blk_dl";
+    }
+    return "?";
+}
+
+static const char *scs2str( enum canmat_scs cs ) {
+    switch(cs) {
+    case CANMAT_SCS_SEG_DL: return "seg_dl";
+    case CANMAT_SCS_EX_DL:  return "ex_dl";
+    case CANMAT_SCS_EX_UL:  return "ex_ul";
+    case CANMAT_SCS_SEG_UL: return "seg_ul";
+    case CANMAT_SCS_ABORT:  return "abort";
+    case CANMAT_SCS_BLK_UL: return "blk_ul";
+    case CANMAT_SCS_BLK_DL: return "blk_dl";
+    }
+    return "?";
+}
+
 static void display_sdo( const canmat_dict_t *dict, const struct can_frame *can ) {
     uint16_t func = canmat_frame_func(can);
     uint8_t node = canmat_frame_node(can);
@@ -136,12 +162,12 @@ static void display_sdo( const canmat_dict_t *dict, const struct can_frame *can 
     const char *param = obj ? obj->parameter_name : "unknown";
 
     const char *cs = "unknown";
-    switch( sdo.cmd_spec ) {
-    case CANMAT_SEG_DL: cs = "SEG_DL"; break;
-    case CANMAT_EX_DL:  cs = "EX_DL";  break;
-    case CANMAT_EX_UL:  cs = "EX_UL";  break;
-    case CANMAT_SEG_UL: cs = "SEG_UL"; break;
-    case CANMAT_ABORT:  cs = "ABORT";  break;
+    if( CANMAT_FUNC_CODE_SDO_RX == func ) {
+        cs = ccs2str((enum canmat_ccs)sdo.cmd_spec);
+    } else if( CANMAT_FUNC_CODE_SDO_TX == func ) {
+        cs = scs2str((enum canmat_scs)sdo.cmd_spec);
+    } else {
+        assert(0);
     }
 
     printf("sdo %s, node %03x %s '%s' (%04x.%02x)",
@@ -151,7 +177,7 @@ static void display_sdo( const canmat_dict_t *dict, const struct can_frame *can 
         );
 
     // print data
-    if ( CANMAT_ABORT == sdo.cmd_spec ) {
+    if ( CANMAT_CS_ABORT == sdo.cmd_spec ) {
         if( 4 == sdo.length ) {
             printf( " '%s' (0x%04"PRIx32")",
                     canmat_sdo_strerror(&sdo),
@@ -160,10 +186,8 @@ static void display_sdo( const canmat_dict_t *dict, const struct can_frame *can 
             printf(" bad length");
             sdo_bytes(&sdo);
         }
-    } else if( (CANMAT_FUNC_CODE_SDO_RX == func &&
-         CANMAT_EX_DL == sdo.cmd_spec) ||
-        (CANMAT_FUNC_CODE_SDO_TX == func &&
-         CANMAT_EX_UL == sdo.cmd_spec) ) {
+    } else if( (CANMAT_FUNC_CODE_SDO_RX == func && CANMAT_CCS_EX_DL == sdo.cmd_spec) ||
+               (CANMAT_FUNC_CODE_SDO_TX == func && CANMAT_SCS_EX_UL == sdo.cmd_spec) ) {
         if( obj ) {
             switch( obj->data_type ) {
             case CANMAT_DATA_TYPE_INTEGER8:
@@ -197,11 +221,13 @@ static void display_sdo( const canmat_dict_t *dict, const struct can_frame *can 
         } else {
             sdo_bytes(&sdo);
         }
-    } else if ( CANMAT_SEG_DL == func ||
-                CANMAT_SEG_UL == func ) {
-        printf(" segmented");
-    } else if (sdo.length > 0) {
-        printf(" unexpected data");
+    } else if( (CANMAT_FUNC_CODE_SDO_RX == func && CANMAT_CCS_EX_UL == sdo.cmd_spec) ||
+               (CANMAT_FUNC_CODE_SDO_TX == func && CANMAT_SCS_EX_DL == sdo.cmd_spec) ) {
+        // ignore this data
+        ;
+    } else {
+        printf(" unhandled ");
+        //FIXME
         sdo_bytes(&sdo);
     }
 

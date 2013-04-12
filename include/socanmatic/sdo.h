@@ -51,13 +51,36 @@ extern "C" {
 /** Make COB-ID for response (slave->master) */
 #define CANMAT_SDO_RESP_ID(node) ((canid_t)( ((node)&CANMAT_NODE_MASK) | CANMAT_FUNC_CODE_SDO_TX))
 
-typedef enum canmat_command_spec {
-    CANMAT_SEG_DL  = 0, ///< segment download
-    CANMAT_EX_DL   = 1, ///< expedited download (master->node)
-    CANMAT_EX_UL   = 2, ///< expedited upload (node->master)
-    CANMAT_SEG_UL  = 3, ///< segment upload
-    CANMAT_ABORT    = 4
-} canmat_command_spec_t;
+#define CANMAT_CS_ABORT 4
+
+enum canmat_ccs {
+    CANMAT_CCS_SEG_DL  = 0, ///< segment download
+    CANMAT_CCS_EX_DL   = 1, ///< expedited download (master->node)
+    CANMAT_CCS_EX_UL   = 2, ///< expedited upload (node->master)
+    CANMAT_CCS_SEG_UL  = 3, ///< segment upload
+    CANMAT_CCS_ABORT   = CANMAT_CS_ABORT,
+    CANMAT_CCS_BLK_UL  = 5, ///< Block Upload
+    CANMAT_CCS_BLK_DL  = 6  ///< Block Download
+};
+
+enum canmat_scs {
+    CANMAT_SCS_SEG_UL   = 0,   ///< Segment Download
+    CANMAT_SCS_SEG_DL   = 1,   ///< Segment Download
+    CANMAT_SCS_EX_UL    = 2,   ///< Expredited Upload Response
+    CANMAT_SCS_EX_DL    = 3,   ///< Expedited Download response
+    CANMAT_SCS_ABORT    = CANMAT_CS_ABORT,
+    CANMAT_SCS_BLK_DL   = 5,   ///< Block Download response
+    CANMAT_SCS_BLK_UL   = 6,   ///< Block Upload response
+};
+
+struct canmat_sdo_cmd_ex {
+    unsigned s  : 1;
+    unsigned e  : 1;
+    unsigned n  : 2;
+    unsigned x  : 1;
+    unsigned cs : 3;
+};
+
 
 typedef enum canmat_command_byte {
     CANMAT_SDO_CMD_DL1 = 0x2f,
@@ -70,7 +93,11 @@ typedef enum canmat_command_byte {
     CANMAT_SDO_CMD_UL2 = 0x4B,
     CANMAT_SDO_CMD_UL3 = 0x47,
     CANMAT_SDO_CMD_UL4 = 0x43,
-    CANMAT_SDO_CMD_UL0 = 0x42
+    CANMAT_SDO_CMD_UL0 = 0x42,
+
+    CANMAT_SDO_CMD_DL_ACK = 0x60,
+
+    CANMAT_SDO_CMD_ABORT = 0x80
 } canmat_command_byte_t;
 
 typedef enum canmat_abort {
@@ -110,18 +137,18 @@ typedef enum canmat_abort {
  *
  */
 typedef struct canmat_sdo_msg {
-    uint16_t index;    ///< CANopen index
-    uint8_t subindex;  ///< CANopen subindex
-    uint8_t node;      ///< CANopen Node ID
-    enum canmat_command_spec cmd_spec; ///< Command Specifier
+    uint16_t index;        ///< CANopen index
+    uint8_t subindex;      ///< CANopen subindex
+    uint8_t node;          ///< CANopen Node ID
+    unsigned cmd_spec : 3; ///< Command Specifier
     enum canmat_data_type data_type; ///< data type stored in the SDO
-    uint8_t length;    ///< CANopen length of data
+    uint8_t length;        ///< CANopen length of data
     union canmat_scalar data;
 } canmat_sdo_msg_t;
 
 
 /// Create a struct can_frame from a canmat_sdo_msg_t
-void canmat_sdo2can (struct can_frame *dst, const canmat_sdo_msg_t *src, const int is_response );
+enum canmat_status canmat_sdo2can (struct can_frame *dst, const canmat_sdo_msg_t *src, const int is_response );
 
 static inline uint16_t canmat_can2sdo_index( const struct can_frame *src ) {
     return (uint16_t)(src->data[1] + (src->data[2] << 8));
@@ -131,12 +158,29 @@ static inline uint8_t canmat_can2sdo_subindex( const struct can_frame *src ) {
     return src->data[3];
 }
 
-static inline enum canmat_command_spec canmat_can2sdo_cmd_spec( const struct can_frame *src ) {
-    return (enum canmat_command_spec) ( (src->data[0] >> 5) & 0x7 );
+static inline enum canmat_command_byte canmat_can2sdo_cmd( const struct can_frame *src ) {
+    return (enum canmat_command_byte) (src->data[0]);
+}
+
+static inline struct canmat_sdo_cmd_ex canmat_can2sdo_cmd_ex( const struct can_frame *src ) {
+    unsigned c = src->data[0];
+    struct canmat_sdo_cmd_ex cmd = { .s = c & 0x1,
+                                     .e = (c >> 1) & 1,
+                                     .n = (c >> 2) & 0x3,
+                                     .cs = (c >> 5) & 0x7 };
+    return cmd;
+}
+
+static inline void canmat_sdo2can_cmd_ex( struct can_frame *dst, const struct canmat_sdo_cmd_ex cmd ) {
+    dst->data[0] = (uint8_t)( (cmd.s ? 1 : 0)            |
+                              ((cmd.e ? 1 : 0) << 1)     |
+                              ((cmd.n & 0x3)   << 2)      |
+                              ((cmd.cs & 0x7)  << 5) );
 }
 
 /// Create a canmat_sdo_msg_t from a struct can_frame
-void canmat_can2sdo( canmat_sdo_msg_t *dst, const struct can_frame *src, enum canmat_data_type data_type );
+enum canmat_status canmat_can2sdo(
+    canmat_sdo_msg_t *dst, const struct can_frame *src, enum canmat_data_type data_type );
 
 canmat_status_t canmat_sdo_ul( canmat_iface_t *cif, const canmat_sdo_msg_t *req,
                                canmat_sdo_msg_t *resp );
@@ -150,13 +194,6 @@ canmat_status_t canmat_sdo_query_send( canmat_iface_t *cif, const canmat_sdo_msg
 /// Receive and SDO query response
 canmat_status_t canmat_sdo_query_recv( canmat_iface_t *cif, canmat_sdo_msg_t *resp,
                                        const canmat_sdo_msg_t *req );
-
-static inline uint8_t canmat_sdo_cmd_byte( int s, int e, int n, int cs ) {
-    return (uint8_t) ( (s ? 1 : 0)            |
-                       ((e ? 1 : 0) << 1)     |
-                       ((n & 0x3)  << 2)      |
-                       ((cs & 0x7)    << 5) );
-}
 
 int canmat_sdo_print( FILE *f, const canmat_sdo_msg_t *sdo );
 

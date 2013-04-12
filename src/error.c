@@ -44,6 +44,20 @@
 #include <string.h>
 #include "socanmatic.h"
 
+const char *canmat_strerror( canmat_status_t status ) {
+    switch (status) {
+    case CANMAT_OK:            return "OK";
+    case CANMAT_ERR_OS:        return "OS error";
+    case CANMAT_ERR_OVERFLOW:  return "Overflow error";
+    case CANMAT_ERR_UNDERFLOW: return "Underflow error";
+    case CANMAT_ERR_PARAM:     return "Invalid parameter";
+    case CANMAT_ERR_PROTO:     return "Protocol error";
+    case CANMAT_ERR_ABORT:     return "Abort";
+    case CANMAT_ERR_NOT_SUP:   return "Not supported";
+    }
+    return "unknown status";
+}
+
 /* ex: set shiftwidth=4 tabstop=4 expandtab: */
 /* Local Variables:                          */
 /* mode: c                                   */

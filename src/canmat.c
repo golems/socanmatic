@@ -450,10 +450,11 @@ int cmd_ul( can_set_t *canset, size_t n, const char **arg ) {
 int cmd_ul_resp( can_set_t *canset, size_t n, const char **arg ) {
     canmat_sdo_msg_t sdo;
     parse_arg_sdo( n, arg, &sdo );
-    sdo.cmd_spec = CANMAT_EX_UL;
+    sdo.cmd_spec = CANMAT_SCS_EX_UL;
     struct can_frame can;
 
-    canmat_sdo2can( &can, &sdo, 1 );
+    canmat_status_t r = canmat_sdo2can( &can, &sdo, 1 );
+    hard_assert( CANMAT_OK == r, "Couldn't build CAN frame: %s\n", canmat_strerror(r) );
     return send_frame( canset, &can );
 }
 
@@ -465,9 +466,10 @@ int cmd_dl( can_set_t *canset, size_t n, const char **arg ) {
 int cmd_dl_resp( can_set_t *canset, size_t n, const char **arg ) {
     canmat_sdo_msg_t sdo;
     parse_arg_sdo( n, arg, &sdo );
-    sdo.cmd_spec = CANMAT_EX_DL;
+    sdo.cmd_spec = CANMAT_SCS_EX_DL;
     struct can_frame can;
-    canmat_sdo2can( &can, &sdo, 1 );
+    canmat_status_t r = canmat_sdo2can( &can, &sdo, 1 );
+    hard_assert( CANMAT_OK == r, "Couldn't build CAN frame: %s\n", canmat_strerror(r) );
     return send_frame( canset, &can );
 }
 
