@@ -74,11 +74,11 @@ enum canmat_scs {
 };
 
 struct canmat_sdo_cmd_ex {
-    unsigned s  : 1;
-    unsigned e  : 1;
-    unsigned n  : 2;
-    unsigned x  : 1;
-    unsigned cs : 3;
+    unsigned s  : 1;      ///< size
+    unsigned e  : 1;      ///< expedited
+    unsigned n  : 2;      ///< no-data length
+    unsigned x  : 1;      ///< unused
+    unsigned cs : 3;      ///< command specifier
 };
 
 
@@ -205,7 +205,7 @@ int canmat_sdo_print( FILE *f, const canmat_sdo_msg_t *sdo );
 canmat_status_t canmat_sdo_query_resp( canmat_iface_t *cif, const canmat_sdo_msg_t *resp );
 
 /** Return a string describing the error status of SDO */
-const char *canmat_sdo_strerror( const canmat_sdo_msg_t *sdo );
+const char *canmat_sdo_strerror( uint32_t u32 );
 
 
 

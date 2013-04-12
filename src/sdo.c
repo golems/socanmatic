@@ -152,7 +152,7 @@ enum canmat_status canmat_can2sdo(
     dst->subindex = canmat_can2sdo_subindex( src );
 
     // FIXME: check that size matches
-    switch( data_type ) {
+    switch( dst->data_type ) {
         // size 4
     case CANMAT_DATA_TYPE_REAL32:
     case CANMAT_DATA_TYPE_UNSIGNED32:
@@ -176,7 +176,7 @@ enum canmat_status canmat_can2sdo(
         return CANMAT_ERR_PARAM;
     }
 
-    return CANMAT_OK;
+    return CANMAT_CS_ABORT == dst->cmd_spec ? CANMAT_ERR_ABORT : CANMAT_OK;
 }
 
 
@@ -249,8 +249,8 @@ int canmat_sdo_print( FILE *f, const canmat_sdo_msg_t *sdo ) {
     return 0;
 }
 
-const char *canmat_sdo_strerror( const canmat_sdo_msg_t *sdo ) {
-    switch (sdo->data.u32)
+const char *canmat_sdo_strerror( uint32_t u32 ) {
+    switch (u32)
     {
     case CANMAT_ABORT_RESET:
         return "Error Reset or no Error";

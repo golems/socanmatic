@@ -97,7 +97,7 @@ canmat_status_t canmat_obj_ul( canmat_iface_t *cif, uint8_t node, const canmat_o
     canmat_sdo_msg_t resp;
 
     canmat_status_t r = canmat_sdo_ul( cif, &req, &resp );
-    if( CANMAT_OK == r ) {
+    if( CANMAT_OK == r || CANMAT_ERR_ABORT == r ) {
         memcpy( val, &resp.data, sizeof(resp.data) );
     }
     return r;
@@ -245,7 +245,7 @@ canmat_status_t canmat_obj_print( FILE *f, const canmat_obj_t *obj, canmat_scala
         } else if (obj->value_descriptor) {
             print_enum( obj->value_descriptor, val->u8 );
         } else {
-            fprintf( f, "0x%"PRIx8"\n", val->u8 );
+            fprintf( f, "0x%"PRIx8" (%"PRId8")\n", val->u8, val->u8 );
         }
         return CANMAT_OK;
     case CANMAT_DATA_TYPE_UNSIGNED16:
@@ -254,7 +254,7 @@ canmat_status_t canmat_obj_print( FILE *f, const canmat_obj_t *obj, canmat_scala
         } else if (obj->value_descriptor) {
             print_enum( obj->value_descriptor, val->u16 );
         } else {
-            fprintf( f, "0x%"PRIx16"\n", val->u16 );
+            fprintf( f, "0x%"PRIx16" (%"PRId16")\n", val->u16, val->u16 );
         }
         return CANMAT_OK;
     case CANMAT_DATA_TYPE_UNSIGNED32:
@@ -263,7 +263,7 @@ canmat_status_t canmat_obj_print( FILE *f, const canmat_obj_t *obj, canmat_scala
         } else if (obj->value_descriptor) {
             print_enum( obj->value_descriptor, val->u32 );
         } else {
-            fprintf( f, "0x%"PRIx32"\n", val->u32 );
+            fprintf( f, "0x%"PRIx32" (%"PRId32")\n", val->u32, val->u32 );
         }
         return CANMAT_OK;
     default:

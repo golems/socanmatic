@@ -668,6 +668,122 @@ PDOMapping=1
 DefaultValue=0
 
 
+;;;;;;;;;;;;;;;;;;;;;;
+;; Profile Position ;;
+;;;;;;;;;;;;;;;;;;;;;;
+
+[607A]
+ParameterName=Target position
+ObjectType=VAR
+DataType=INTEGER32
+AccessType=RW
+PDOMapping=1
+
+
+[607B]
+ParameterName=Position range limit
+ObjectType=ARRAY
+DataType=INTEGER32
+
+[607Bsub0]
+ParameterName=Position range limit/number of entries
+ObjectType=VAR
+DataType=UNSIGNED8
+
+[607Bsub1]
+ParameterName=Position range limit/Min position range limit
+DataType=INTEGER32
+
+[607Bsub2]
+ParameterName=Position range limit/Max position range limit
+DataType=INTEGER32
+
+
+[607D]
+ParameterName=Software position limit
+ObjectType=ARRAY
+DataType=INTEGER32
+
+[607Dsub0]
+ParameterName=Software position limit/number of entries
+ObjectType=VAR
+DataType=UNSIGNED8
+
+[607Dsub1]
+ParameterName=Software position limit/Min position range limit
+AccessType=RW
+DataType=INTEGER32
+
+[607Dsub2]
+ParameterName=Software position limit/Max position range limit
+AccessType=RW
+DataType=INTEGER32
+
+[6081]
+ParameterName=Profile velocity
+ObjectType=VAR
+AccessType=RW
+DataType=UNSIGNED32
+PDOMapping=1
+
+[6082]
+ParameterName=End velocity
+ObjectType=VAR
+AccessType=RW
+DataType=UNSIGNED32
+PDOMapping=1
+
+[6083]
+ParameterName=Profile acceleration
+ObjectType=VAR
+AccessType=RW
+DataType=UNSIGNED32
+PDOMapping=1
+
+[6084]
+ParameterName=Profile deceleration
+ObjectType=VAR
+AccessType=RW
+DataType=UNSIGNED32
+PDOMapping=1
+
+[6085]
+ParameterName=Quick stop deceleration
+ObjectType=VAR
+AccessType=RW
+DataType=UNSIGNED32
+PDOMapping=1
+
+[6086]
+ParameterName=Motion profile type
+ObjectType=VAR
+AccessType=RW
+DataType=INTEGER16
+PDOMapping=1
+ValueEnum=motion_profile_type
+
+[enum:motion_profile_type]
+; negative values are manufacturer specific
+linear_ramp.value             = 0
+linear_ramp.description       = Trapezoidal profile
+sin2_ramp.value               = 1
+jerk_free_ramp                = 2
+jerk_limited_ramp             = 3
+; values 4+ are reserved
+
+[60C5]
+ParameterName=Max acceleration
+ObjectType=VAR
+AccessType=RW
+DataType=UNSIGNED32
+PDOMapping=1
+
+[60C5]
+ParameterName=Max deceleration
+ObjectType=VAR
+AccessType=RW
+DataType=UNSIGNED32
+PDOMapping=1
 
 ; Local Variables:
 ; mode: conf

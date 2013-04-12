@@ -487,6 +487,7 @@ int cmd_dict_dl( can_set_t *canset, size_t n, const char **arg) {
     hard_assert( 1 == canset->n, "Can only send on 1 interface\n" );
 
     canmat_status_t r = canmat_obj_dl_str( canset->cif[0], node, obj, val );
+    verbf( 1, "dl status: %s\n", canmat_iface_strerror( canset->cif[0], r ) );
     hard_assert( CANMAT_OK == r, "Failed download: %s\n", canmat_iface_strerror(canset->cif[0],r) );
 
     return 0;
@@ -506,9 +507,19 @@ int cmd_dict_ul( can_set_t *canset, size_t n, const char **arg ) {
 
     canmat_scalar_t val;
     canmat_status_t r = canmat_obj_ul( canset->cif[0], node, obj, &val );
-    hard_assert( CANMAT_OK == r, "Failed upload: %s\n", canmat_iface_strerror(canset->cif[0],r) );
+    verbf( 1, "dl status: %s\n", canmat_iface_strerror( canset->cif[0], r ) );
 
-    canmat_obj_print( stdout, obj, &val );
+    if( CANMAT_OK == r ) {
+        canmat_obj_print( stdout, obj, &val );
+    } else if ( CANMAT_ERR_ABORT == r ) {
+
+        fprintf( stderr, "Transfer aborted: (0x%08"PRIx32") %s\n",
+                 val.u32, canmat_sdo_strerror(val.u32) );
+        exit( EXIT_FAILURE );
+    } else {
+        fprintf(stderr, "Failed upload: %s\n", canmat_iface_strerror(canset->cif[0],r) );
+        exit(EXIT_FAILURE);
+    }
 
     return 0;
 }

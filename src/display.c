@@ -180,7 +180,7 @@ static void display_sdo( const canmat_dict_t *dict, const struct can_frame *can 
     if ( CANMAT_CS_ABORT == sdo.cmd_spec ) {
         if( 4 == sdo.length ) {
             printf( " '%s' (0x%04"PRIx32")",
-                    canmat_sdo_strerror(&sdo),
+                    canmat_sdo_strerror(sdo.data.u32),
                     sdo.data.u32 );
         } else {
             printf(" bad length");
