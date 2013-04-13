@@ -53,8 +53,29 @@ extern "C" {
 #define CANMAT_RPDO_COM_COB_ID       0x1
 #define CANMAT_RPDO_COM_TRANS_TYPE   0x2
 
+// ds 301, table 68, p 132
+typedef enum canmat_pdo_trans_type {
+    CANMAT_PDO_TRANS_SYNC0 = 0x00,
+    CANMAT_PDO_TRANS_SYNC1 = 0xF0,
+    CANMAT_PDO_TRANS_EVENT_MFR = 0xFE,
+    CANMAT_PDO_TRANS_EVENT_DEV = 0xFF
+} canmat_pdo_trans_type;
 
-struct pdo_descriptor {
+
+// ds 301, table 69, p 135
+typedef enum canmat_pdo_mapping {
+    CANMAT_PDO_MAPPING_DISABLED = 0x00,
+    CANMAT_PDO_MAPPING_1 = 0x01,
+    CANMAT_PDO_MAPPING_1_2 = 0x02,
+    CANMAT_PDO_MAPPING_1_3 = 0x03,
+    CANMAT_PDO_MAPPING_1_4 = 0x04,
+
+    CANMAT_PDO_MAPPING_SAM_MPDO = 0xFE,
+    CANMAT_PDO_MAPPING_DAM_MPDO = 0xFE
+} canmat_pdo_mapping_t;
+
+
+struct canmat_pdo_descriptor {
     uint32_t cob_id;          ///< CAN frame COB-ID
     unsigned n_obj : 4;       ///< number of objects in the PDO
     struct {
@@ -64,17 +85,22 @@ struct pdo_descriptor {
     } obj[8];
 };
 
-struct pdo_descriptor_table {
+struct canmat_pdo_descriptor_table {
     size_t n;             ///< number of valid entries
     size_t max;           ///< allocated size of descriptor
-    struct pdo_descriptor_table *descriptor; ///< pointer to the entries
+    struct canmat_pdo_descriptor_table *descriptor; ///< pointer to the entries
 };
 
 /** Lookup the descriptor for can_frame in and write message data to the pointed location.
  *
+ * precondtion: table->descriptor is sorted by cob-id
+ *
+ * postcondition: The data in frame is written to the memory locations
+ * pointed to by the corresponding pdo_descriptor in table
+ *
  */
 enum canmat_status canmat_pdo_process(
-    const struct pdo_descriptor_table table, const struct can_frame );
+    const struct canmat_pdo_descriptor_table table, const struct can_frame frame );
 
 #ifdef __cplusplus
 }

@@ -84,22 +84,25 @@ typedef enum canmat_402_ctrlmask_ip {
  * with the MASK_AND and bitwise or the word with the MASK_OR */
 
 typedef enum canmat_402_ctrlcmd_mask {
-    CANMAT_402_CTRLCMD_MASK_AND_SHUTDOWN  = (~CANMAT_402_CTRLMASK_RESET_FAULT & ~CANMAT_402_CTRLMASK_SWITCH_ON),
+    CANMAT_402_CTRLCMD_MASK_AND_SHUTDOWN  = (uint16_t)(~CANMAT_402_CTRLMASK_RESET_FAULT &
+                                                       ~CANMAT_402_CTRLMASK_SWITCH_ON),
     CANMAT_402_CTRLCMD_MASK_OR_SHUTDOWN   = (CANMAT_402_CTRLMASK_QUICK_STOP | CANMAT_402_CTRLMASK_ENABLE_VOLTAGE),
     /* Need to set the "enable operation" bit independently */
-    CANMAT_402_CTRLCMD_MASK_AND_SWITCH_ON = (~CANMAT_402_CTRLMASK_RESET_FAULT),
+    CANMAT_402_CTRLCMD_MASK_AND_SWITCH_ON = (uint16_t)(~CANMAT_402_CTRLMASK_RESET_FAULT),
     CANMAT_402_CTRLCMD_MASK_OR_SWITCH_ON  = (CANMAT_402_CTRLMASK_QUICK_STOP | CANMAT_402_CTRLMASK_ENABLE_VOLTAGE |
-                                            CANMAT_402_CTRLMASK_SWITCH_ON),
-    CANMAT_402_CTRLCMD_MASK_AND_DISABLE_VOLTAGE = (~CANMAT_402_CTRLMASK_RESET_FAULT &
-                                                  ~CANMAT_402_CTRLMASK_ENABLE_VOLTAGE),
+                                             CANMAT_402_CTRLMASK_SWITCH_ON),
+    CANMAT_402_CTRLCMD_MASK_AND_DISABLE_VOLTAGE = (uint16_t)(~CANMAT_402_CTRLMASK_RESET_FAULT &
+                                                             ~CANMAT_402_CTRLMASK_ENABLE_VOLTAGE),
     CANMAT_402_CTRLCMD_MASK_OR_DISABLE_VOLTAGE  = 0,
-    CANMAT_402_CTRLCMD_MASK_AND_QUICK_STOP  = (~CANMAT_402_CTRLMASK_RESET_FAULT & ~CANMAT_402_CTRLMASK_QUICK_STOP),
+    CANMAT_402_CTRLCMD_MASK_AND_QUICK_STOP  = (uint16_t)(~CANMAT_402_CTRLMASK_RESET_FAULT &
+                                                         ~CANMAT_402_CTRLMASK_QUICK_STOP),
     CANMAT_402_CTRLCMD_MASK_OR_QUICK_STOP   = CANMAT_402_CTRLMASK_ENABLE_VOLTAGE,
-    CANMAT_402_CTRLCMD_MASK_AND_DISABLE_OP  = (~CANMAT_402_CTRLMASK_RESET_FAULT & ~CANMAT_402_CTRLMASK_ENABLE_OPERATION),
+    CANMAT_402_CTRLCMD_MASK_AND_DISABLE_OP  = (uint16_t)(~CANMAT_402_CTRLMASK_RESET_FAULT &
+                                                         ~CANMAT_402_CTRLMASK_ENABLE_OPERATION),
     CANMAT_402_CTRLCMD_MASK_OR_DISABLE_OP   = (CANMAT_402_CTRLMASK_QUICK_STOP | CANMAT_402_CTRLMASK_ENABLE_VOLTAGE |
-                                              CANMAT_402_CTRLMASK_SWITCH_ON),
-    CANMAT_402_CTRLCMD_MASK_AND_ENSABLE_OP  = (~CANMAT_402_CTRLMASK_RESET_FAULT),
-    CANMAT_402_CTRLCMD_MASK_OR_ENSABLE_OP   = (CANMAT_402_CTRLMASK_ENABLE_OPERATION| CANMAT_402_CTRLMASK_QUICK_STOP |
+                                               CANMAT_402_CTRLMASK_SWITCH_ON),
+    CANMAT_402_CTRLCMD_MASK_AND_ENABLE_OP  = (uint16_t)(~CANMAT_402_CTRLMASK_RESET_FAULT),
+    CANMAT_402_CTRLCMD_MASK_OR_ENABLE_OP   = (CANMAT_402_CTRLMASK_ENABLE_OPERATION | CANMAT_402_CTRLMASK_QUICK_STOP |
                                               CANMAT_402_CTRLMASK_ENABLE_VOLTAGE | CANMAT_402_CTRLMASK_SWITCH_ON),
     CANMAT_402_CTRLCMD_MASK_AND_RESET_FAULT = 0xFFFF,
     CANMAT_402_CTRLCMD_MASK_OR_RESET_FAULT  = CANMAT_402_CTRLMASK_RESET_FAULT
@@ -151,6 +154,42 @@ enum canmat_402_polarity_mask {
     CANMAT_402_POLARITY_FACTOR( (polarity) & CANMAT_402_POLARITY_MASK_POS )
 
 canmat_obj_print_fun* canmat_402_print_lookup( const char *name );
+
+
+struct canmat_402_drive {
+    uint8_t node_id;
+    uint16_t ctrl_word;
+    uint16_t stat_word;
+
+    double pos_factor;
+    double vel_factor;
+    double cur_factor;
+
+    int32_t actual_pos_raw;
+    int32_t actual_vel_raw;
+    int32_t actual_cur_raw;
+
+    double actual_pos;
+    double actual_vel;
+    double actual_cur;
+};
+
+///< initialize drive variables in struct
+enum canmat_402_state_val canmat_402_state( const struct canmat_402_drive *drive );
+
+///< initialize drive variables in struct
+enum canmat_status canmat_402_init( struct canmat_iface *cif, uint8_t id, struct canmat_402_drive *drive );
+
+///< start the drive
+enum canmat_status canmat_402_start( struct canmat_iface *cif, struct canmat_402_drive *drive );
+
+///< stop the drive
+enum canmat_status canmat_402_stop( struct canmat_iface *cif, struct canmat_402_drive *drive );
+
+///< Add active RPDOs to the descriptor table
+enum canmat_status canmat_402_probe_pdo(
+    struct canmat_iface *cif, struct canmat_pdo_descriptor_table tab,
+    const struct canmat_402_drive *drive );
 
 #ifdef __cplusplus
 }

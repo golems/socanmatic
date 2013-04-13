@@ -47,8 +47,8 @@
 #include "socanmatic_private.h"
 
 
-int canmat_send_nmt( canmat_iface_t *cif, uint8_t node,
-                     canmat_nmt_msg_t nmt_msg ) {
+enum canmat_status canmat_send_nmt( canmat_iface_t *cif, uint8_t node,
+                                    canmat_nmt_msg_t nmt_msg ) {
     struct can_frame frame = {0};
     frame.can_id = 0;
     frame.can_dlc = 2;

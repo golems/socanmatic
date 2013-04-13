@@ -45,12 +45,6 @@
 extern "C" {
 #endif
 
-/* Return the item in dict with given name */
-canmat_obj_t *canmat_dict_search_name( const struct canmat_dict *dict, const char *name );
-
-/* Return the item in dict with given index and subindex */
-canmat_obj_t *canmat_dict_search_index (
-    const struct canmat_dict *dict, uint16_t idx, uint8_t subindex );
 
 canmat_status_t canmat_obj_ul (
     canmat_iface_t *cif, uint8_t node, const canmat_obj_t *obj, canmat_scalar_t *val );
@@ -60,6 +54,18 @@ canmat_status_t canmat_obj_dl (
 
 canmat_status_t canmat_obj_dl_str (
     canmat_iface_t *cif, uint8_t node, const canmat_obj_t *obj, const char *val );
+
+/* Return the item in dict with given name */
+canmat_obj_t *canmat_dict_search_name( const struct canmat_dict *dict, const char *name );
+
+/* Return the item in dict with given index and subindex */
+canmat_obj_t *canmat_dict_search_index (
+    const struct canmat_dict *dict, uint16_t idx, uint8_t subindex );
+
+/* canmat_status_t canmat_dict_ul ( */
+/*     canmat_iface_t *cif, const struct canmat_dict *dict, */
+/*     uint8_t node, const char *name, */
+/*     canmat_scalar_t *val ); */
 
 /* Parse str based on provided type and store in val */
 canmat_status_t canmat_typed_parse( enum canmat_data_type type, const char *str, canmat_scalar_t *val );

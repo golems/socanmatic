@@ -216,6 +216,7 @@ static int print_enum( struct canmat_code_descriptor fmt[], int64_t u ) {
     return 0;
 }
 
+
 canmat_status_t canmat_obj_print( FILE *f, const canmat_obj_t *obj, canmat_scalar_t *val ) {
     switch(obj->data_type) {
     case CANMAT_DATA_TYPE_INTEGER8:

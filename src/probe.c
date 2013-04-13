@@ -88,6 +88,22 @@ canmat_status_t canmat_probe_pdo( canmat_iface_t *cif, uint8_t node ) {
             printf(" frame: %d\n", (resp.data.u32 & CANMAT_COBID_PDO_MASK_FRAME) ? 1 : 0 );
             printf(" valid: %d\n", (resp.data.u32 & (uint32_t)CANMAT_COBID_PDO_MASK_VALID) ? 1 : 0 );
         }
+        // trans type
+        if( com_size > 1 ) {
+            canmat_sdo_msg_t resp;
+            canmat_sdo_msg_t req = { .index = (uint16_t)(CANMAT_RPDO_COM_BASE+i),
+                                     .subindex = 2,
+                                     .node = node,
+                                     .data_type = CANMAT_DATA_TYPE_UNSIGNED8 };
+            canmat_status_t  r = canmat_sdo_ul( cif, &req, &resp );
+
+            if( CANMAT_OK != r ) return r;
+            if( CANMAT_CS_ABORT == resp.cmd_spec ) continue;
+            if( CANMAT_SCS_EX_UL != resp.cmd_spec ) return CANMAT_ERR_PROTO;
+
+            printf(" trans_type: 0x%x\n", resp.data.u8 );
+
+        }
 
     }
     return CANMAT_OK;

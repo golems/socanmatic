@@ -785,6 +785,24 @@ AccessType=RW
 DataType=UNSIGNED32
 PDOMapping=1
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Profile Control Function ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+[6064]
+ParameterName=Position actual value
+ObjectType=VAR
+AccessType=RO
+DataType=INTEGER32
+PDOMapping=1
+
+[606C]
+ParameterName=Velocity actual value
+ObjectType=VAR
+AccessType=RO
+DataType=INTEGER32
+PDOMapping=1
+
 ; Local Variables:
 ; mode: conf
 ; End:

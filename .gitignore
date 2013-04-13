@@ -30,3 +30,4 @@ doc/Makefile.in
 /socanmatic/*.h
 /enum301.c
 /enum402.c
+/can402
