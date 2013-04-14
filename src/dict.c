@@ -101,10 +101,12 @@ canmat_status_t canmat_obj_ul( canmat_iface_t *cif, uint8_t node, const canmat_o
     canmat_status_t r = canmat_sdo_ul( cif, &req, &resp );
     assert( resp.length <= 4 );
     if( CANMAT_OK == r ) {
-        memcpy( val, &resp.data, sizeof(resp.length) );
+        memcpy( val, &resp.data, resp.length );
+        if( err_val ) *err_val = 0;
     } else if (CANMAT_ERR_ABORT == r ) {
+        if( 4 != resp.length ) return CANMAT_ERR_PROTO;
         void * p = err_val ? (void*)err_val : (void*)val;
-        memcpy( p, &resp.data, sizeof(resp.length) );
+        memcpy( p, &resp.data, resp.length );
     }
     return r;
 }
@@ -155,7 +157,7 @@ canmat_status_t canmat_obj_dl_str( canmat_iface_t *cif, uint8_t node, const canm
 canmat_status_t canmat_typed_parse( enum canmat_data_type type, const char *str, canmat_scalar_t *val ) {
     unsigned long u;
     long i;
-
+    // TODO: check endptr
     errno = 0;
     switch(type) {
     case CANMAT_DATA_TYPE_INTEGER8:
