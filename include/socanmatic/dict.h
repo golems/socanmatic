@@ -56,6 +56,13 @@ typedef enum canmat_access_type {
 } canmat_access_type_t;
 
 
+typedef uint8_t  CANMAT_UNSIGNED8;
+typedef uint16_t CANMAT_UNSIGNED16;
+typedef uint32_t CANMAT_UNSIGNED32;
+typedef int8_t   CANMAT_INTEGER8;
+typedef int16_t  CANMAT_INTEGER16;
+typedef int32_t  CANMAT_INTEGER32;
+
 
 /** Description of a CiA Object */
 typedef struct canmat_obj {

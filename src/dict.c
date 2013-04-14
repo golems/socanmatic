@@ -103,7 +103,8 @@ canmat_status_t canmat_obj_ul( canmat_iface_t *cif, uint8_t node, const canmat_o
     if( CANMAT_OK == r ) {
         memcpy( val, &resp.data, sizeof(resp.length) );
     } else if (CANMAT_ERR_ABORT == r ) {
-        memcpy( err_val ? err_val : val, &resp.data, sizeof(resp.length) );
+        void * p = err_val ? (void*)err_val : (void*)val;
+        memcpy( p, &resp.data, sizeof(resp.length) );
     }
     return r;
 }

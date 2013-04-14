@@ -77,16 +77,38 @@ int canmat_obj_print( FILE *f, const canmat_obj_t *obj, canmat_scalar_t *val );
 typedef int canmat_obj_print_fun(canmat_scalar_t);
 
 
-/* canmat_status_t canmat_obj_ul_u16 ( */
-/*     canmat_iface_t *cif, uint8_t node, const canmat_obj_t *obj, uint16_t *val, uint32_t *err ) */
-/* { */
-/*     assert( CANMAT_DATA_TYPE_UNSIGNED16 == obj->data_type ); */
-/*     canmat_scalar_t *sval; */
-/*     canmat_status_t r = at_obj_ul_u16 ( */
-
-/* } */
 
 
+#define CANMAT_OBJ_TYPE_FUN( T_CAN, T_SHORT )                           \
+    static inline canmat_status_t canmat_obj_ul_ ## T_SHORT(            \
+        canmat_iface_t *cif, uint8_t node, const canmat_obj_t *obj,     \
+        CANMAT_##T_CAN *val, uint32_t *err )                            \
+    {                                                                   \
+        if( CANMAT_DATA_TYPE_ ## T_CAN != obj->data_type )              \
+            return CANMAT_ERR_PARAM;                                    \
+        canmat_scalar_t sval;                                           \
+        canmat_status_t r = canmat_obj_ul( cif, node, obj,              \
+                                           &sval, err );                \
+        if( CANMAT_OK == r ) *val = sval.T_SHORT;                       \
+        return r;                                                       \
+    }                                                                   \
+    static inline canmat_status_t canmat_obj_dl_ ## T_SHORT (           \
+        canmat_iface_t *cif, uint8_t node, const canmat_obj_t *obj,     \
+        const CANMAT_##T_CAN *val, uint32_t *err )                      \
+    {                                                                   \
+        if( CANMAT_DATA_TYPE_ ## T_CAN != obj->data_type )              \
+            return CANMAT_ERR_PARAM;                                    \
+        canmat_scalar_t sval = {.T_SHORT = *val};                       \
+        return canmat_obj_dl( cif, node, obj, &sval, err );             \
+    }
+
+CANMAT_OBJ_TYPE_FUN( UNSIGNED8,  u8 )
+CANMAT_OBJ_TYPE_FUN( UNSIGNED16, u16 )
+CANMAT_OBJ_TYPE_FUN( UNSIGNED32, u32 )
+
+CANMAT_OBJ_TYPE_FUN( INTEGER8,  i8 )
+CANMAT_OBJ_TYPE_FUN( INTEGER16, i16 )
+CANMAT_OBJ_TYPE_FUN( INTEGER32, i32 )
 
 #ifdef __cplusplus
 }

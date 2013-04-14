@@ -176,6 +176,29 @@ def edsobj2cstruct( section, params, enum_dict ):
 
     return (h,s)
 
+def make_dict_header( name, namespace, params, i ):
+    esc = escape_const(params['parametername'])
+    defname = '%s_OBJ_%s' % (namespace.upper(), esc.upper())
+    s = ( '#define %s (%s.obj + %d)\n' % (defname, name, i) )
+    if( ('datatype' in params) and
+        (re.match(r'((INTEGER|UNSIGNED)(8|16|32))', params['datatype'].upper()) ) and
+        ('objecttype' in params) and
+        ('VAR' == params['objecttype'].upper())
+        ):
+        t_short = params['datatype'][0].lower()
+        t_short += re.sub(r'[A-Za-z]','', params['datatype'])
+        # UL
+        s += 'static inline canmat_status_t %s_ul_%s (\n' % (namespace, esc.lower())
+        s += '\tstruct canmat_iface *cif, uint8_t node,\n'
+        s += '\tCANMAT_%s *val, uint32_t *err)\n' % params['datatype'].upper()
+        s += '{ return canmat_obj_ul_%s(cif, node, %s, val, err); }\n' % (t_short, defname)
+        # DL
+        s += 'static inline canmat_status_t %s_dl_%s (\n' % (namespace, esc.lower())
+        s += '\tstruct canmat_iface *cif, uint8_t node,\n'
+        s += '\tconst CANMAT_%s *val, uint32_t *err)\n' % params['datatype'].upper()
+        s += '{ return canmat_obj_dl_%s(cif, node, %s, val, err); }\n' % (t_short, defname)
+    return s
+
 
 def print_dict( name, output, header, namespace, odict, enum_dict ):
     # Sort by names
@@ -213,8 +236,7 @@ def print_dict( name, output, header, namespace, odict, enum_dict ):
         (hp,sp) =  edsobj2cstruct( section, odict[section], enum_dict )
         h += hp
         s += sp
-        h += ( '#define %s_OBJ_%s (%s.obj + %d)\n' %
-               (namespace.upper(), escape_const(odict[section]['parametername']), name, i) )
+        h += make_dict_header( name, namespace, odict[section], i )
         i+=1
     s += "\t}\n"
 
@@ -276,7 +298,7 @@ def main() :
     if( not opts.exclude_dictionary ):
         s = ''
         s += '#include "socanmatic/eds.h"\n'
-        s += '#include "%s"\n' % header_name
+        #s += '#include "%s"\n' % header_name
         output.write(s)
         print_dict( opts.name, output, header, opts.namespace, obj_dict, enum_dict )
 

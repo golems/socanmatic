@@ -123,15 +123,17 @@ enum canmat_status canmat_sdo2can (struct can_frame *dst, const canmat_sdo_msg_t
 enum canmat_status canmat_can2sdo(
     canmat_sdo_msg_t *dst, const struct can_frame *src, enum canmat_data_type data_type )
 {
-    // FIXME: better message validation, check that message is actually an SDO, sufficient size
-
-    assert( src->can_dlc <= 8 );
-
+    // FIXME: better message validation
+    if( src->can_dlc < 4 ) return CANMAT_ERR_PROTO;
 
     // command
     struct canmat_sdo_cmd_ex cmd = canmat_can2sdo_cmd_ex( src );
     dst->cmd_spec = cmd.cs;
 
+    // ensure expedited
+    if( ! cmd.e ) return CANMAT_ERR_PROTO;
+
+    // data type and length
     // check for aborted transfer
     if( CANMAT_CS_ABORT == dst->cmd_spec ) /* same code for client and server */ {
         dst->data_type = CANMAT_DATA_TYPE_UNSIGNED32;
@@ -152,25 +154,25 @@ enum canmat_status canmat_can2sdo(
     dst->index = canmat_can2sdo_index( src );
     dst->subindex = canmat_can2sdo_subindex( src );
 
-    // FIXME: check that size matches
+    // Should we be more tolerant of incorrectly set sizes?
     switch( dst->data_type ) {
         // size 4
     case CANMAT_DATA_TYPE_REAL32:
     case CANMAT_DATA_TYPE_UNSIGNED32:
     case CANMAT_DATA_TYPE_INTEGER32:
-        if( src->can_dlc < 8 ) return CANMAT_ERR_PROTO;
+        if( src->can_dlc < 8 || dst->length != 4 ) return CANMAT_ERR_PROTO;
         dst->data.u32 = canmat_byte_ldle32( src->data+4 );
         break;
         // size 2
     case CANMAT_DATA_TYPE_UNSIGNED16:
     case CANMAT_DATA_TYPE_INTEGER16:
-        if( src->can_dlc < 6 ) return CANMAT_ERR_PROTO;
+        if( src->can_dlc < 6 || dst->length != 2 ) return CANMAT_ERR_PROTO;
         dst->data.u16 = canmat_byte_ldle16( src->data+4 );
         break;
         // size 1
     case CANMAT_DATA_TYPE_UNSIGNED8:
     case CANMAT_DATA_TYPE_INTEGER8:
-        if( src->can_dlc < 5 ) return CANMAT_ERR_PROTO;
+        if( src->can_dlc < 5 || dst->length != 1 ) return CANMAT_ERR_PROTO;
         dst->data.u8 = src->data[4];
         break;
     default:

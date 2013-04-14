@@ -49,6 +49,9 @@
  * declaratations therein.
  */
 
+struct canmat_iface;
+
+#include "socanmatic/status.h"
 #include "socanmatic/descriptor.h"
 #include "socanmatic/enum301.h"
 #include "socanmatic/dict.h"
