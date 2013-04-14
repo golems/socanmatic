@@ -46,7 +46,6 @@
 extern "C" {
 #endif
 
-extern canmat_dict_t canmat_dict402;
 
 /** Velocity-mode controlword masks */
 typedef enum canmat_402_ctrlmask_vl {

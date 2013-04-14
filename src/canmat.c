@@ -53,6 +53,7 @@
 #include <poll.h>
 
 #include "socanmatic.h"
+#include "socanmatic/dict402.h"
 #include "socanmatic_private.h"
 
 

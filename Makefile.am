@@ -66,7 +66,8 @@ BUILT_SOURCES =                              \
 
 
 socanmatic/dict402.h dict402.c: $(top_srcdir)/canmatc $(top_srcdir)/eds/dsp301.eds $(top_srcdir)/eds/dsp402.eds
-	$(top_srcdir)/canmatc --exclude-enum -n canmat_dict402 -o dict402.c --header socanmatic/dict402.h \
+	$(top_srcdir)/canmatc --exclude-enum -n canmat_dict402 -N canmat_402 \
+		-o dict402.c --header socanmatic/dict402.h                   \
 		$(top_srcdir)/eds/dsp301.eds $(top_srcdir)/eds/dsp402.eds
 
 socanmatic/enum301.h: $(top_srcdir)/canmatc $(top_srcdir)/eds/dsp301.eds

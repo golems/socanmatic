@@ -132,6 +132,11 @@ def map_enum( function, enum_dict, typename ):
             desc = enum_dict[typename][elementname]["description"]
         function( elementname, val, desc )
 
+def escape_const(s):
+       s = re.sub(r' |-',"_", s.upper())
+       s = re.sub(r'/',"_SUB_", s.upper())
+       return s
+
 def edsobj2cstruct( section, params, enum_dict ):
     '''Print and EDS section as C code'''
     (index,subindex) = sect2index( section )
@@ -146,6 +151,7 @@ def edsobj2cstruct( section, params, enum_dict ):
     def print_element( name, val, desc ):
         ss[0] += '\t\t\t{.name = "%s", .value=(%s), .description="%s"},\n' % (name, val, desc)
 
+    h = ''
     s =  '\t{\n'
     s += '\t\t.index=0x%04x,\n' % index
     s += '\t\t.subindex=0x%02x,\n' % subindex
@@ -167,9 +173,11 @@ def edsobj2cstruct( section, params, enum_dict ):
     s += '\t\t.parameter_name="%s"\n' % params['parametername']
     s += '\t},\n'
 
-    return s
 
-def print_dict( name, output, header, odict, enum_dict ):
+    return (h,s)
+
+
+def print_dict( name, output, header, namespace, odict, enum_dict ):
     # Sort by names
     def key_index(section):
         (index,subindex) = sect2index( section )
@@ -186,8 +194,9 @@ def print_dict( name, output, header, odict, enum_dict ):
 
     # print
     s = ''
-
-    s += "canmat_dict_t %s = {\n" % name
+    h = ''
+    h += "extern const canmat_dict_t %s;\n" % name
+    s += "const canmat_dict_t %s = {\n" % name
 
     # length
     s += "\t.length=%d,\n" % len(sections)
@@ -199,14 +208,20 @@ def print_dict( name, output, header, odict, enum_dict ):
 
     # entries in index order
     s += "\t.obj=(canmat_obj_t[]){\n"
+    i = 0
     for section in sections:
-        s +=  edsobj2cstruct( section, odict[section], enum_dict )
+        (hp,sp) =  edsobj2cstruct( section, odict[section], enum_dict )
+        h += hp
+        s += sp
+        h += ( '#define %s_OBJ_%s (%s.obj + %d)\n' %
+               (namespace.upper(), escape_const(odict[section]['parametername']), name, i) )
+        i+=1
     s += "\t}\n"
 
     s += "};\n"
 
     output.write(s)
-    header.write("extern canmat_dict_t %s;\n" % name )
+    header.write(h)
 
 
 def print_enum( header, namespace, enum_dict ):
@@ -263,7 +278,7 @@ def main() :
         s += '#include "socanmatic/eds.h"\n'
         s += '#include "%s"\n' % header_name
         output.write(s)
-        print_dict( opts.name, output, header, obj_dict, enum_dict )
+        print_dict( opts.name, output, header, opts.namespace, obj_dict, enum_dict )
 
     if( not opts.exclude_enum ):
         print_enum( header, opts.namespace, enum_dict )

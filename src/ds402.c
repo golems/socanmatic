@@ -70,11 +70,9 @@ enum canmat_402_state_val canmat_402_state( const struct canmat_402_drive *drive
 }
 
 static enum canmat_status dl_control( struct canmat_iface *cif, struct canmat_402_drive *drive, uint16_t ctrl ) {
-    canmat_obj_t *obj = canmat_dict_search_name( &canmat_dict402, "controlword" );
-    assert( obj && obj->data_type == CANMAT_DATA_TYPE_UNSIGNED16 );
-
     canmat_scalar_t val = {.u16 = ctrl };
-    canmat_status_t r = canmat_obj_dl( cif, drive->node_id, obj, &val );
+    canmat_status_t r = canmat_obj_dl( cif, drive->node_id,
+                                       CANMAT_402_OBJ_CONTROLWORD, &val );
 
     if( CANMAT_OK == r )  drive->ctrl_word = val.u16;
 
@@ -95,46 +93,38 @@ enum canmat_status canmat_402_init( struct canmat_iface *cif, uint8_t id, struct
 
     // control word
     {
-        canmat_obj_t *obj = canmat_dict_search_name( &canmat_dict402, "controlword" );
-        assert( obj && obj->data_type == CANMAT_DATA_TYPE_UNSIGNED16 );
-        r = canmat_obj_ul( cif, drive->node_id, obj, &val );
+        r = canmat_obj_ul( cif, drive->node_id, CANMAT_402_OBJ_CONTROLWORD, &val );
         if( CANMAT_OK != r ) return r;
         drive->ctrl_word = val.u16;
     }
 
     // status word
     {
-        canmat_obj_t *obj = canmat_dict_search_name( &canmat_dict402, "statusword" );
-        assert( obj && obj->data_type == CANMAT_DATA_TYPE_UNSIGNED16 );
-        r = canmat_obj_ul( cif, drive->node_id, obj, &val );
+        r = canmat_obj_ul( cif, drive->node_id, CANMAT_402_OBJ_STATUSWORD , &val );
         if( CANMAT_OK != r ) return r;
         drive->stat_word = val.u16;
     }
 
     // position
     {
-        canmat_obj_t *obj = canmat_dict_search_name( &canmat_dict402, "position actual value" );
-        assert( obj && obj->data_type == CANMAT_DATA_TYPE_INTEGER32 );
-        r = canmat_obj_ul( cif, drive->node_id, obj, &val );
+        r = canmat_obj_ul( cif, drive->node_id, CANMAT_402_OBJ_POSITION_ACTUAL_VALUE, &val );
         if( CANMAT_OK != r ) return r;
         drive->actual_pos_raw = val.i32;
     }
     // velocity
     {
-        canmat_obj_t *obj = canmat_dict_search_name( &canmat_dict402, "velocity actual value" );
-        assert( obj && obj->data_type == CANMAT_DATA_TYPE_INTEGER32 );
-        r = canmat_obj_ul( cif, drive->node_id, obj, &val );
+        r = canmat_obj_ul( cif, drive->node_id, CANMAT_402_OBJ_POSITION_ACTUAL_VALUE, &val );
         if( CANMAT_OK != r ) return r;
         drive->actual_vel_raw = val.i32;
     }
     // current
-    {
-        canmat_obj_t *obj = canmat_dict_search_name( &canmat_dict402, "current actual value" );
-        assert( obj && obj->data_type == CANMAT_DATA_TYPE_INTEGER32 );
-        r = canmat_obj_ul( cif, drive->node_id, obj, &val );
-        if( CANMAT_OK != r ) return r;
-        drive->actual_cur_raw = val.i32;
-    }
+    /* { */
+    /*     canmat_obj_t *obj = canmat_dict_search_name( &canmat_dict402, "current actual value" ); */
+    /*     assert( obj && obj->data_type == CANMAT_DATA_TYPE_INTEGER32 ); */
+    /*     r = canmat_obj_ul( cif, drive->node_id, obj, &val ); */
+    /*     if( CANMAT_OK != r ) return r; */
+    /*     drive->actual_cur_raw = val.i32; */
+    /* } */
     return CANMAT_OK;
 }
 
