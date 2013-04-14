@@ -507,7 +507,7 @@ int cmd_dict_ul( can_set_t *canset, size_t n, const char **arg ) {
     hard_assert( 1 == canset->n, "Can only send on 1 interface\n" );
 
     canmat_scalar_t val;
-    canmat_status_t r = canmat_obj_ul( canset->cif[0], node, obj, &val );
+    canmat_status_t r = canmat_obj_ul( canset->cif[0], node, obj, &val, NULL );
     verbf( 1, "dl status: %s\n", canmat_iface_strerror( canset->cif[0], r ) );
 
     if( CANMAT_OK == r ) {

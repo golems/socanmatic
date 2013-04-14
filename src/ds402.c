@@ -93,27 +93,27 @@ enum canmat_status canmat_402_init( struct canmat_iface *cif, uint8_t id, struct
 
     // control word
     {
-        r = canmat_obj_ul( cif, drive->node_id, CANMAT_402_OBJ_CONTROLWORD, &val );
+        r = canmat_obj_ul( cif, drive->node_id, CANMAT_402_OBJ_CONTROLWORD, &val, NULL );
         if( CANMAT_OK != r ) return r;
         drive->ctrl_word = val.u16;
     }
 
     // status word
     {
-        r = canmat_obj_ul( cif, drive->node_id, CANMAT_402_OBJ_STATUSWORD , &val );
+        r = canmat_obj_ul( cif, drive->node_id, CANMAT_402_OBJ_STATUSWORD , &val, NULL );
         if( CANMAT_OK != r ) return r;
         drive->stat_word = val.u16;
     }
 
     // position
     {
-        r = canmat_obj_ul( cif, drive->node_id, CANMAT_402_OBJ_POSITION_ACTUAL_VALUE, &val );
+        r = canmat_obj_ul( cif, drive->node_id, CANMAT_402_OBJ_POSITION_ACTUAL_VALUE, &val, NULL );
         if( CANMAT_OK != r ) return r;
         drive->actual_pos_raw = val.i32;
     }
     // velocity
     {
-        r = canmat_obj_ul( cif, drive->node_id, CANMAT_402_OBJ_POSITION_ACTUAL_VALUE, &val );
+        r = canmat_obj_ul( cif, drive->node_id, CANMAT_402_OBJ_POSITION_ACTUAL_VALUE, &val, NULL );
         if( CANMAT_OK != r ) return r;
         drive->actual_vel_raw = val.i32;
     }

@@ -43,6 +43,7 @@
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include "socanmatic.h"
 #include "socanmatic_private.h"
@@ -81,7 +82,8 @@ canmat_obj_t *canmat_dict_search_index( const struct canmat_dict *dict, uint16_t
                                       dict_compar_index );
 }
 
-canmat_status_t canmat_obj_ul( canmat_iface_t *cif, uint8_t node, const canmat_obj_t *obj, canmat_scalar_t *val ) {
+canmat_status_t canmat_obj_ul( canmat_iface_t *cif, uint8_t node, const canmat_obj_t *obj,
+                               canmat_scalar_t *val, uint32_t *err_val ) {
     if( NULL == obj  ||
         CANMAT_OBJECT_TYPE_VAR != obj->object_type )
     {
@@ -97,8 +99,11 @@ canmat_status_t canmat_obj_ul( canmat_iface_t *cif, uint8_t node, const canmat_o
     canmat_sdo_msg_t resp;
 
     canmat_status_t r = canmat_sdo_ul( cif, &req, &resp );
-    if( CANMAT_OK == r || CANMAT_ERR_ABORT == r ) {
-        memcpy( val, &resp.data, sizeof(resp.data) );
+    assert( resp.length <= 4 );
+    if( CANMAT_OK == r ) {
+        memcpy( val, &resp.data, sizeof(resp.length) );
+    } else if (CANMAT_ERR_ABORT == r ) {
+        memcpy( err_val ? err_val : val, &resp.data, sizeof(resp.length) );
     }
     return r;
 }

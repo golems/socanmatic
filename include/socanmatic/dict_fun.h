@@ -47,11 +47,12 @@ extern "C" {
 
 
 canmat_status_t canmat_obj_ul (
-    canmat_iface_t *cif, uint8_t node, const canmat_obj_t *obj, canmat_scalar_t *val );
+    canmat_iface_t *cif, uint8_t node, const canmat_obj_t *obj,
+    canmat_scalar_t *val, uint32_t *err_val );
 
 canmat_status_t canmat_obj_dl (
-    canmat_iface_t *cif, uint8_t node, const canmat_obj_t *obj, const canmat_scalar_t *val,
-    uint32_t *err_val );
+    canmat_iface_t *cif, uint8_t node, const canmat_obj_t *obj,
+    const canmat_scalar_t *val, uint32_t *err_val );
 
 canmat_status_t canmat_obj_dl_str (
     canmat_iface_t *cif, uint8_t node, const canmat_obj_t *obj, const char *val, uint32_t *err_val );
@@ -74,6 +75,17 @@ canmat_status_t canmat_typed_parse( enum canmat_data_type type, const char *str,
 int canmat_obj_print( FILE *f, const canmat_obj_t *obj, canmat_scalar_t *val );
 
 typedef int canmat_obj_print_fun(canmat_scalar_t);
+
+
+/* canmat_status_t canmat_obj_ul_u16 ( */
+/*     canmat_iface_t *cif, uint8_t node, const canmat_obj_t *obj, uint16_t *val, uint32_t *err ) */
+/* { */
+/*     assert( CANMAT_DATA_TYPE_UNSIGNED16 == obj->data_type ); */
+/*     canmat_scalar_t *sval; */
+/*     canmat_status_t r = at_obj_ul_u16 ( */
+
+/* } */
+
 
 
 #ifdef __cplusplus
