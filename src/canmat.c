@@ -487,7 +487,7 @@ int cmd_dict_dl( can_set_t *canset, size_t n, const char **arg) {
     hard_assert( obj, "Object `%s' not found\n", param );
     hard_assert( 1 == canset->n, "Can only send on 1 interface\n" );
 
-    canmat_status_t r = canmat_obj_dl_str( canset->cif[0], node, obj, val );
+    canmat_status_t r = canmat_obj_dl_str( canset->cif[0], node, obj, val, NULL );
     verbf( 1, "dl status: %s\n", canmat_iface_strerror( canset->cif[0], r ) );
     hard_assert( CANMAT_OK == r, "Failed download: %s\n", canmat_iface_strerror(canset->cif[0],r) );
 

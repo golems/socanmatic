@@ -105,7 +105,9 @@ canmat_status_t canmat_obj_ul( canmat_iface_t *cif, uint8_t node, const canmat_o
 
 
 canmat_status_t canmat_obj_dl( canmat_iface_t *cif,
-                               uint8_t node, const canmat_obj_t *obj, const canmat_scalar_t *val ) {
+                               uint8_t node, const canmat_obj_t *obj, const canmat_scalar_t *val,
+                               uint32_t *err_val)
+{
     if( NULL == obj  || CANMAT_OBJECT_TYPE_VAR != obj->object_type )
     {
         return CANMAT_ERR_PARAM;
@@ -120,11 +122,20 @@ canmat_status_t canmat_obj_dl( canmat_iface_t *cif,
     memcpy( &req.data, val, sizeof(req.data) );
     canmat_sdo_msg_t resp;
 
-    return canmat_sdo_dl( cif, &req, &resp );
+    canmat_status_t r = canmat_sdo_dl( cif, &req, &resp );
+    if( err_val ) {
+        if( CANMAT_CS_ABORT == resp.cmd_spec ) {
+            *err_val = resp.data.u32;
+        } else {
+            *err_val = 0;
+        }
+    }
+    return r;
 }
 
 
-canmat_status_t canmat_obj_dl_str( canmat_iface_t *cif, uint8_t node, const canmat_obj_t *obj, const char *val ) {
+canmat_status_t canmat_obj_dl_str( canmat_iface_t *cif, uint8_t node, const canmat_obj_t *obj, const char *val,
+                                   uint32_t *err_val) {
     if( NULL == obj ) return CANMAT_ERR_PARAM;
 
     canmat_scalar_t sval;
@@ -132,7 +143,7 @@ canmat_status_t canmat_obj_dl_str( canmat_iface_t *cif, uint8_t node, const canm
         return CANMAT_ERR_PARAM;
     }
 
-    return canmat_obj_dl( cif, node, obj, &sval );
+    return canmat_obj_dl( cif, node, obj, &sval, err_val );
 }
 
 canmat_status_t canmat_typed_parse( enum canmat_data_type type, const char *str, canmat_scalar_t *val ) {

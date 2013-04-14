@@ -132,7 +132,8 @@ enum canmat_status canmat_can2sdo(
     struct canmat_sdo_cmd_ex cmd = canmat_can2sdo_cmd_ex( src );
     dst->cmd_spec = cmd.cs;
 
-    if( CANMAT_CCS_ABORT == dst->cmd_spec ) /* same code for client and server */ {
+    // check for aborted transfer
+    if( CANMAT_CS_ABORT == dst->cmd_spec ) /* same code for client and server */ {
         dst->data_type = CANMAT_DATA_TYPE_UNSIGNED32;
         dst->length = 4;
     } else {

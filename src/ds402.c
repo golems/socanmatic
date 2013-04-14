@@ -72,7 +72,7 @@ enum canmat_402_state_val canmat_402_state( const struct canmat_402_drive *drive
 static enum canmat_status dl_control( struct canmat_iface *cif, struct canmat_402_drive *drive, uint16_t ctrl ) {
     canmat_scalar_t val = {.u16 = ctrl };
     canmat_status_t r = canmat_obj_dl( cif, drive->node_id,
-                                       CANMAT_402_OBJ_CONTROLWORD, &val );
+                                       CANMAT_402_OBJ_CONTROLWORD, &val, NULL );
 
     if( CANMAT_OK == r )  drive->ctrl_word = val.u16;
 

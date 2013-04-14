@@ -50,10 +50,11 @@ canmat_status_t canmat_obj_ul (
     canmat_iface_t *cif, uint8_t node, const canmat_obj_t *obj, canmat_scalar_t *val );
 
 canmat_status_t canmat_obj_dl (
-    canmat_iface_t *cif, uint8_t node, const canmat_obj_t *obj, const canmat_scalar_t *val );
+    canmat_iface_t *cif, uint8_t node, const canmat_obj_t *obj, const canmat_scalar_t *val,
+    uint32_t *err_val );
 
 canmat_status_t canmat_obj_dl_str (
-    canmat_iface_t *cif, uint8_t node, const canmat_obj_t *obj, const char *val );
+    canmat_iface_t *cif, uint8_t node, const canmat_obj_t *obj, const char *val, uint32_t *err_val );
 
 /* Return the item in dict with given name */
 canmat_obj_t *canmat_dict_search_name( const struct canmat_dict *dict, const char *name );
