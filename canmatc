@@ -195,7 +195,7 @@ def make_dict_header( name, namespace, params, i ):
         # DL
         s += 'static inline canmat_status_t %s_dl_%s (\n' % (namespace, esc.lower())
         s += '\tstruct canmat_iface *cif, uint8_t node,\n'
-        s += '\tconst CANMAT_%s *val, uint32_t *err)\n' % params['datatype'].upper()
+        s += '\tCANMAT_%s val, uint32_t *err)\n' % params['datatype'].upper()
         s += '{ return canmat_obj_dl_%s(cif, node, %s, val, err); }\n' % (t_short, defname)
     return s
 

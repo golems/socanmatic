@@ -180,7 +180,8 @@ static inline void canmat_sdo2can_cmd_ex( struct can_frame *dst, const struct ca
 
 /// Create a canmat_sdo_msg_t from a struct can_frame
 enum canmat_status canmat_can2sdo(
-    canmat_sdo_msg_t *dst, const struct can_frame *src, enum canmat_data_type data_type );
+    canmat_sdo_msg_t *dst, const struct can_frame *src,
+    enum canmat_data_type data_type );
 
 canmat_status_t canmat_sdo_ul( canmat_iface_t *cif, const canmat_sdo_msg_t *req,
                                canmat_sdo_msg_t *resp );

@@ -150,6 +150,7 @@ static void display_sdo( const canmat_dict_t *dict, const struct can_frame *can 
     uint8_t node = canmat_frame_node(can);
     assert( CANMAT_FUNC_CODE_SDO_RX == func ||
             CANMAT_FUNC_CODE_SDO_TX == func );
+    _Bool is_tx = CANMAT_FUNC_CODE_SDO_TX == func;
 
     uint16_t index = canmat_can2sdo_index( can );
     uint8_t subindex = canmat_can2sdo_subindex( can );
@@ -157,21 +158,26 @@ static void display_sdo( const canmat_dict_t *dict, const struct can_frame *can 
     canmat_obj_t *obj = canmat_dict_search_index( dict, index, subindex );
 
     canmat_sdo_msg_t sdo;
-    canmat_can2sdo( &sdo, can, obj ? obj->data_type : CANMAT_DATA_TYPE_UNSIGNED32 );
+    canmat_status_t r = canmat_can2sdo( &sdo, can, obj ? obj->data_type : CANMAT_DATA_TYPE_UNSIGNED32 );
+    if( ! (CANMAT_OK == r || CANMAT_ERR_ABORT == r) ) {
+        printf("bad sdo, %s: ", canmat_strerror(r));
+        display_raw(can);
+        return;
+    }
+
+
 
     const char *param = obj ? obj->parameter_name : "unknown";
 
     const char *cs = "unknown";
-    if( CANMAT_FUNC_CODE_SDO_RX == func ) {
-        cs = ccs2str((enum canmat_ccs)sdo.cmd_spec);
-    } else if( CANMAT_FUNC_CODE_SDO_TX == func ) {
+    if( is_tx ) {
         cs = scs2str((enum canmat_scs)sdo.cmd_spec);
     } else {
-        assert(0);
+        cs = ccs2str((enum canmat_ccs)sdo.cmd_spec);
     }
 
     printf("sdo %s, node %03x %s '%s' (%04x.%02x)",
-           CANMAT_FUNC_CODE_SDO_RX == func ? "rx" : "tx",
+           is_tx ? "tx" : "rx",
            node, cs,
            param, sdo.index, sdo.subindex
         );
@@ -183,7 +189,7 @@ static void display_sdo( const canmat_dict_t *dict, const struct can_frame *can 
                     canmat_sdo_strerror(sdo.data.u32),
                     sdo.data.u32 );
         } else {
-            printf(" bad length");
+            printf(" bad length (%d)", sdo.length);
             sdo_bytes(&sdo);
         }
     } else if( (CANMAT_FUNC_CODE_SDO_RX == func && CANMAT_CCS_EX_DL == sdo.cmd_spec) ||
@@ -214,6 +220,8 @@ static void display_sdo( const canmat_dict_t *dict, const struct can_frame *can 
                 if( sdo_check_length(&sdo, 4) ) break;
                 printf( " 0x%"PRIx32, sdo.data.u32 );
                 break;
+            case CANMAT_DATA_TYPE_VOID:
+                printf(" (no data)");
             default:
                 printf(" unhandled type");
                 sdo_bytes(&sdo);

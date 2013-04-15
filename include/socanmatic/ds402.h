@@ -115,29 +115,29 @@ typedef enum canmat_402_ctrlcmd_mask {
  * the enum are the status word with don't care bits masked out.
  */
 typedef enum canmat_402_state_val {
-    CANMAT_402_STATE_VAL_OFF_NRDY              = 0x00,
-    CANMAT_402_STATE_VAL_OFF_SW_ON_DISABLE     = 0x40,
-    CANMAT_402_STATE_VAL_OFF_RDY               = 0x21,
-    CANMAT_402_STATE_VAL_ON_OP_DIS             = 0x23,
-    CANMAT_402_STATE_VAL_ON_OP_EN              = 0x27,
-    CANMAT_402_STATE_VAL_ON_QUICK_STOP         = 0x03,
-    CANMAT_402_STATE_VAL_FAULT_REACTION_ACTIVE = 0x0F,
-    CANMAT_402_STATE_VAL_FAULT                 = 0x08,
-    CANMAT_402_STATE_VAL_UNKNOWN               = 0xFFFF
+    CANMAT_402_STATE_VAL_OFF_NRDY              = 0x00,  ///< not ready to switch on
+    CANMAT_402_STATE_VAL_OFF_SW_ON_DISABLE     = 0x40,  ///< switch on disabled
+    CANMAT_402_STATE_VAL_OFF_RDY               = 0x21,  ///< ready to switch on
+    CANMAT_402_STATE_VAL_ON_OP_DIS             = 0x23,  ///< switched on
+    CANMAT_402_STATE_VAL_ON_OP_EN              = 0x27,  ///< operation enabled
+    CANMAT_402_STATE_VAL_ON_QUICK_STOP         = 0x03,  ///< quick stop active
+    CANMAT_402_STATE_VAL_FAULT_REACTION_ACTIVE = 0x0F,  ///< fault reaction active
+    CANMAT_402_STATE_VAL_FAULT                 = 0x08,  ///< fault
+    CANMAT_402_STATE_VAL_UNKNOWN               = 0xFFFF ///< Unknown state
 } canmat_402_state_val_t;
 
 /** Mask out don't care bits for mapping status_word to drive state
  *  See table 19, p. 41.
  */
 typedef enum canmat_402_state_val_mask {
-    CANMAT_402_STATE_VAL_MASK_OFF_NRDY              = ~0x4F,
-    CANMAT_402_STATE_VAL_MASK_OFF_SW_ON_DISABLE     = ~0x4F,
-    CANMAT_402_STATE_VAL_MASK_OFF_RDY               = ~0x6F,
-    CANMAT_402_STATE_VAL_MASK_ON_OP_DIS             = ~0x6F,
-    CANMAT_402_STATE_VAL_MASK_ON_OP_EN              = ~0x6F,
-    CANMAT_402_STATE_VAL_MASK_ON_QUICK_STOP         = ~0x6F,
-    CANMAT_402_STATE_VAL_MASK_FAULT_REACTION_ACTIVE = ~0x4F,
-    CANMAT_402_STATE_VAL_MASK_FAULT                 = ~0x4F
+    CANMAT_402_STATE_VAL_MASK_OFF_NRDY              = 0x4F,
+    CANMAT_402_STATE_VAL_MASK_OFF_SW_ON_DISABLE     = 0x4F,
+    CANMAT_402_STATE_VAL_MASK_OFF_RDY               = 0x6F,
+    CANMAT_402_STATE_VAL_MASK_ON_OP_DIS             = 0x6F,
+    CANMAT_402_STATE_VAL_MASK_ON_OP_EN              = 0x6F,
+    CANMAT_402_STATE_VAL_MASK_ON_QUICK_STOP         = 0x6F,
+    CANMAT_402_STATE_VAL_MASK_FAULT_REACTION_ACTIVE = 0x4F,
+    CANMAT_402_STATE_VAL_MASK_FAULT                 = 0x4F
 } canmat_402_state_val_mask_t;
 
 enum canmat_402_polarity_mask {
@@ -159,6 +159,8 @@ struct canmat_402_drive {
     uint8_t node_id;
     uint16_t ctrl_word;
     uint16_t stat_word;
+
+    uint32_t abort_code;
 
     double pos_factor;
     double vel_factor;
@@ -189,6 +191,9 @@ enum canmat_status canmat_402_stop( struct canmat_iface *cif, struct canmat_402_
 enum canmat_status canmat_402_probe_pdo(
     struct canmat_iface *cif, struct canmat_pdo_descriptor_table tab,
     const struct canmat_402_drive *drive );
+
+const char *canmat_402_state_string( enum canmat_402_state_val s );
+
 
 #ifdef __cplusplus
 }

@@ -123,29 +123,45 @@ enum canmat_status canmat_sdo2can (struct can_frame *dst, const canmat_sdo_msg_t
 enum canmat_status canmat_can2sdo(
     canmat_sdo_msg_t *dst, const struct can_frame *src, enum canmat_data_type data_type )
 {
-    // FIXME: better message validation
     if( src->can_dlc < 4 ) return CANMAT_ERR_PROTO;
+
+    // Function
+    uint16_t func = canmat_frame_func(src);
+    _Bool is_tx;
+    if( CANMAT_FUNC_CODE_SDO_TX == func ) {
+        is_tx = 1;
+    } else if ( CANMAT_FUNC_CODE_SDO_RX == func ) {
+        is_tx = 0;
+    } else {
+        return CANMAT_ERR_PROTO;
+    }
 
     // command
     struct canmat_sdo_cmd_ex cmd = canmat_can2sdo_cmd_ex( src );
     dst->cmd_spec = cmd.cs;
 
-    // ensure expedited
-    if( ! cmd.e ) return CANMAT_ERR_PROTO;
-
-    // data type and length
-    // check for aborted transfer
+    // validate command / ensure expedited
     if( CANMAT_CS_ABORT == dst->cmd_spec ) /* same code for client and server */ {
         dst->data_type = CANMAT_DATA_TYPE_UNSIGNED32;
         dst->length = 4;
-    } else {
+    } else if( ( is_tx && CANMAT_SCS_EX_DL == cmd.cs ) ||
+               (!is_tx && CANMAT_CCS_EX_UL == cmd.cs ) )
+    {
+        dst->length = 0;
+        dst->data_type = CANMAT_DATA_TYPE_VOID;
+    } else if( ( is_tx && CANMAT_SCS_EX_UL == cmd.cs ) ||
+               (!is_tx && CANMAT_CCS_EX_DL == cmd.cs ) )
+    {
         dst->data_type = data_type;
         if( cmd.s ) {
             dst->length = (uint8_t) (4 - cmd.n);
         } else {
             dst->length = (uint8_t) (src->can_dlc - 4);
         }
+    } else { // unhandled SDO transfer type
+        return CANMAT_ERR_PROTO;
     }
+
 
     // node
     dst->node = (uint8_t)(src->can_id & CANMAT_NODE_MASK);
@@ -161,19 +177,25 @@ enum canmat_status canmat_can2sdo(
     case CANMAT_DATA_TYPE_UNSIGNED32:
     case CANMAT_DATA_TYPE_INTEGER32:
         if( src->can_dlc < 8 || dst->length != 4 ) return CANMAT_ERR_PROTO;
+        assert(4 == dst->length);
         dst->data.u32 = canmat_byte_ldle32( src->data+4 );
         break;
         // size 2
     case CANMAT_DATA_TYPE_UNSIGNED16:
     case CANMAT_DATA_TYPE_INTEGER16:
         if( src->can_dlc < 6 || dst->length != 2 ) return CANMAT_ERR_PROTO;
+        assert(2 == dst->length);
         dst->data.u16 = canmat_byte_ldle16( src->data+4 );
         break;
         // size 1
     case CANMAT_DATA_TYPE_UNSIGNED8:
     case CANMAT_DATA_TYPE_INTEGER8:
         if( src->can_dlc < 5 || dst->length != 1 ) return CANMAT_ERR_PROTO;
+        assert(1 == dst->length);
         dst->data.u8 = src->data[4];
+        break;
+    case CANMAT_DATA_TYPE_VOID:
+        if( dst->length != 0 ) return CANMAT_ERR_PROTO;
         break;
     default:
         return CANMAT_ERR_PARAM;
@@ -206,7 +228,6 @@ static canmat_status_t canmat_sdo_query(
         if( CANMAT_OK == r ) {
             r = canmat_can2sdo( resp, &can, req->data_type );
         }
-
         return r;
     }
 }
