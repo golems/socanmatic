@@ -241,9 +241,30 @@ int main( int argc, char ** argv ) {
         posarg(argv[optind++], i++);
     }
 
-    hard_assert( opt_command, "can402: missing command.\nTry `can402 -H' for more information.\n");
+    //hard_assert( opt_command, "can402: missing command.\nTry `can402 -H' for more information.\n");
 
     hard_assert( cif, "can402: missing interface.\nTry `can402 -H' for more information.\n");
+
+
+
+    struct canmat_402_drive drive;
+    enum canmat_status r = canmat_402_init( cif, 0xa, &drive );
+
+
+    verbf( 1, "drive 0x%x: statusword 0x%x, state '%s' (0x%x) \n", drive.node_id, drive.stat_word,
+           canmat_402_state_string( canmat_402_state(&drive) ), canmat_402_state(&drive) );
+    hard_assert( CANMAT_OK == r, "can402: couldn't init drive 0x%x: %s\n",
+                 drive.node_id, canmat_iface_strerror( cif, r) );
+
+    r = canmat_402_start( cif, &drive );
+    hard_assert( CANMAT_OK == r, "can402: couldn't start drive 0x%x: '%s', state: '%s'\n",
+                 drive.node_id, canmat_iface_strerror( cif, r),
+                 canmat_402_state_string( canmat_402_state(&drive) ) );
+
+    verbf( 1, "drive 0x%x: statusword 0x%x, state '%s' (0x%x) \n", drive.node_id, drive.stat_word,
+           canmat_402_state_string( canmat_402_state(&drive) ), canmat_402_state(&drive) );
+
+
     //return opt_command(&canset, opt_npos, opt_pos);
 
     return 0;

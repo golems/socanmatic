@@ -110,17 +110,11 @@ canmat_iface_t* canmat_iface_new( const char *type ) {
 }
 
 const char *canmat_iface_strerror( canmat_iface_t *cif, canmat_status_t status ) {
-    switch (status) {
-    case CANMAT_OK:            return "OK";
-    case CANMAT_ERR_OS:        return cif->vtable->strerror(cif);
-    case CANMAT_ERR_OVERFLOW:  return "overflow error";
-    case CANMAT_ERR_UNDERFLOW: return "underflow error";
-    case CANMAT_ERR_PARAM:     return "invalid parameter";
-    case CANMAT_ERR_PROTO:     return "protocol error";
-    case CANMAT_ERR_ABORT:     return "abort";
-    case CANMAT_ERR_NOT_SUP:   return "not supported";
+    if( CANMAT_ERR_OS == status ) {
+        return cif->vtable->strerror(cif);
+    } else {
+        return canmat_strerror(status);
     }
-    return "unknown status";
 }
 
 
