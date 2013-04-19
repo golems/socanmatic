@@ -150,6 +150,8 @@ def edsobj2cstruct( section, params, enum_dict ):
     ss = ['']
     def print_element( name, val, desc ):
         ss[0] += '\t\t\t{.name = "%s", .value=(%s), .description="%s"},\n' % (name, val, desc)
+    def print_null():
+        ss[0] += '\t\t\t{.name = NULL, .value=0, .description=NULL}\n'
 
     h = ''
     s =  '\t{\n'
@@ -164,11 +166,11 @@ def edsobj2cstruct( section, params, enum_dict ):
         s += '\t\t.access_type=' + NS + 'ACCESS_%s,\n' % params['accesstype'].upper()
     if( 'maskenum' in params ) :
         map_enum( print_element, enum_dict, params['maskenum'] )
-        print_element("NULL", "0", "NULL")
+        print_null()
         s += '\t\t.mask_descriptor = (struct canmat_code_descriptor[]){\n%s\t\t},\n' % ss[0]
     if( 'valueenum' in params ) :
         map_enum( print_element, enum_dict, params['valueenum'] )
-        print_element("NULL", "0", "NULL")
+        print_null()
         s += '\t\t.value_descriptor = (struct canmat_code_descriptor[]){\n%s\t\t},\n' % ss[0]
     s += '\t\t.parameter_name="%s"\n' % params['parametername']
     s += '\t},\n'
