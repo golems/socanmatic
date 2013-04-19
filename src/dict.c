@@ -59,7 +59,7 @@ static int dict_compar_name( const void *a, const void *b ) {
 static int dict_compar_index( const void *a, const void *b ) {
     int32_t *a1 = (int32_t*)a;
     const canmat_obj_t *b1 = (const canmat_obj_t*)b;
-    return *a1 - ((b1->index << 16) | b1->subindex);
+    return *a1 - ((b1->index << 8) | b1->subindex);
 }
 
 canmat_obj_t *canmat_dict_search_name( const struct canmat_dict *dict, const char *name ) {
@@ -76,7 +76,7 @@ canmat_obj_t *canmat_dict_search_name( const struct canmat_dict *dict, const cha
 
 
 canmat_obj_t *canmat_dict_search_index( const struct canmat_dict *dict, uint16_t idx, uint8_t subindex ) {
-    int32_t key = idx << 16 | subindex;
+    int32_t key = (idx << 8) | subindex;
     return  (canmat_obj_t *) bsearch( &key, dict->obj,
                                       dict->length, sizeof( dict->obj[0] ),
                                       dict_compar_index );

@@ -204,7 +204,7 @@ def print_dict( name, output, header, namespace, odict, enum_dict ):
     # Sort by names
     def key_index(section):
         (index,subindex) = sect2index( section )
-        return index << 16 + subindex
+        return (index << 8) + subindex
 
     sections = odict.keys()
     sections.sort(key=key_index)
