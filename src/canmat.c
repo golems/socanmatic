@@ -87,6 +87,7 @@ size_t opt_npos = 0;
 //size_t opt_n_ifaces;
 
 void hard_assert( _Bool test , const char fmt[], ...)          ATTR_PRINTF(2,3);
+void fail( const char fmt[], ...)          ATTR_PRINTF(1,2);
 
 
 static void verbf( int level , const char fmt[], ...)          ATTR_PRINTF(2,3);
@@ -133,6 +134,13 @@ void hard_assert( _Bool test , const char fmt[], ...)  {
     }
 }
 
+void fail( const char fmt[], ...)  {
+        va_list argp;
+        va_start( argp, fmt );
+        vfprintf( stderr, fmt, argp );
+        va_end( argp );
+        exit(EXIT_FAILURE);
+}
 
 static void verbf( int level , const char fmt[], ...) {
     if( level <= opt_verbosity ) {
@@ -487,8 +495,13 @@ int cmd_dict_dl( can_set_t *canset, size_t n, const char **arg) {
     hard_assert( obj, "Object `%s' not found\n", param );
     hard_assert( 1 == canset->n, "Can only send on 1 interface\n" );
 
-    canmat_status_t r = canmat_obj_dl_str( canset->cif[0], node, obj, val, NULL );
+    uint32_t err;
+    canmat_status_t r = canmat_obj_dl_str( canset->cif[0], node, obj, val, &err );
     verbf( 1, "dl status: %s\n", canmat_iface_strerror( canset->cif[0], r ) );
+
+    if( CANMAT_ERR_ABORT == r ) {
+        fail("Transfer aborted: '%s' (0x%08x)\n", canmat_sdo_strerror(err), err );
+    }
     hard_assert( CANMAT_OK == r, "Failed download: %s\n", canmat_iface_strerror(canset->cif[0],r) );
 
     return 0;
