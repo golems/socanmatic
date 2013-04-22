@@ -528,6 +528,7 @@ static int cmd_dict_ul( can_set_t *canset, size_t n, const char **arg ) {
     verbf( 1, "dl status: %s\n", canmat_iface_strerror( canset->cif[0], r ) );
 
     if( CANMAT_OK == r ) {
+        printf( "%s: ", obj->parameter_name );
         canmat_obj_print( stdout, obj, &val );
     } else if ( CANMAT_ERR_ABORT == r ) {
 

@@ -55,6 +55,7 @@
 #include "socanmatic.h"
 #include "socanmatic_private.h"
 
+#include "socanmatic/dict402.h"
 
 #ifdef __GNUC__
 #define ATTR_PRINTF(m,n) __attribute__((format(printf, m, n)))
@@ -248,14 +249,17 @@ int main( int argc, char ** argv ) {
 
 
     struct canmat_402_drive drive;
-    enum canmat_status r = canmat_402_init( cif, 0xa, &drive );
 
+    // init
+
+    enum canmat_status r = canmat_402_init( cif, 0xa, &drive );
 
     verbf( 1, "drive 0x%x: statusword 0x%x, state '%s' (0x%x) \n", drive.node_id, drive.stat_word,
            canmat_402_state_string( canmat_402_state(&drive) ), canmat_402_state(&drive) );
     hard_assert( CANMAT_OK == r, "can402: couldn't init drive 0x%x: %s\n",
                  drive.node_id, canmat_iface_strerror( cif, r) );
 
+    // start
     r = canmat_402_start( cif, &drive );
     hard_assert( CANMAT_OK == r, "can402: couldn't start drive 0x%x: '%s', state: '%s'\n",
                  drive.node_id, canmat_iface_strerror( cif, r),
@@ -264,6 +268,16 @@ int main( int argc, char ** argv ) {
     verbf( 1, "drive 0x%x: statusword 0x%x, state '%s' (0x%x) \n", drive.node_id, drive.stat_word,
            canmat_402_state_string( canmat_402_state(&drive) ), canmat_402_state(&drive) );
 
+    // set mode
+    r = canmat_402_dl_modes_of_operation( cif, drive.node_id, CANMAT_402_OP_MODE_VELOCITY,
+                                          &(drive.abort_code) );
+    hard_assert( CANMAT_OK == r, "can402: couldn't set op mode: '%s'\n",
+                 canmat_iface_strerror( cif, r) );
+
+    r = canmat_402_dl_controlword( cif, drive.node_id, 0x7F,
+                                   &(drive.abort_code) );
+    hard_assert( CANMAT_OK == r, "can402: couldn't set control word: '%s'\n",
+                 canmat_iface_strerror( cif, r) );
 
     //return opt_command(&canset, opt_npos, opt_pos);
 

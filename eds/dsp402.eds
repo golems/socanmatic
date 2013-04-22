@@ -804,6 +804,14 @@ AccessType=RO
 DataType=INTEGER16
 PDOMapping=1
 
+
+[6044]
+ParameterName=vl control effort
+ObjectType=VAR
+AccessType=RO
+DataType=INTEGER16
+PDOMapping=1
+
 [6053]
 ParameterName=vl percentage demand
 ObjectType=VAR
