@@ -46,7 +46,7 @@
 extern "C" {
 #endif
 
-canmat_status_t  canmat_probe_pdo( canmat_iface_t *cif, uint8_t node );
+canmat_status_t  canmat_probe_pdo( const struct canmat_dict *dict,  canmat_iface_t *cif, uint8_t node );
 
 #ifdef __cplusplus
 }

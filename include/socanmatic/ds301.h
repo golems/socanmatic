@@ -112,9 +112,9 @@ typedef enum canmat_cobid_emcy_mask {
 } canmat_cobid_emcy_mask_t;
 
 typedef enum canmat_cobid_pdo_mask {
-    CANMAT_COBID_PDO_MASK_FRAME = 1 << 29,
+    CANMAT_COBID_PDO_MASK_FRAME = (uint32_t)(1 << 29),
     /* 30 is reserved */
-    CANMAT_COBID_PDO_MASK_VALID = 1 << 31
+    CANMAT_COBID_PDO_MASK_VALID = (uint32_t)(1 << 31)
 } canmat_cobid_pdo_mask_t;
 
 #ifdef __cplusplus

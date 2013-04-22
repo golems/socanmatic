@@ -220,7 +220,7 @@ static int print_masks( struct canmat_code_descriptor fmt[], unsigned u ) {
 
 // FIXME: some fiddly issues with signs here
 
-static int print_enum( struct canmat_code_descriptor fmt[], int64_t u ) {
+static int print_enum( struct canmat_code_descriptor *fmt, int64_t u ) {
     printf("%"PRId64" (0x%"PRIx64")\n", u, (uint64_t)u );
     for( size_t i = 0; fmt[i].name; i ++ ) {
         if( u == fmt[i].value ) {
@@ -291,6 +291,21 @@ canmat_status_t canmat_obj_print( FILE *f, const canmat_obj_t *obj, canmat_scala
     }
 }
 
+int canmat_obj_bitsize( const struct canmat_obj *obj ) {
+    switch(obj->data_type) {
+    case CANMAT_DATA_TYPE_INTEGER8:
+    case CANMAT_DATA_TYPE_UNSIGNED8:
+        return 8;
+    case CANMAT_DATA_TYPE_INTEGER16:
+    case CANMAT_DATA_TYPE_UNSIGNED16:
+        return 16;
+    case CANMAT_DATA_TYPE_INTEGER32:
+    case CANMAT_DATA_TYPE_UNSIGNED32:
+        return 32;
+    default:
+        return -1;
+    }
+}
 
 /* ex: set shiftwidth=4 tabstop=4 expandtab: */
 /* Local Variables:                          */

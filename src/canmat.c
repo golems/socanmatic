@@ -64,12 +64,11 @@
 #endif
 
 
-const char *opt_cmd = NULL;
-int opt_verbosity = 0;
-const char *opt_api = "socketcan";
+static int opt_verbosity = 0;
+static const char *opt_api = "socketcan";
 
-const char **opt_pos = NULL;
-size_t opt_npos = 0;
+static const char **opt_pos = NULL;
+static size_t opt_npos = 0;
 
 //uint16_t opt_canid = 0;
 //uint8_t opt_can_dlc = 0;
@@ -86,8 +85,8 @@ size_t opt_npos = 0;
 //char const ** opt_ifaces = NULL;
 //size_t opt_n_ifaces;
 
-void hard_assert( _Bool test , const char fmt[], ...)          ATTR_PRINTF(2,3);
-void fail( const char fmt[], ...)          ATTR_PRINTF(1,2);
+static void hard_assert( _Bool test , const char fmt[], ...)          ATTR_PRINTF(2,3);
+static void fail( const char fmt[], ...)          ATTR_PRINTF(1,2);
 
 
 static void verbf( int level , const char fmt[], ...)          ATTR_PRINTF(2,3);
@@ -104,27 +103,29 @@ typedef struct can_set {
 } can_set_t;
 
 typedef int (*cmd_fun_t)(can_set_t*,size_t, const char**);
-cmd_fun_t opt_command = NULL;
 
-int cmd_send( can_set_t *canset, size_t n, const char **args );
-int cmd_dump( can_set_t *canset, size_t n, const char **args );
-int cmd_ul( can_set_t *canset, size_t n, const char **args );
-int cmd_ul_resp( can_set_t *canset, size_t n, const char **args );
-int cmd_dl( can_set_t *canset, size_t n, const char **args );
-int cmd_dl_resp( can_set_t *canset, size_t n, const char **args );
-int cmd_dict_dl( can_set_t *canset, size_t n, const char **args );
-int cmd_dict_ul( can_set_t *canset, size_t n, const char **args );
-int cmd_display( can_set_t *canset, size_t n, const char **args );
-int cmd_info( can_set_t *canset, size_t n, const char **args );
-int cmd_set( can_set_t *canset, size_t n, const char **args );
-int cmd_nmt( can_set_t *canset, size_t n, const char **args );
-int cmd_probe( can_set_t *canset, size_t n, const char **args );
+static cmd_fun_t opt_command = NULL;
+
+static int cmd_send( can_set_t *canset, size_t n, const char **args );
+static int cmd_dump( can_set_t *canset, size_t n, const char **args );
+static int cmd_ul( can_set_t *canset, size_t n, const char **args );
+static int cmd_ul_resp( can_set_t *canset, size_t n, const char **args );
+static int cmd_dl( can_set_t *canset, size_t n, const char **args );
+static int cmd_dl_resp( can_set_t *canset, size_t n, const char **args );
+static int cmd_dict_dl( can_set_t *canset, size_t n, const char **args );
+static int cmd_dict_ul( can_set_t *canset, size_t n, const char **args );
+static int cmd_display( can_set_t *canset, size_t n, const char **args );
+static int cmd_info( can_set_t *canset, size_t n, const char **args );
+static int cmd_set( can_set_t *canset, size_t n, const char **args );
+static int cmd_nmt( can_set_t *canset, size_t n, const char **args );
+static int cmd_probe( can_set_t *canset, size_t n, const char **args );
+static int cmd_map_rpdo( can_set_t *canset, size_t n, const char **args );
 
 /***********/
 /* HELPERS */
 /***********/
 
-void hard_assert( _Bool test , const char fmt[], ...)  {
+static void hard_assert( _Bool test , const char fmt[], ...)  {
     if( ! test ) {
         va_list argp;
         va_start( argp, fmt );
@@ -134,7 +135,7 @@ void hard_assert( _Bool test , const char fmt[], ...)  {
     }
 }
 
-void fail( const char fmt[], ...)  {
+static void fail( const char fmt[], ...)  {
         va_list argp;
         va_start( argp, fmt );
         vfprintf( stderr, fmt, argp );
@@ -156,7 +157,7 @@ static void verbf( int level , const char fmt[], ...) {
 /* ARG PARSING */
 /***************/
 
-unsigned long parse_uhex( const char *arg, uint64_t max ) {
+static unsigned long parse_uhex( const char *arg, uint64_t max ) {
     char *endptr;
     errno = 0;
     unsigned long u  = strtoul( arg, &endptr, 16 );
@@ -168,7 +169,7 @@ unsigned long parse_uhex( const char *arg, uint64_t max ) {
 }
 
 
-unsigned long parse_u( const char *arg, uint64_t max ) {
+static unsigned long parse_u( const char *arg, uint64_t max ) {
     char *endptr;
     errno = 0;
     unsigned long u  = strtoul( arg, &endptr, 0 );
@@ -179,12 +180,12 @@ unsigned long parse_u( const char *arg, uint64_t max ) {
     return u;
 }
 
-void invalid_arg( const char *arg ) {
+static void invalid_arg( const char *arg ) {
     hard_assert( 0, "Invalid argument: %s\n", arg );
 }
 
 
-cmd_fun_t posarg_cmd( const char *arg ) {
+static cmd_fun_t posarg_cmd( const char *arg ) {
     static const struct  {
         const char *name;
         cmd_fun_t fun;
@@ -201,6 +202,7 @@ cmd_fun_t posarg_cmd( const char *arg ) {
                  {"set", cmd_set},
                  {"nmt", cmd_nmt},
                  {"probe", cmd_probe},
+                 {"map-rpdo", cmd_map_rpdo },
                  {NULL, NULL} };
     size_t i;
     for( i = 0; cmds[i].name != NULL; i ++ ) {
@@ -212,7 +214,7 @@ cmd_fun_t posarg_cmd( const char *arg ) {
     assert(0);
 }
 
-void posarg( const char *arg, int i ) {
+static void posarg( const char *arg, int i ) {
     if( 0 == i ) {
         verbf( 1, "Setting command: %s\n", arg );
         opt_command = posarg_cmd(arg);
@@ -222,7 +224,7 @@ void posarg( const char *arg, int i ) {
     }
 }
 
-void open_iface( can_set_t *canset, const char *type, const char *name ) {
+static void open_iface( can_set_t *canset, const char *type, const char *name ) {
     canset->cif = (canmat_iface_t**) realloc( canset->cif, sizeof(canset->cif[0]) * (canset->n+1) );
     canset->name = (const char**) realloc( (void*)canset->name, sizeof(char*) * (canset->n+1) );
 
@@ -293,6 +295,7 @@ int main( int argc, char ** argv ) {
                   "  canmat set bitrate value                     Set bitrate in kbps\n"
                   "  canmat nmt node (start|stop|preop|reset-(node|com))\n"
                   "                                               Send an NMT message\n"
+                  "  canmat map-rpdo node pdo-num param-name      Establish RPDO mapping\n"
                   "\n"
                   "Report bugs to <ntd@gatech.edu>"
                 );
@@ -354,7 +357,7 @@ static void pollin1( const char *name, canmat_iface_t *cif, void (printer)(struc
     }
 }
 
-int cmd_pollin( can_set_t *canset, void (printer)(struct can_frame*) ) {
+static int cmd_pollin( can_set_t *canset, void (printer)(struct can_frame*) ) {
 
     // TODO: use threads for interfaces without a file descriptor
 
@@ -388,23 +391,24 @@ int cmd_pollin( can_set_t *canset, void (printer)(struct can_frame*) ) {
             }
         }
     }
+    return 0;
 }
 
 
-int cmd_dump( can_set_t *canset, size_t n, const char **arg ) {
+static int cmd_dump( can_set_t *canset, size_t n, const char **arg ) {
     hard_assert( 0 == n && NULL == arg, "Extra arguments\n");
 
     cmd_pollin( canset, pollin_raw );
     return 0;
 }
 
-int cmd_display( can_set_t *canset, size_t n, const char **arg ) {
+static int cmd_display( can_set_t *canset, size_t n, const char **arg ) {
     hard_assert( 0 == n && NULL == arg, "Extra arguments\n");
     cmd_pollin( canset, pollin_display );
     return 0;
 }
 
-int send_frame( can_set_t *canset, struct can_frame *can ) {
+static int send_frame( can_set_t *canset, struct can_frame *can ) {
     if(opt_verbosity) {
         verbf(1, "Sending ");
         canmat_dump_frame( stdout, can );
@@ -420,7 +424,7 @@ int send_frame( can_set_t *canset, struct can_frame *can ) {
 }
 
 
-int cmd_send( can_set_t *canset, size_t n, const char **arg ) {
+static int cmd_send( can_set_t *canset, size_t n, const char **arg ) {
     hard_assert( n >= 1, "Insufficient arguments\n");
     hard_assert( n <= 1 + 8, "Extra arguments\n");
 
@@ -434,7 +438,7 @@ int cmd_send( can_set_t *canset, size_t n, const char **arg ) {
     return send_frame( canset, &can );
 }
 
-void parse_arg_sdo( size_t n, const char **arg, canmat_sdo_msg_t *sdo ) {
+static void parse_arg_sdo( size_t n, const char **arg, canmat_sdo_msg_t *sdo ) {
     hard_assert( n >= 3, "Insufficient arguments\n");
     hard_assert( n <= 3 + 4, "Extra arguments\n");
 
@@ -451,12 +455,12 @@ void parse_arg_sdo( size_t n, const char **arg, canmat_sdo_msg_t *sdo ) {
     }
 }
 
-int cmd_ul( can_set_t *canset, size_t n, const char **arg ) {
+static int cmd_ul( can_set_t *canset, size_t n, const char **arg ) {
     // FIXME
     assert(0);
 }
 
-int cmd_ul_resp( can_set_t *canset, size_t n, const char **arg ) {
+static int cmd_ul_resp( can_set_t *canset, size_t n, const char **arg ) {
     canmat_sdo_msg_t sdo;
     parse_arg_sdo( n, arg, &sdo );
     sdo.cmd_spec = CANMAT_SCS_EX_UL;
@@ -467,12 +471,12 @@ int cmd_ul_resp( can_set_t *canset, size_t n, const char **arg ) {
     return send_frame( canset, &can );
 }
 
-int cmd_dl( can_set_t *canset, size_t n, const char **arg ) {
+static int cmd_dl( can_set_t *canset, size_t n, const char **arg ) {
     // FIXME
     assert(0);
 }
 
-int cmd_dl_resp( can_set_t *canset, size_t n, const char **arg ) {
+static int cmd_dl_resp( can_set_t *canset, size_t n, const char **arg ) {
     canmat_sdo_msg_t sdo;
     parse_arg_sdo( n, arg, &sdo );
     sdo.cmd_spec = CANMAT_SCS_EX_DL;
@@ -482,7 +486,7 @@ int cmd_dl_resp( can_set_t *canset, size_t n, const char **arg ) {
     return send_frame( canset, &can );
 }
 
-int cmd_dict_dl( can_set_t *canset, size_t n, const char **arg) {
+static int cmd_dict_dl( can_set_t *canset, size_t n, const char **arg) {
     hard_assert( !(n < 3), "Insufficient arguments\n");
     hard_assert( !(n > 3), "Extra arguments\n");
 
@@ -507,7 +511,7 @@ int cmd_dict_dl( can_set_t *canset, size_t n, const char **arg) {
     return 0;
 }
 
-int cmd_dict_ul( can_set_t *canset, size_t n, const char **arg ) {
+static int cmd_dict_ul( can_set_t *canset, size_t n, const char **arg ) {
     hard_assert( !(n < 2), "Insufficient arguments\n");
     hard_assert( !(n > 2), "Extra arguments\n");
 
@@ -538,7 +542,7 @@ int cmd_dict_ul( can_set_t *canset, size_t n, const char **arg ) {
     return 0;
 }
 
-int cmd_info( can_set_t *canset, size_t n, const char **arg) {
+static int cmd_info( can_set_t *canset, size_t n, const char **arg) {
     hard_assert( 0 == n && NULL == arg, "Extra arguments\n");
     for( size_t i = 0; i < canset->n; i++ ) {
         printf("> %s\n", canset->name[i] );
@@ -548,7 +552,7 @@ int cmd_info( can_set_t *canset, size_t n, const char **arg) {
     return 0;
 }
 
-int cmd_set( can_set_t *canset, size_t n, const char **arg) {
+static int cmd_set( can_set_t *canset, size_t n, const char **arg) {
     hard_assert( !(n < 2), "Insufficient arguments\n");
     hard_assert( !(n > 2), "Extra arguments\n");
 
@@ -573,7 +577,7 @@ int cmd_set( can_set_t *canset, size_t n, const char **arg) {
     return 0;
 }
 
-int cmd_nmt( can_set_t *canset, size_t n, const char **arg) {
+static int cmd_nmt( can_set_t *canset, size_t n, const char **arg) {
     hard_assert( !(n < 2), "Insufficient arguments\n");
     hard_assert( !(n > 2), "Extra arguments\n");
 
@@ -617,14 +621,14 @@ static int probe_pdo( can_set_t *canset, size_t n, const char **arg) {
 
     hard_assert( 1 == canset->n, "Only one CAN interface supported\n");
 
-    canmat_status_t r = canmat_probe_pdo( canset->cif[0], node );
+    canmat_status_t r = canmat_probe_pdo( &canmat_dict402, canset->cif[0], node );
 
     hard_assert( CANMAT_OK == r, "Probing failed: %s\n", canmat_iface_strerror(canset->cif[0], r) );
 
     return 0;
 }
 
-int cmd_probe( can_set_t *canset, size_t n, const char **arg ) {
+static int cmd_probe( can_set_t *canset, size_t n, const char **arg ) {
     hard_assert( n >= 1, "Insufficient arguments\n");
 
     if( 0 == strcasecmp( "pdo", arg[0] ) ) {
@@ -633,4 +637,29 @@ int cmd_probe( can_set_t *canset, size_t n, const char **arg ) {
         fprintf(stderr, "Don't know how to probe '%s'\n", arg[0]);
         exit(EXIT_FAILURE);
     }
+}
+
+static int cmd_map_rpdo( can_set_t *canset, size_t n, const char **arg ) {
+    hard_assert( !(n < 3), "Insufficient arguments\n");
+    hard_assert( !(n > 3), "Extra arguments\n");
+    hard_assert( 1 == canset->n, "Only one CAN interface supported\n");
+
+    uint8_t node = (uint8_t)parse_uhex( arg[0], CANMAT_NODE_MASK );
+    uint8_t pdo_num = (uint8_t)parse_u( arg[1], 0xFF );
+    const char *param = arg[2];
+
+
+    canmat_obj_t *obj = canmat_dict_search_name( &canmat_dict402, param );
+    hard_assert( NULL != obj, "Unknown parameter: %s\n", param );
+
+    uint32_t err;
+    canmat_status_t r = canmat_rpdo_remap( canset->cif[0], node, pdo_num,
+                                           1, obj, &err );
+    if( CANMAT_ERR_ABORT == r ) {
+        fail("Transfer aborted: '%s' (0x%08x)\n", canmat_sdo_strerror(err), err );
+    }
+    hard_assert( CANMAT_OK == r, "Remap failed: '%s'\n",
+                 canmat_iface_strerror(canset->cif[0], r) );
+
+    return 0;
 }

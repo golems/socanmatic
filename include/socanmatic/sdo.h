@@ -189,6 +189,53 @@ canmat_status_t canmat_sdo_ul( canmat_iface_t *cif, const canmat_sdo_msg_t *req,
 canmat_status_t canmat_sdo_dl( canmat_iface_t *cif, const canmat_sdo_msg_t *req,
                                canmat_sdo_msg_t *resp );
 
+
+
+#define CANMAT_SDO_TYPE_FUN( T_CAN, T_SHORT )                           \
+    static inline canmat_status_t canmat_sdo_ul_ ## T_SHORT(            \
+        canmat_iface_t *cif, uint8_t node, uint16_t idx, uint8_t subix, \
+        CANMAT_##T_CAN *val, uint32_t *err )                            \
+    {                                                                   \
+        canmat_sdo_msg_t resp;                                          \
+        canmat_sdo_msg_t req = { .index = idx,                          \
+                                 .subindex = subix,                     \
+                                 .node = node,                          \
+                                 .data_type = CANMAT_DATA_TYPE_##T_CAN  \
+        };                                                              \
+        canmat_status_t r = canmat_sdo_ul( cif, &req, &resp );          \
+        if( CANMAT_OK == r ) {                                          \
+            *val = resp.data.T_SHORT;                                   \
+        } else if (CANMAT_ERR_ABORT == r && NULL != err ) {             \
+            *err = resp.data.u32;                                       \
+        }                                                               \
+        return r;                                                       \
+    }                                                                   \
+    static inline canmat_status_t canmat_sdo_dl_ ## T_SHORT (           \
+        canmat_iface_t *cif, uint8_t node, uint16_t idx, uint8_t subix, \
+        CANMAT_##T_CAN val, uint32_t *err )                             \
+    {                                                                   \
+        canmat_sdo_msg_t resp;                                          \
+        canmat_sdo_msg_t req = { .index = idx,                          \
+                                 .subindex = subix,                     \
+                                 .node = node,                          \
+                                 .data_type = CANMAT_DATA_TYPE_##T_CAN  \
+        };                                                              \
+        req.data.T_SHORT = val;                                         \
+        canmat_status_t r = canmat_sdo_dl( cif, &req, &resp );          \
+        if( CANMAT_ERR_ABORT == r && NULL != err ) {                    \
+            *err = resp.data.u32;                                       \
+        }                                                               \
+        return r;                                                       \
+    }
+
+CANMAT_SDO_TYPE_FUN( UNSIGNED8,  u8 )
+CANMAT_SDO_TYPE_FUN( UNSIGNED16, u16 )
+CANMAT_SDO_TYPE_FUN( UNSIGNED32, u32 )
+
+CANMAT_SDO_TYPE_FUN( INTEGER8,  i8 )
+CANMAT_SDO_TYPE_FUN( INTEGER16, i16 )
+CANMAT_SDO_TYPE_FUN( INTEGER32, i32 )
+
 /// Send an SDO query
 canmat_status_t canmat_sdo_query_send( canmat_iface_t *cif, const canmat_sdo_msg_t *req );
 

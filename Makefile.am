@@ -35,6 +35,7 @@ libsocanmatic_la_SOURCES =                   \
 	src/util.c                           \
 	src/iface/iface.c                    \
 	src/probe.c                          \
+	src/pdo.c                            \
 	src/nmt.c
 
 libsocanmatic_la_LIBADD = -ldl

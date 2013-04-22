@@ -102,6 +102,12 @@ struct canmat_pdo_descriptor_table {
 enum canmat_status canmat_pdo_process(
     const struct canmat_pdo_descriptor_table table, const struct can_frame frame );
 
+
+enum canmat_status canmat_rpdo_remap(
+    struct canmat_iface *cif, uint8_t node, uint8_t pdo,
+    uint8_t cnt, const struct canmat_obj *objs,
+    uint32_t *err );
+
 #ifdef __cplusplus
 }
 #endif

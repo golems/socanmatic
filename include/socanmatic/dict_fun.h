@@ -76,6 +76,7 @@ int canmat_obj_print( FILE *f, const canmat_obj_t *obj, canmat_scalar_t *val );
 
 typedef int canmat_obj_print_fun(canmat_scalar_t);
 
+int canmat_obj_bitsize( const struct canmat_obj *obj );
 
 
 

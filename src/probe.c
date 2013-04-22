@@ -48,21 +48,22 @@
 
 #define PDO_MAX 8
 
-canmat_status_t canmat_probe_pdo( canmat_iface_t *cif, uint8_t node ) {
+canmat_status_t canmat_probe_pdo( const struct canmat_dict *dict,  canmat_iface_t *cif,  uint8_t node ) {
+    canmat_sdo_msg_t resp;
+    canmat_status_t  r;
     // RPDO
     for( uint8_t i = 0; i < PDO_MAX; i ++ ) {
         // com size
         uint8_t com_size;
         {
-            canmat_sdo_msg_t resp;
             canmat_sdo_msg_t req = { .index = (uint16_t)(CANMAT_RPDO_COM_BASE+i),
                                      .subindex = 0,
                                      .node = node,
                                      .data_type = CANMAT_DATA_TYPE_UNSIGNED8 };
-            canmat_status_t  r = canmat_sdo_ul( cif, &req, &resp );
+            r = canmat_sdo_ul( cif, &req, &resp );
 
+            if( CANMAT_ERR_ABORT == r ) continue;
             if( CANMAT_OK != r ) return r;
-            if( CANMAT_CS_ABORT == resp.cmd_spec ) continue;
             if( CANMAT_SCS_EX_UL != resp.cmd_spec ) return CANMAT_ERR_PROTO;
             com_size = resp.data.u8;
         }
@@ -73,40 +74,70 @@ canmat_status_t canmat_probe_pdo( canmat_iface_t *cif, uint8_t node ) {
 
         // cob-id
         if( com_size > 0 ) {
-            canmat_sdo_msg_t resp;
             canmat_sdo_msg_t req = { .index = (uint16_t)(CANMAT_RPDO_COM_BASE+i),
                                      .subindex = 1,
                                      .node = node,
                                      .data_type = CANMAT_DATA_TYPE_UNSIGNED32 };
-            canmat_status_t  r = canmat_sdo_ul( cif, &req, &resp );
+            r = canmat_sdo_ul( cif, &req, &resp );
 
-            if( CANMAT_OK != r ) return r;
-            if( CANMAT_CS_ABORT == resp.cmd_spec ) continue;
+            if( CANMAT_OK != r ) goto ABORT;
             if( CANMAT_SCS_EX_UL != resp.cmd_spec ) return CANMAT_ERR_PROTO;
 
-            printf(" cob-id: 0x%x\n", resp.data.u32 & CANMAT_COBID_MASK );
-            printf(" frame: %d\n", (resp.data.u32 & CANMAT_COBID_PDO_MASK_FRAME) ? 1 : 0 );
-            printf(" valid: %d\n", (resp.data.u32 & (uint32_t)CANMAT_COBID_PDO_MASK_VALID) ? 1 : 0 );
+            printf("> cob-id: 0x%x\n", resp.data.u32 & CANMAT_COBID_MASK );
+            printf("> frame: %d\n", (resp.data.u32 & CANMAT_COBID_PDO_MASK_FRAME) ? 1 : 0 );
+            printf("> valid: %d\n", (resp.data.u32 & (uint32_t)CANMAT_COBID_PDO_MASK_VALID) ? 1 : 0 );
         }
         // trans type
         if( com_size > 1 ) {
-            canmat_sdo_msg_t resp;
             canmat_sdo_msg_t req = { .index = (uint16_t)(CANMAT_RPDO_COM_BASE+i),
                                      .subindex = 2,
                                      .node = node,
                                      .data_type = CANMAT_DATA_TYPE_UNSIGNED8 };
-            canmat_status_t  r = canmat_sdo_ul( cif, &req, &resp );
+            r = canmat_sdo_ul( cif, &req, &resp );
 
-            if( CANMAT_OK != r ) return r;
-            if( CANMAT_CS_ABORT == resp.cmd_spec ) continue;
+            if( CANMAT_OK != r ) goto ABORT;
             if( CANMAT_SCS_EX_UL != resp.cmd_spec ) return CANMAT_ERR_PROTO;
 
-            printf(" trans_type: 0x%x\n", resp.data.u8 );
+            printf("> trans_type: 0x%x\n", resp.data.u8 );
 
+        }
+
+        // mapping
+        uint8_t map_size;
+        {
+            canmat_sdo_msg_t req = { .index = (uint16_t)(CANMAT_RPDO_MAP_BASE+i),
+                                     .subindex = 0,
+                                     .node = node,
+                                     .data_type = CANMAT_DATA_TYPE_UNSIGNED8 };
+            r = canmat_sdo_ul( cif, &req, &resp );
+
+            if( CANMAT_OK != r ) goto ABORT;
+            if( CANMAT_SCS_EX_UL != resp.cmd_spec ) return CANMAT_ERR_PROTO;
+            map_size = resp.data.u8;
+        }
+        printf("> mapped: %d\n", map_size);
+        for( uint8_t j = 0; j < map_size; j ++ ) {
+            canmat_sdo_msg_t req = { .index = (uint16_t)(CANMAT_RPDO_MAP_BASE+i),
+                                     .subindex = 1 + j,
+                                     .node = node,
+                                     .data_type = CANMAT_DATA_TYPE_UNSIGNED32 };
+            r = canmat_sdo_ul( cif, &req, &resp );
+
+            if( CANMAT_OK != r ) goto ABORT;
+            if( CANMAT_SCS_EX_UL != resp.cmd_spec ) return CANMAT_ERR_PROTO;
+            uint16_t idx = resp.data.u32 >> 16;
+            uint8_t subidx = (resp.data.u32) >> 8 & 0xFF;
+            canmat_obj_t *obj = canmat_dict_search_index( dict, idx, subidx );
+            printf("  > %d: '%s' (%x.%x) (%d)\n",
+                   j, obj ? obj->parameter_name : "unknown",
+                   idx, subidx, resp.data.u32 & 0xFF);
         }
 
     }
     return CANMAT_OK;
+
+ABORT:
+    return r;
 }
 
 /* ex: set shiftwidth=4 tabstop=4 expandtab: */
