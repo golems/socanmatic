@@ -55,16 +55,12 @@
 #include "socanmatic.h"
 #include "socanmatic/dict402.h"
 #include "socanmatic_private.h"
+#include "socanmatic/util.h"
 
 
-#ifdef __GNUC__
-#define ATTR_PRINTF(m,n) __attribute__((format(printf, m, n)))
-#else
-#define ATTR_PRINTF(m,n)
-#endif
 
 
-static int opt_verbosity = 0;
+int opt_verbosity = 0;
 static const char *opt_api = "socketcan";
 
 static const char **opt_pos = NULL;
@@ -85,11 +81,8 @@ static size_t opt_npos = 0;
 //char const ** opt_ifaces = NULL;
 //size_t opt_n_ifaces;
 
-static void hard_assert( _Bool test , const char fmt[], ...)          ATTR_PRINTF(2,3);
-static void fail( const char fmt[], ...)          ATTR_PRINTF(1,2);
 
 
-static void verbf( int level , const char fmt[], ...)          ATTR_PRINTF(2,3);
 
 struct iface_list {
     struct iface_list *next;
@@ -121,68 +114,11 @@ static int cmd_nmt( can_set_t *canset, size_t n, const char **args );
 static int cmd_probe( can_set_t *canset, size_t n, const char **args );
 static int cmd_map_rpdo( can_set_t *canset, size_t n, const char **args );
 
-/***********/
-/* HELPERS */
-/***********/
-
-static void hard_assert( _Bool test , const char fmt[], ...)  {
-    if( ! test ) {
-        va_list argp;
-        va_start( argp, fmt );
-        vfprintf( stderr, fmt, argp );
-        va_end( argp );
-        exit(EXIT_FAILURE);
-    }
-}
-
-static void fail( const char fmt[], ...)  {
-        va_list argp;
-        va_start( argp, fmt );
-        vfprintf( stderr, fmt, argp );
-        va_end( argp );
-        exit(EXIT_FAILURE);
-}
-
-static void verbf( int level , const char fmt[], ...) {
-    if( level <= opt_verbosity ) {
-        fputs("# ", stderr);
-        va_list argp;
-        va_start( argp, fmt );
-        vfprintf( stderr, fmt, argp );
-        va_end( argp );
-    }
-}
 
 /***************/
 /* ARG PARSING */
 /***************/
 
-static unsigned long parse_uhex( const char *arg, uint64_t max ) {
-    char *endptr;
-    errno = 0;
-    unsigned long u  = strtoul( arg, &endptr, 16 );
-
-    hard_assert( 0 == errno, "Invalid hex argument: %s (%s)\n", arg, strerror(errno) );
-    hard_assert( u <= max, "Argument %s too big\n", arg );
-
-    return u;
-}
-
-
-static unsigned long parse_u( const char *arg, uint64_t max ) {
-    char *endptr;
-    errno = 0;
-    unsigned long u  = strtoul( arg, &endptr, 0 );
-
-    hard_assert( 0 == errno, "Invalid hex argument: %s (%s)\n", arg, strerror(errno) );
-    hard_assert( u <= max, "Argument %s too big\n", arg );
-
-    return u;
-}
-
-static void invalid_arg( const char *arg ) {
-    hard_assert( 0, "Invalid argument: %s\n", arg );
-}
 
 
 static cmd_fun_t posarg_cmd( const char *arg ) {

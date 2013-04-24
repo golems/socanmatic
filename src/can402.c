@@ -53,17 +53,12 @@
 #include <poll.h>
 
 #include "socanmatic.h"
+#include "socanmatic/util.h"
 #include "socanmatic_private.h"
 
 #include "socanmatic/dict402.h"
 
 #include "sns.h"
-
-#ifdef __GNUC__
-#define ATTR_PRINTF(m,n) __attribute__((format(printf, m, n)))
-#else
-#define ATTR_PRINTF(m,n)
-#endif
 
 struct canmat_402_set {
     struct canmat_iface *cif;
@@ -84,10 +79,6 @@ const char *opt_api = "socketcan";
 const char **opt_pos = NULL;
 size_t opt_npos = 0;
 
-void hard_assert( _Bool test , const char fmt[], ...)          ATTR_PRINTF(2,3);
-
-
-static void verbf( int level , const char fmt[], ...)          ATTR_PRINTF(2,3);
 
 typedef int (*cmd_fun_t)(struct canmat_iface*,size_t, const char**);
 cmd_fun_t opt_command = NULL;
@@ -101,86 +92,10 @@ cmd_fun_t opt_command = NULL;
 //static void stop( struct can402_cx *cx );
 static void parse( struct can402_cx *cx, int argc, char **argv );
 
-/***********/
-/* HELPERS */
-/***********/
-
-void hard_assert( _Bool test , const char fmt[], ...)  {
-    if( ! test ) {
-        va_list argp;
-        va_start( argp, fmt );
-        vfprintf( stderr, fmt, argp );
-        va_end( argp );
-        exit(EXIT_FAILURE);
-    }
-}
-
-
-static void verbf( int level , const char fmt[], ...) {
-    if( level <= opt_verbosity ) {
-        fputs("# ", stderr);
-        va_list argp;
-        va_start( argp, fmt );
-        vfprintf( stderr, fmt, argp );
-        va_end( argp );
-    }
-}
-
-/***************/
-/* ARG PARSING */
-/***************/
-
-unsigned long parse_uhex( const char *arg, uint64_t max ) {
-    char *endptr;
-    errno = 0;
-    unsigned long u  = strtoul( arg, &endptr, 16 );
-
-    hard_assert( 0 == errno, "Invalid hex argument: %s (%s)\n", arg, strerror(errno) );
-    hard_assert( u <= max, "Argument %s too big\n", arg );
-
-    return u;
-}
-
-
-unsigned long parse_u( const char *arg, uint64_t max ) {
-    char *endptr;
-    errno = 0;
-    unsigned long u  = strtoul( arg, &endptr, 0 );
-
-    hard_assert( 0 == errno, "Invalid hex argument: %s (%s)\n", arg, strerror(errno) );
-    hard_assert( u <= max, "Argument %s too big\n", arg );
-
-    return u;
-}
-
 void invalid_arg( const char *arg ) {
     hard_assert( 0, "Invalid argument: %s\n", arg );
 }
 
-cmd_fun_t posarg_cmd( const char *arg ) {
-    static const struct  {
-        const char *name;
-        cmd_fun_t fun;
-    } cmds[] = { {NULL, NULL} };
-    size_t i;
-    for( i = 0; cmds[i].name != NULL; i ++ ) {
-        if( 0 == strcasecmp( arg, cmds[i].name ) ) {
-            return cmds[i].fun;
-        }
-    }
-    invalid_arg( arg );
-    assert(0);
-}
-
-void posarg( const char *arg, int i ) {
-    if( 0 == i ) {
-        verbf( 1, "Setting command: %s\n", arg );
-        opt_command = posarg_cmd(arg);
-    } else {
-        opt_pos = (const char**) realloc( opt_pos, sizeof(opt_pos[0]) * (opt_npos+1) );
-        opt_pos[opt_npos++] = arg;
-    }
-}
 
 struct canmat_iface *open_iface( const char *type, const char *name ) {
     struct canmat_iface *cif = canmat_iface_new( type );
@@ -259,61 +174,58 @@ static void parse( struct can402_cx *cx, int argc, char **argv )
 {
     assert( 0 == cx->drive_set.n );
     uint8_t node[CANMAT_NODE_MASK+1];
-    {
-        int c, i = 0;
-        while( (c = getopt( argc, argv, "vhH?Vf:a:n:")) != -1 ) {
-            switch(c) {
-            case 'V':   /* version     */
-                puts( "can402 " PACKAGE_VERSION "\n"
-                      "\n"
-                      "Copyright (c) 2008-2013, Georgia Tech Research Corporation\n"
-                      "This is free software; see the source for copying conditions.  There is NO\n"
-                      "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
-                      "\n"
-                      "Written by Neil T. Dantam"
-                    );
-                exit(EXIT_SUCCESS);
-            case 'v':   /* verbose  */
-                opt_verbosity++;
-                break;
-            case 'a':   /* api  */
-                opt_api = optarg;
-                break;
-            case 'f':   /* interface  */
-                cx->drive_set.cif = open_iface( opt_api, optarg );
-                break;
-            case 'n':   /* node  */
-                hard_assert( cx->drive_set.n < CANMAT_NODE_MASK-1, "Too many nodes\n" );
-                node[cx->drive_set.n] = (uint8_t) parse_uhex( optarg, CANMAT_NODE_MASK );
-                cx->drive_set.n++;
-                break;
-            case '?':   /* help     */
-            case 'h':
-            case 'H':
-                puts( "Usage: canmat [OPTIONS...] COMMAND [command-args...]\n"
-                      "Shell tool for CANopen\n"
-                      "\n"
-                      "Options:\n"
-                      "  -v,                       Make output more verbose\n"
-                      "  -a api_type,              CAN API, e.g, socketcan, ntcan\n"
-                      "  -f interface,             CAN interface\n"
-                      "  -f n,                     Node (multiple allowed)\n"
-                      "  -?,                       Give program help list\n"
-                      "  -V,                       Print program version\n"
-                      "\n"
-                      "Examples:\n"
-                      "\n"
-                      "Report bugs to <ntd@gatech.edu>"
-                    );
-                exit(EXIT_SUCCESS);
-                break;
-            default:
-                posarg(optarg, i++);
-            }
+    for( int c; -1 != (c = getopt(argc, argv, "vhH?Vf:a:n:")); ) {
+        switch(c) {
+        case 'V':   /* version     */
+            puts( "can402 " PACKAGE_VERSION "\n"
+                  "\n"
+                  "Copyright (c) 2008-2013, Georgia Tech Research Corporation\n"
+                  "This is free software; see the source for copying conditions.  There is NO\n"
+                  "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
+                  "\n"
+                  "Written by Neil T. Dantam"
+                );
+            exit(EXIT_SUCCESS);
+        case 'v':   /* verbose  */
+            opt_verbosity++;
+            break;
+        case 'a':   /* api  */
+            opt_api = optarg;
+            break;
+        case 'f':   /* interface  */
+            cx->drive_set.cif = open_iface( opt_api, optarg );
+            break;
+        case 'n':   /* node  */
+            hard_assert( cx->drive_set.n < CANMAT_NODE_MASK-1, "Too many nodes\n" );
+            node[cx->drive_set.n] = (uint8_t) parse_uhex( optarg, CANMAT_NODE_MASK );
+            cx->drive_set.n++;
+            break;
+        case '?':   /* help     */
+        case 'h':
+        case 'H':
+            puts( "Usage: canmat [OPTIONS...] COMMAND [command-args...]\n"
+                  "Shell tool for CANopen\n"
+                  "\n"
+                  "Options:\n"
+                  "  -v,                       Make output more verbose\n"
+                  "  -a api_type,              CAN API, e.g, socketcan, ntcan\n"
+                  "  -f interface,             CAN interface\n"
+                  "  -f n,                     Node (multiple allowed)\n"
+                  "  -?,                       Give program help list\n"
+                  "  -V,                       Print program version\n"
+                  "\n"
+                  "Examples:\n"
+                  "\n"
+                  "Report bugs to <ntd@gatech.edu>"
+                );
+            exit(EXIT_SUCCESS);
+            break;
+        default:
+            invalid_arg( optarg );
         }
-        while( optind < argc ) {
-            posarg(argv[optind++], i++);
-        }
+    }
+    if( optind < argc ) {
+        invalid_arg(argv[optind]);
     }
 
 
