@@ -56,7 +56,7 @@ canmat_SOURCES = src/canmat.c src/display.c
 canmat_LDADD = libsocanmatic.la libsocanmatic402.la libsocanmatic_iface_ntcan.la libsocanmatic_iface_socketcan.la
 
 can402_SOURCES = src/can402.c
-can402_LDADD = libsocanmatic.la libsocanmatic402.la libsocanmatic_iface_ntcan.la libsocanmatic_iface_socketcan.la
+can402_LDADD = libsocanmatic.la libsocanmatic402.la libsocanmatic_iface_ntcan.la libsocanmatic_iface_socketcan.la -lsns
 
 
 BUILT_SOURCES =                              \
@@ -83,7 +83,7 @@ socanmatic/enum402.h: $(top_srcdir)/canmatc $(top_srcdir)/eds/dsp402.eds
 
 pdo.eds: $(top_srcdir)/eds/pdo-template.eds
 	rm -rf pdo.eds
-	i=0; while [ $$i -lt 256 ]; do \
+	i=0; while [ $$i -lt 10 ]; do \
 		sed  $(top_srcdir)/eds/pdo-template.eds -e s/XX/`printf %02x $$i`/ -e '/^;.*/d' >> pdo.eds; \
 		i=$$((i+1)); \
 	done
