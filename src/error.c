@@ -55,6 +55,7 @@ const char *canmat_strerror( canmat_status_t status ) {
     case CANMAT_ERR_ABORT:     return "Abort";
     case CANMAT_ERR_NOT_SUP:   return "Not supported";
     case CANMAT_ERR_DEV:       return "Device error";
+    case CANMAT_ERR_MOTION:    return "Device error";
     }
     return "unknown status";
 }

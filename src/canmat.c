@@ -160,21 +160,11 @@ static void posarg( const char *arg, int i ) {
     }
 }
 
-static void open_iface( can_set_t *canset, const char *type, const char *name ) {
+static void set_iface( can_set_t *canset, const char *type, const char *name ) {
     canset->cif = (canmat_iface_t**) realloc( canset->cif, sizeof(canset->cif[0]) * (canset->n+1) );
     canset->name = (const char**) realloc( (void*)canset->name, sizeof(char*) * (canset->n+1) );
-
-    canset->cif[canset->n] = canmat_iface_new( type );
-    hard_assert( canset->cif[canset->n], "Couldn't create interface of type: %s\n", type );
-
-    canmat_status_t r =  canmat_iface_open( canset->cif[canset->n], name);
-    hard_assert( CANMAT_OK == r, "Couldn't open: %s, %s\n",
-                 name, canmat_iface_strerror( canset->cif[canset->n], r ) );
-
-    verbf( 1, "Opened interface %s, type %s\n", name, type);
-
+    canset->cif[canset->n] = open_iface(type, name );
     canset->name[ canset->n ] = strdup(name);
-
     canset->n++;
 }
 
@@ -202,7 +192,7 @@ int main( int argc, char ** argv ) {
             opt_api = optarg;
             break;
         case 'f':   /* interface  */
-            open_iface( &canset, opt_api, optarg );
+            set_iface( &canset, opt_api, optarg );
             break;
         case '?':   /* help     */
         case 'h':

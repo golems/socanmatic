@@ -52,6 +52,9 @@
 #include <assert.h>
 #include <poll.h>
 
+
+#include <syslog.h>
+
 #include "socanmatic.h"
 #include "socanmatic/util.h"
 #include "socanmatic_private.h"
@@ -75,49 +78,26 @@ struct can402_cx {
 const char *opt_cmd = NULL;
 int opt_verbosity = 0;
 const char *opt_api = "socketcan";
-
 const char **opt_pos = NULL;
 size_t opt_npos = 0;
-
-
-typedef int (*cmd_fun_t)(struct canmat_iface*,size_t, const char**);
-cmd_fun_t opt_command = NULL;
 
 /**********/
 /* PROTOS */
 /**********/
 
-//static void init( struct can402_cx *cx );
-//static void run( struct can402_cx *cx );
-//static void stop( struct can402_cx *cx );
+static void init( struct can402_cx *cx );
+static void run( struct can402_cx *cx );
+static void stop( struct can402_cx *cx );
 static void parse( struct can402_cx *cx, int argc, char **argv );
 
-void invalid_arg( const char *arg ) {
-    hard_assert( 0, "Invalid argument: %s\n", arg );
-}
-
-
-struct canmat_iface *open_iface( const char *type, const char *name ) {
-    struct canmat_iface *cif = canmat_iface_new( type );
-    hard_assert( cif, "Couldn't create interface of type: %s\n", type );
-
-    canmat_status_t r =  canmat_iface_open( cif, name);
-    hard_assert( CANMAT_OK == r, "Couldn't open: %s, %s\n",
-                 name, canmat_iface_strerror( cif, r ) );
-
-    verbf( 1, "Opened interface %s, type %s\n", name, type);
-
-    return cif;
-}
+static void error( int level , const char fmt[], ...)          ATTR_PRINTF(2,3);
 
 int main( int argc, char ** argv ) {
-    //struct canmat_402_set drive_set = {0};
     struct can402_cx cx;
     memset( &cx, 0, sizeof(cx));
 
-    // argument pargs
+    //parse
     parse( &cx, argc, argv );
-
 
     if( opt_verbosity ) {
         for( size_t i = 0; i < cx.drive_set.n; i ++ ) {
@@ -125,46 +105,14 @@ int main( int argc, char ** argv ) {
         }
     }
 
-
-
-    exit(0);
-    //hard_assert( opt_command, "can402: missing command.\nTry `can402 -H' for more information.\n");
-
-
-
-
-    struct canmat_402_drive drive;
-
     // init
+    init(&cx);
 
-    enum canmat_status r = canmat_402_init( cx.drive_set.cif, 0xa, &drive );
+    // run
+    run(&cx);
 
-    verbf( 1, "drive 0x%x: statusword 0x%x, state '%s' (0x%x) \n", drive.node_id, drive.stat_word,
-           canmat_402_state_string( canmat_402_state(&drive) ), canmat_402_state(&drive) );
-    hard_assert( CANMAT_OK == r, "can402: couldn't init drive 0x%x: %s\n",
-                 drive.node_id, canmat_iface_strerror( cx.drive_set.cif, r) );
-
-    // start
-    r = canmat_402_start( cx.drive_set.cif, &drive );
-    hard_assert( CANMAT_OK == r, "can402: couldn't start drive 0x%x: '%s', state: '%s'\n",
-                 drive.node_id, canmat_iface_strerror( cx.drive_set.cif, r),
-                 canmat_402_state_string( canmat_402_state(&drive) ) );
-
-    verbf( 1, "drive 0x%x: statusword 0x%x, state '%s' (0x%x) \n", drive.node_id, drive.stat_word,
-           canmat_402_state_string( canmat_402_state(&drive) ), canmat_402_state(&drive) );
-
-    // set mode
-    r = canmat_402_dl_modes_of_operation( cx.drive_set.cif, drive.node_id, CANMAT_402_OP_MODE_VELOCITY,
-                                          &(drive.abort_code) );
-    hard_assert( CANMAT_OK == r, "can402: couldn't set op mode: '%s'\n",
-                 canmat_iface_strerror( cx.drive_set.cif, r) );
-
-    r = canmat_402_dl_controlword( cx.drive_set.cif, drive.node_id, 0x7F,
-                                   &(drive.abort_code) );
-    hard_assert( CANMAT_OK == r, "can402: couldn't set control word: '%s'\n",
-                 canmat_iface_strerror( cx.drive_set.cif, r) );
-
-    //return opt_command(&canset, opt_npos, opt_pos);
+    // stop
+    stop(&cx);
 
     return 0;
 }
@@ -239,17 +187,78 @@ static void parse( struct can402_cx *cx, int argc, char **argv )
     }
 
     cx->ref = sns_msg_motor_ref_alloc ( cx->drive_set.n );
-
 }
 
-/* static void init( struct canmat_402_set *drive_set ) { */
 
-/* } */
+static void init( struct can402_cx *cx ) {
 
-/* static void run( struct canmat_402_set *drive_set ) { */
+    enum canmat_status r;
 
-/* } */
+    // init
+    for( size_t i = 0; i < cx->drive_set.n; i ++ ) {
+        r = canmat_402_init( cx->drive_set.cif, cx->drive_set.drive[i].node_id, &cx->drive_set.drive[i] );
 
-/* static void stop( struct canmat_402_set *drive_set ) { */
+        verbf( 1, "drive 0x%x: statusword 0x%x, state '%s' (0x%x) \n",
+               cx->drive_set.drive[i].node_id, cx->drive_set.drive[i].stat_word,
+               canmat_402_state_string( canmat_402_state(&cx->drive_set.drive[i]) ),
+               canmat_402_state(&cx->drive_set.drive[i]) );
+        hard_assert( CANMAT_OK == r, "can402: couldn't init drive 0x%x: %s\n",
+                     cx->drive_set.drive[i].node_id, canmat_iface_strerror( cx->drive_set.cif, r) );
+    }
 
-/* } */
+    // set mode
+    for( size_t i = 0; i < cx->drive_set.n; i ++ ) {
+        r = canmat_402_set_op_mode( cx->drive_set.cif, &cx->drive_set.drive[i], CANMAT_402_OP_MODE_VELOCITY );
+        if( r != CANMAT_OK ) {
+            error( LOG_ERR, "can402: couldn't set op mode: '%s'\n",
+                   canmat_iface_strerror( cx->drive_set.cif, r) );
+            goto FAIL;
+        }
+    }
+
+    // start
+    for( size_t i = 0; i < cx->drive_set.n; i ++ ) {
+        r = canmat_402_start( cx->drive_set.cif, &cx->drive_set.drive[i] );
+        if( CANMAT_OK != r ) {
+            error( LOG_ERR, "can402: couldn't start drive 0x%x: '%s', state: '%s'\n",
+                   cx->drive_set.drive[i].node_id, canmat_iface_strerror( cx->drive_set.cif, r),
+                   canmat_402_state_string( canmat_402_state(&cx->drive_set.drive[i]) ) );
+            goto FAIL;
+        }
+
+        verbf( 1, "drive 0x%x: statusword 0x%x, state '%s' (0x%x) \n",
+               cx->drive_set.drive[i].node_id, cx->drive_set.drive[i].stat_word,
+               canmat_402_state_string( canmat_402_state(&cx->drive_set.drive[i]) ),
+               canmat_402_state(&cx->drive_set.drive[i]) );
+    }
+    return;
+
+FAIL:
+    stop(cx);
+    exit(EXIT_FAILURE);
+}
+
+static void run( struct can402_cx *cx ) {
+    while(1) {
+        sleep(1);
+        printf("tick\n");
+    }
+}
+
+static void stop( struct can402_cx *cx ) {
+    for( size_t i = 0; i < cx->drive_set.n; i ++ ) {
+        canmat_status_t r = canmat_402_stop( cx->drive_set.cif, & (cx->drive_set.drive[i]) );
+        if( CANMAT_OK != r ) {
+            error( LOG_ERR, "Couldn't stop node 0x%x: %s\n",
+                   cx->drive_set.drive[i].node_id,
+                   canmat_iface_strerror( cx->drive_set.cif, r) );
+        }
+    }
+}
+
+static void error( int level , const char fmt[], ...) {
+    va_list argp;
+    va_start( argp, fmt );
+    vfprintf( stderr, fmt, argp );
+    va_end( argp );
+}

@@ -51,6 +51,7 @@ typedef enum canmat_status {
     CANMAT_ERR_PROTO      = -6,   ///< CANopen protocol error
     CANMAT_ERR_ABORT      = -7,   ///< CANopen transfer aborted
     CANMAT_ERR_DEV        = -8,   ///< Device error
+    CANMAT_ERR_MOTION     = -9,   ///< Disallowed Motion
 } canmat_status_t;
 
 const char *canmat_strerror( canmat_status_t status );

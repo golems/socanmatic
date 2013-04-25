@@ -160,6 +160,8 @@ struct canmat_402_drive {
     uint16_t ctrl_word;
     uint16_t stat_word;
 
+    enum canmat_402_op_mode op_mode;
+
     uint32_t abort_code;
 
     double pos_factor;
@@ -173,6 +175,9 @@ struct canmat_402_drive {
     double actual_pos;
     double actual_vel;
     double actual_cur;
+
+    // PDO number (zero indexed) to configure based on the selected op mode
+    int rpdo_user;
 };
 
 ///< initialize drive variables in struct
@@ -187,6 +192,14 @@ enum canmat_status canmat_402_start( struct canmat_iface *cif, struct canmat_402
 ///< stop the drive
 enum canmat_status canmat_402_stop( struct canmat_iface *cif, struct canmat_402_drive *drive );
 
+///< set control mask
+enum canmat_status canmat_402_dl_ctrlmask( struct canmat_iface *cif, struct canmat_402_drive *drive ,
+                                           uint16_t mask_and, uint16_t mask_or );
+
+///< set op mode and configure RPDO to receive
+enum canmat_status canmat_402_set_op_mode( struct canmat_iface *cif, struct canmat_402_drive *drive,
+                                           enum canmat_402_op_mode op_mode );
+
 ///< Add active RPDOs to the descriptor table
 enum canmat_status canmat_402_probe_pdo(
     struct canmat_iface *cif, struct canmat_pdo_descriptor_table tab,
@@ -194,6 +207,9 @@ enum canmat_status canmat_402_probe_pdo(
 
 const char *canmat_402_state_string( enum canmat_402_state_val s );
 
+#define CANMAT_402_CTRLMASK_VL_RFG_ENABLE  CANMAT_402_CTRLMASK_OP_MODE_SPECIFIC0
+#define CANMAT_402_CTRLMASK_VL_RFG_UNLOCK  CANMAT_402_CTRLMASK_OP_MODE_SPECIFIC1
+#define CANMAT_402_CTRLMASK_VL_RFG_USE_REF CANMAT_402_CTRLMASK_OP_MODE_SPECIFIC2
 
 #ifdef __cplusplus
 }

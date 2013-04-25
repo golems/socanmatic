@@ -56,6 +56,7 @@ void fail( const char fmt[], ...)          ATTR_PRINTF(1,2);
 unsigned long parse_uhex( const char *arg, uint64_t max );
 unsigned long parse_u( const char *arg, uint64_t max );
 void invalid_arg( const char *arg );
+struct canmat_iface *open_iface( const char *type, const char *name );
 
 
 

@@ -101,3 +101,17 @@ unsigned long parse_u( const char *arg, uint64_t max ) {
 void invalid_arg( const char *arg ) {
     hard_assert( 0, "Invalid argument: %s\n", arg );
 }
+
+
+struct canmat_iface *open_iface( const char *type, const char *name ) {
+    struct canmat_iface *cif = canmat_iface_new( type );
+    hard_assert( cif, "Couldn't create interface of type: %s\n", type );
+
+    canmat_status_t r =  canmat_iface_open( cif, name);
+    hard_assert( CANMAT_OK == r, "Couldn't open: %s, %s\n",
+                 name, canmat_iface_strerror( cif, r ) );
+
+    verbf( 1, "Opened interface %s, type %s\n", name, type);
+
+    return cif;
+}

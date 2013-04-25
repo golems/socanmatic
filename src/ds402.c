@@ -84,16 +84,6 @@ const char *canmat_402_state_string( enum canmat_402_state_val s ) {
     return "?";
 }
 
-static enum canmat_status dl_control( struct canmat_iface *cif, struct canmat_402_drive *drive, uint16_t ctrl ) {
-    return canmat_402_dl_controlword( cif, drive->node_id, ctrl, &drive->abort_code );
-}
-
-static enum canmat_status dl_control_mask( struct canmat_iface *cif, struct canmat_402_drive *drive,
-                                           uint16_t mask_and, uint16_t mask_or ) {
-    return dl_control( cif, drive, (drive->ctrl_word & mask_and) | mask_or );
-}
-
-
 #define CHECK_STATUS(V)                         \
     {                                           \
     enum canmat_status check_status_r = (V);    \
@@ -102,6 +92,19 @@ static enum canmat_status dl_control_mask( struct canmat_iface *cif, struct canm
     }                                           \
     }                                           \
 
+
+
+enum canmat_status canmat_402_dl_ctrlmask( struct canmat_iface *cif, struct canmat_402_drive *drive ,
+                                           uint16_t mask_and, uint16_t mask_or ) {
+
+    uint16_t ctrl = (drive->ctrl_word & mask_and) | mask_or;
+    canmat_status_t r = canmat_402_dl_controlword( cif, drive->node_id, ctrl, &drive->abort_code );
+    if( CANMAT_OK == r ) drive->ctrl_word = ctrl;
+    return r;
+}
+
+enum canmat_status canmat_402_set_op_mode( struct canmat_iface *cif, struct canmat_402_drive *drive ,
+                                           enum canmat_402_op_mode op_mode );
 
 
 enum canmat_status canmat_402_init( struct canmat_iface *cif, uint8_t id, struct canmat_402_drive *drive ) {
@@ -132,20 +135,21 @@ enum canmat_status canmat_402_init( struct canmat_iface *cif, uint8_t id, struct
     return CANMAT_OK;
 }
 
-static enum canmat_status check_state( struct canmat_iface *cif, struct canmat_402_drive *drive,
-                                       enum canmat_402_state_val state )
-{
-    // get word
-    CHECK_STATUS( canmat_402_ul_statusword( cif, drive->node_id, &drive->stat_word, &drive->abort_code ) );
-    // ensure we're in the expected state
-    if( state != canmat_402_state(drive) ) return CANMAT_ERR_DEV;
-    else return CANMAT_OK;
-}
+/* static enum canmat_status check_state( struct canmat_iface *cif, struct canmat_402_drive *drive, */
+/*                                        enum canmat_402_state_val state ) */
+/* { */
+/*     // get word */
+/*     CHECK_STATUS( canmat_402_ul_statusword( cif, drive->node_id, &drive->stat_word, &drive->abort_code ) ); */
+/*     // ensure we're in the expected state */
+/*     if( state != canmat_402_state(drive) ) return CANMAT_ERR_DEV; */
+/*     else return CANMAT_OK; */
+/* } */
 
 enum canmat_status canmat_402_start( struct canmat_iface *cif, struct canmat_402_drive *drive ) {
     // TODO: handle quick-stopped drives
     // TODO: check status word after each dl_control to make sure we really transitioned
 
+    printf("start: %x\n", drive->ctrl_word);
 
     // update status
     int c = 0;
@@ -158,19 +162,19 @@ enum canmat_status canmat_402_start( struct canmat_iface *cif, struct canmat_402
             CHECK_STATUS( canmat_send_nmt( cif, drive->node_id, CANMAT_NMT_START_REMOTE ) );
             break;
         case CANMAT_402_STATE_VAL_OFF_SW_ON_DISABLE:
-            CHECK_STATUS( dl_control_mask( cif, drive,
-                                           CANMAT_402_CTRLCMD_MASK_AND_SHUTDOWN,
-                                           CANMAT_402_CTRLCMD_MASK_OR_SHUTDOWN ) );
+            CHECK_STATUS( canmat_402_dl_ctrlmask( cif, drive,
+                                                  CANMAT_402_CTRLCMD_MASK_AND_SHUTDOWN,
+                                                  CANMAT_402_CTRLCMD_MASK_OR_SHUTDOWN ) );
             break;
         case CANMAT_402_STATE_VAL_OFF_RDY:
-            CHECK_STATUS( dl_control_mask( cif, drive,
-                                           CANMAT_402_CTRLCMD_MASK_AND_SWITCH_ON,
-                                           CANMAT_402_CTRLCMD_MASK_OR_SWITCH_ON ) );
+            CHECK_STATUS( canmat_402_dl_ctrlmask( cif, drive,
+                                                  CANMAT_402_CTRLCMD_MASK_AND_SWITCH_ON,
+                                                  CANMAT_402_CTRLCMD_MASK_OR_SWITCH_ON ) );
             break;
         case CANMAT_402_STATE_VAL_ON_OP_DIS:
-            CHECK_STATUS( dl_control_mask( cif, drive,
-                                           CANMAT_402_CTRLCMD_MASK_AND_ENABLE_OP,
-                                           CANMAT_402_CTRLCMD_MASK_OR_ENABLE_OP ) );
+            CHECK_STATUS( canmat_402_dl_ctrlmask( cif, drive,
+                                                  CANMAT_402_CTRLCMD_MASK_AND_ENABLE_OP,
+                                                  CANMAT_402_CTRLCMD_MASK_OR_ENABLE_OP ) );
             break;
         case CANMAT_402_STATE_VAL_ON_OP_EN:
             return CANMAT_OK;
@@ -178,15 +182,15 @@ enum canmat_status canmat_402_start( struct canmat_iface *cif, struct canmat_402
             return CANMAT_ERR_PARAM; // TODO
         case CANMAT_402_STATE_VAL_FAULT_REACTION_ACTIVE:
         case CANMAT_402_STATE_VAL_FAULT:
-            CHECK_STATUS( dl_control_mask( cif, drive,
-                                           CANMAT_402_CTRLCMD_MASK_AND_SHUTDOWN,
-                                           CANMAT_402_CTRLCMD_MASK_OR_SHUTDOWN ) );
+            CHECK_STATUS( canmat_402_dl_ctrlmask( cif, drive,
+                                                  CANMAT_402_CTRLCMD_MASK_AND_SHUTDOWN,
+                                                  CANMAT_402_CTRLCMD_MASK_OR_SHUTDOWN ) );
             // Schunk drives seem to need this start NMT to get over the error
             CHECK_STATUS( canmat_send_nmt( cif, drive->node_id, CANMAT_NMT_START_REMOTE ) );
             // reset error
-            CHECK_STATUS( dl_control_mask( cif, drive,
-                                           CANMAT_402_CTRLCMD_MASK_AND_RESET_FAULT,
-                                           CANMAT_402_CTRLCMD_MASK_OR_RESET_FAULT ) );
+            CHECK_STATUS( canmat_402_dl_ctrlmask( cif, drive,
+                                                  CANMAT_402_CTRLCMD_MASK_AND_RESET_FAULT,
+                                                  CANMAT_402_CTRLCMD_MASK_OR_RESET_FAULT ) );
             break;
         case CANMAT_402_STATE_VAL_UNKNOWN:
         default:
@@ -197,42 +201,10 @@ enum canmat_status canmat_402_start( struct canmat_iface *cif, struct canmat_402
     }
     return CANMAT_ERR_DEV;
 
-    /* // shutdown */
-    /* CHECK_STATUS( dl_control_mask( cif, drive, */
-    /*                                CANMAT_402_CTRLCMD_MASK_AND_SHUTDOWN, CANMAT_402_CTRLCMD_MASK_OR_SHUTDOWN ) ); */
-
-
-    /* // NMT start */
-    /* CHECK_STATUS( canmat_send_nmt( cif, drive->node_id, CANMAT_NMT_START_REMOTE ) ); */
-
-    /* sleep(1); */
-
-    /* // shutdown again */
-    /* CHECK_STATUS( dl_control_mask( cif, drive, */
-    /*                                CANMAT_402_CTRLCMD_MASK_AND_SHUTDOWN, CANMAT_402_CTRLCMD_MASK_OR_SHUTDOWN ) ); */
-
-    /* // ensure we're in the expected state */
-    /* printf("check: off_dis\n"); */
-    /* CHECK_STATUS( check_state( cif, drive,  CANMAT_402_STATE_VAL_OFF_RDY ) ); */
-
-    /* // switch-on */
-
-    /* sleep(1); */
-    /* printf("check: sw on dis\n"); */
-    /* CHECK_STATUS( check_state( cif, drive,  CANMAT_402_STATE_VAL_ON_OP_DIS ) ); */
-
-    /* // enable */
-
-    /* sleep(1); */
-
-    /* printf("check: on, op en\n"); */
-    /* CHECK_STATUS( check_state( cif, drive,  CANMAT_402_STATE_VAL_ON_OP_EN ) ); */
-
-    return CANMAT_OK;
 }
 
 enum canmat_status canmat_402_stop( struct canmat_iface *cif, struct canmat_402_drive *drive ) {
-    return dl_control_mask( cif, drive, CANMAT_402_CTRLCMD_MASK_AND_SHUTDOWN, CANMAT_402_CTRLCMD_MASK_OR_SHUTDOWN );
+    return canmat_402_dl_ctrlmask( cif, drive, CANMAT_402_CTRLCMD_MASK_AND_SHUTDOWN, CANMAT_402_CTRLCMD_MASK_OR_SHUTDOWN );
 }
 
 enum canmat_status canmat_402_probe_pdo(
@@ -241,4 +213,58 @@ enum canmat_status canmat_402_probe_pdo(
 {
     return CANMAT_OK;
 
+}
+
+enum canmat_status canmat_402_set_op_mode( struct canmat_iface *cif, struct canmat_402_drive *drive,
+                                           enum canmat_402_op_mode op_mode ) {
+    // Depend on a user-configurable RPDO for now
+    if( drive->rpdo_user < 0 || drive->rpdo_user > 0xFF ) return CANMAT_ERR_PARAM;
+
+    // Check that opmode is handled
+    canmat_obj_t *ref_obj = NULL;
+    uint16_t ctrl_and = 0xFFFF, ctrl_or = 0;
+    canmat_scalar_t ref_val = {0};
+    switch( op_mode ) {
+    case CANMAT_402_OP_MODE_VELOCITY:
+        ref_obj = CANMAT_402_OBJ_VL_TARGET_VELOCITY;
+        ref_val.u16 = 0;
+        ctrl_and = (~(CANMAT_402_CTRLMASK_HALT)) & 0xFFFF;
+        ctrl_or = ( CANMAT_402_CTRLMASK_VL_RFG_ENABLE |
+                    CANMAT_402_CTRLMASK_VL_RFG_UNLOCK |
+                    CANMAT_402_CTRLMASK_VL_RFG_USE_REF );
+        break;
+    default: return CANMAT_ERR_PARAM;
+    }
+    if( NULL == ref_obj ) return CANMAT_ERR_PARAM;
+
+    // Make sure the drive is halted
+    if( ! (drive->ctrl_word & CANMAT_402_CTRLMASK_HALT) ) {
+        return CANMAT_ERR_MOTION;
+    }
+
+    // set the mode
+    CHECK_STATUS( canmat_402_dl_modes_of_operation( cif, drive->node_id, op_mode,
+                                                    &(drive->abort_code) ) );
+    drive->op_mode = op_mode;
+
+    // Set reference to no-motion value
+    CHECK_STATUS( canmat_obj_dl( cif, drive->node_id, ref_obj, &ref_val, &(drive->abort_code) ) );
+
+    // Map the RPDO
+    canmat_status_t r = canmat_rpdo_remap( cif, drive->node_id, (uint8_t)(drive->rpdo_user),
+                                           1, ref_obj, &(drive->abort_code) );
+
+    // Make transmission asynchronous
+    CHECK_STATUS( canmat_sdo_dl_u8( cif, drive->node_id,
+                                    (uint16_t)(CANMAT_RPDO_COM_BASE + drive->rpdo_user),
+                                    CANMAT_402_OBJ_RPDO00_COMMUNICATION_PARAMETER_SUB_TRANSMISSION_TYPE->subindex,
+                                    0xFF, &(drive->abort_code)) );
+
+    // set control word
+    printf("%x %x %x\n", drive->ctrl_word, ctrl_and, ctrl_or);
+    CHECK_STATUS( canmat_402_dl_ctrlmask( cif, drive,
+                                          ctrl_and,
+                                          ctrl_or ) );
+    printf("%x %x %x\n", drive->ctrl_word, ctrl_and, ctrl_or);
+    return r;
 }
