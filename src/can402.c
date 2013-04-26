@@ -54,14 +54,14 @@
 
 
 #include <syslog.h>
+#include <math.h>
 
 #include "socanmatic.h"
-#include "socanmatic/util.h"
 #include "socanmatic_private.h"
 
 #include "socanmatic/dict402.h"
 
-#include "sns.h"
+#include <sns.h>
 
 struct canmat_402_set {
     struct canmat_iface *cif;
@@ -72,14 +72,19 @@ struct canmat_402_set {
 
 struct can402_cx {
     struct canmat_402_set drive_set;
-    struct sns_msg_motor_ref *ref;
+    struct sns_msg_motor_ref *msg_ref;
+
+    ach_channel_t chan_ref;
 };
 
+const char *opt_chan = "motor-ref";
 const char *opt_cmd = NULL;
-int opt_verbosity = 0;
 const char *opt_api = "socketcan";
 const char **opt_pos = NULL;
 size_t opt_npos = 0;
+
+// FIXME: 1
+double opt_vel_factor = 180/M_PI*1000;
 
 /**********/
 /* PROTOS */
@@ -90,7 +95,11 @@ static void run( struct can402_cx *cx );
 static void stop( struct can402_cx *cx );
 static void parse( struct can402_cx *cx, int argc, char **argv );
 
-static void error( int level , const char fmt[], ...)          ATTR_PRINTF(2,3);
+static unsigned long parse_uhex( const char *arg, uint64_t max );
+//static unsigned long parse_u( const char *arg, uint64_t max );
+struct canmat_iface *open_iface( const char *type, const char *name );
+
+//static void error( int level , const char fmt[], ...)          ATTR_PRINTF(2,3);
 
 int main( int argc, char ** argv ) {
     struct can402_cx cx;
@@ -99,9 +108,9 @@ int main( int argc, char ** argv ) {
     //parse
     parse( &cx, argc, argv );
 
-    if( opt_verbosity ) {
+    if( sns_cx.verbosity ) {
         for( size_t i = 0; i < cx.drive_set.n; i ++ ) {
-            verbf( 1, "node: 0x%x\n", cx.drive_set.drive[i].node_id );
+            SNS_LOG( LOG_INFO, "node: 0x%x\n", cx.drive_set.drive[i].node_id );
         }
     }
 
@@ -122,8 +131,9 @@ static void parse( struct can402_cx *cx, int argc, char **argv )
 {
     assert( 0 == cx->drive_set.n );
     uint8_t node[CANMAT_NODE_MASK+1];
-    for( int c; -1 != (c = getopt(argc, argv, "vhH?Vf:a:n:")); ) {
+    for( int c; -1 != (c = getopt(argc, argv, "c:hH?Vf:a:n:" SNS_OPTSTRING)); ) {
         switch(c) {
+            SNS_OPTCASES
         case 'V':   /* version     */
             puts( "can402 " PACKAGE_VERSION "\n"
                   "\n"
@@ -134,17 +144,17 @@ static void parse( struct can402_cx *cx, int argc, char **argv )
                   "Written by Neil T. Dantam"
                 );
             exit(EXIT_SUCCESS);
-        case 'v':   /* verbose  */
-            opt_verbosity++;
-            break;
         case 'a':   /* api  */
             opt_api = optarg;
             break;
         case 'f':   /* interface  */
             cx->drive_set.cif = open_iface( opt_api, optarg );
             break;
+        case 'c':   /* interface  */
+            opt_chan = strdup(optarg);
+            break;
         case 'n':   /* node  */
-            hard_assert( cx->drive_set.n < CANMAT_NODE_MASK-1, "Too many nodes\n" );
+            SNS_REQUIRE( cx->drive_set.n < CANMAT_NODE_MASK-1, "Too many nodes\n" );
             node[cx->drive_set.n] = (uint8_t) parse_uhex( optarg, CANMAT_NODE_MASK );
             cx->drive_set.n++;
             break;
@@ -159,6 +169,7 @@ static void parse( struct can402_cx *cx, int argc, char **argv )
                   "  -a api_type,              CAN API, e.g, socketcan, ntcan\n"
                   "  -f interface,             CAN interface\n"
                   "  -f n,                     Node (multiple allowed)\n"
+                  "  -c name,                  Ach Channel name\n"
                   "  -?,                       Give program help list\n"
                   "  -V,                       Print program version\n"
                   "\n"
@@ -169,16 +180,16 @@ static void parse( struct can402_cx *cx, int argc, char **argv )
             exit(EXIT_SUCCESS);
             break;
         default:
-            invalid_arg( optarg );
+            sns_die( 0, "Invalid argument: %s\n", optarg );
         }
     }
     if( optind < argc ) {
-        invalid_arg(argv[optind]);
+        sns_die( 0, "Invalid argument: %s\n", argv[optind] );
     }
 
 
-    hard_assert( cx->drive_set.cif, "can402: missing interface.\nTry `can402 -H' for more information.\n");
-    hard_assert( cx->drive_set.n, "can402: missing node IDs.\nTry `can402 -H' for more information.\n");
+    SNS_REQUIRE( cx->drive_set.cif, "can402: missing interface.\nTry `can402 -H' for more information.\n");
+    SNS_REQUIRE( cx->drive_set.n, "can402: missing node IDs.\nTry `can402 -H' for more information.\n");
 
     // create drive struct
     cx->drive_set.drive = (struct canmat_402_drive*) malloc( cx->drive_set.n * sizeof(struct canmat_402_drive) );
@@ -186,11 +197,16 @@ static void parse( struct can402_cx *cx, int argc, char **argv )
         cx->drive_set.drive[i].node_id = node[i];
     }
 
-    cx->ref = sns_msg_motor_ref_alloc ( cx->drive_set.n );
+    cx->msg_ref = sns_msg_motor_ref_alloc ( cx->drive_set.n );
 }
 
 
 static void init( struct can402_cx *cx ) {
+
+    sns_start();
+
+    sns_chan_open( &cx->chan_ref, opt_chan, NULL );
+
 
     enum canmat_status r;
 
@@ -198,11 +214,11 @@ static void init( struct can402_cx *cx ) {
     for( size_t i = 0; i < cx->drive_set.n; i ++ ) {
         r = canmat_402_init( cx->drive_set.cif, cx->drive_set.drive[i].node_id, &cx->drive_set.drive[i] );
 
-        verbf( 1, "drive 0x%x: statusword 0x%x, state '%s' (0x%x) \n",
-               cx->drive_set.drive[i].node_id, cx->drive_set.drive[i].stat_word,
-               canmat_402_state_string( canmat_402_state(&cx->drive_set.drive[i]) ),
-               canmat_402_state(&cx->drive_set.drive[i]) );
-        hard_assert( CANMAT_OK == r, "can402: couldn't init drive 0x%x: %s\n",
+        SNS_LOG( LOG_DEBUG, "drive 0x%x: statusword 0x%x, state '%s' (0x%x) \n",
+                 cx->drive_set.drive[i].node_id, cx->drive_set.drive[i].stat_word,
+                 canmat_402_state_string( canmat_402_state(&cx->drive_set.drive[i]) ),
+                 canmat_402_state(&cx->drive_set.drive[i]) );
+        SNS_REQUIRE( CANMAT_OK == r, "can402: couldn't init drive 0x%x: %s\n",
                      cx->drive_set.drive[i].node_id, canmat_iface_strerror( cx->drive_set.cif, r) );
     }
 
@@ -210,7 +226,7 @@ static void init( struct can402_cx *cx ) {
     for( size_t i = 0; i < cx->drive_set.n; i ++ ) {
         r = canmat_402_set_op_mode( cx->drive_set.cif, &cx->drive_set.drive[i], CANMAT_402_OP_MODE_VELOCITY );
         if( r != CANMAT_OK ) {
-            error( LOG_ERR, "can402: couldn't set op mode: '%s'\n",
+            sns_die( 0, "can402: couldn't set op mode: '%s'\n",
                    canmat_iface_strerror( cx->drive_set.cif, r) );
             goto FAIL;
         }
@@ -220,16 +236,16 @@ static void init( struct can402_cx *cx ) {
     for( size_t i = 0; i < cx->drive_set.n; i ++ ) {
         r = canmat_402_start( cx->drive_set.cif, &cx->drive_set.drive[i] );
         if( CANMAT_OK != r ) {
-            error( LOG_ERR, "can402: couldn't start drive 0x%x: '%s', state: '%s'\n",
-                   cx->drive_set.drive[i].node_id, canmat_iface_strerror( cx->drive_set.cif, r),
-                   canmat_402_state_string( canmat_402_state(&cx->drive_set.drive[i]) ) );
+            sns_die( 0, "can402: couldn't start drive 0x%x: '%s', state: '%s'\n",
+                     cx->drive_set.drive[i].node_id, canmat_iface_strerror( cx->drive_set.cif, r),
+                     canmat_402_state_string( canmat_402_state(&cx->drive_set.drive[i]) ) );
             goto FAIL;
         }
 
-        verbf( 1, "drive 0x%x: statusword 0x%x, state '%s' (0x%x) \n",
-               cx->drive_set.drive[i].node_id, cx->drive_set.drive[i].stat_word,
-               canmat_402_state_string( canmat_402_state(&cx->drive_set.drive[i]) ),
-               canmat_402_state(&cx->drive_set.drive[i]) );
+        SNS_LOG( LOG_DEBUG, "drive 0x%x: statusword 0x%x, state '%s' (0x%x) \n",
+                 cx->drive_set.drive[i].node_id, cx->drive_set.drive[i].stat_word,
+                 canmat_402_state_string( canmat_402_state(&cx->drive_set.drive[i]) ),
+                 canmat_402_state(&cx->drive_set.drive[i]) );
     }
     return;
 
@@ -239,9 +255,48 @@ FAIL:
 }
 
 static void run( struct can402_cx *cx ) {
-    while(1) {
-        sleep(1);
-        printf("tick\n");
+    while( ! sns_cx.shutdown ) {
+        size_t frame_size;
+        cx->msg_ref->n = cx->drive_set.n;
+        const size_t expected_size = sns_msg_motor_ref_size(cx->msg_ref);
+        ach_status_t r = ach_get( &cx->chan_ref, cx->msg_ref,
+                                  expected_size,
+                                  &frame_size, NULL, ACH_O_WAIT | ACH_O_LAST );
+        if( ACH_OK == r ) {
+            // validate
+            if( cx->msg_ref->n == cx->drive_set.n &&
+                frame_size == expected_size )
+            {
+                if( SNS_LOG_PRIORITY(LOG_DEBUG + 1) ) {
+                    sns_msg_motor_ref_dump( stderr, cx->msg_ref );
+                }
+                // process message
+                // TODO: op mode switching
+                for( size_t i = 0; i < cx->msg_ref->n; i ++ ) {
+                    double val = cx->msg_ref->u[i] * opt_vel_factor;
+                    int16_t vl_target = 0;
+                    if( val > INT16_MAX ) vl_target = INT16_MAX;
+                    else if (val < INT16_MIN ) vl_target = INT16_MIN;
+                    else vl_target = (int16_t) val;
+                    struct can_frame can;
+                    can.can_dlc = 2;
+                    can.can_id = CANMAT_RPDO_COBID( cx->drive_set.drive[i].node_id,
+                                                    cx->drive_set.drive[i].rpdo_user );
+                    can.data[0] = (uint8_t)(vl_target & 0xFF);
+                    can.data[1] = (uint8_t)((vl_target >> 8) & 0xFF);
+                    canmat_dump_frame( stderr, &can );
+                    canmat_status_t cr = canmat_iface_send( cx->drive_set.cif, &can );
+                    SNS_CHECK( CANMAT_OK == r, LOG_ERR, 0, "Couldn't send PDO: %s\n",
+                               canmat_iface_strerror( cx->drive_set.cif, cr) );
+
+                }
+            } else {
+                SNS_LOG( LOG_ERR, "bogus message: n: %"PRIuPTR", expected: %"PRIuPTR", "
+                         "size: %"PRIuPTR", expected: %"PRIuPTR"\n",
+                         cx->msg_ref->n, cx->drive_set.n,
+                         frame_size, expected_size );
+            }
+        }
     }
 }
 
@@ -249,16 +304,49 @@ static void stop( struct can402_cx *cx ) {
     for( size_t i = 0; i < cx->drive_set.n; i ++ ) {
         canmat_status_t r = canmat_402_stop( cx->drive_set.cif, & (cx->drive_set.drive[i]) );
         if( CANMAT_OK != r ) {
-            error( LOG_ERR, "Couldn't stop node 0x%x: %s\n",
-                   cx->drive_set.drive[i].node_id,
-                   canmat_iface_strerror( cx->drive_set.cif, r) );
+            SNS_LOG( LOG_ERR, "Couldn't stop node 0x%x: %s\n",
+                     cx->drive_set.drive[i].node_id,
+                     canmat_iface_strerror( cx->drive_set.cif, r) );
         }
     }
+    sns_end();
 }
 
-static void error( int level , const char fmt[], ...) {
-    va_list argp;
-    va_start( argp, fmt );
-    vfprintf( stderr, fmt, argp );
-    va_end( argp );
+
+
+
+static unsigned long parse_uhex( const char *arg, uint64_t max ) {
+    char *endptr;
+    errno = 0;
+    unsigned long u  = strtoul( arg, &endptr, 16 );
+
+    SNS_REQUIRE( 0 == errno, "Invalid hex argument: %s (%s)\n", arg, strerror(errno) );
+    SNS_REQUIRE( u <= max, "Argument %s too big\n", arg );
+
+    return u;
+}
+
+
+/* static unsigned long parse_u( const char *arg, uint64_t max ) { */
+/*     char *endptr; */
+/*     errno = 0; */
+/*     unsigned long u  = strtoul( arg, &endptr, 0 ); */
+
+/*     SNS_REQUIRE( 0 == errno, "Invalid hex argument: %s (%s)\n", arg, strerror(errno) ); */
+/*     SNS_REQUIRE( u <= max, "Argument %s too big\n", arg ); */
+
+/*     return u; */
+/* } */
+
+struct canmat_iface *open_iface( const char *type, const char *name ) {
+    struct canmat_iface *cif = canmat_iface_new( type );
+    SNS_REQUIRE( cif, "Couldn't create interface of type: %s\n", type );
+
+    canmat_status_t r =  canmat_iface_open( cif, name);
+    SNS_REQUIRE( CANMAT_OK == r, "Couldn't open: %s, %s\n",
+                 name, canmat_iface_strerror( cif, r ) );
+
+    SNS_LOG( LOG_INFO, "Opened interface %s, type %s\n", name, type);
+
+    return cif;
 }

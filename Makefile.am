@@ -21,8 +21,7 @@ lib_LTLIBRARIES =                            \
 	libsocanmatic.la                     \
 	libsocanmatic402.la                  \
 	libsocanmatic_iface_socketcan.la     \
-	libsocanmatic_iface_ntcan.la         \
-	libsocanmatic_util.la
+	libsocanmatic_iface_ntcan.la
 
 m4_dnl bin_PROGRAMS = esdcantool
 
@@ -45,7 +44,6 @@ libsocanmatic_la_LIBADD = -ldl
 libsocanmatic402_la_SOURCES = dict402.c src/ds402.c
 
 
-libsocanmatic_util_la_SOURCES = src/private.c
 
 libsocanmatic_iface_socketcan_la_SOURCES = src/iface/iface_socketcan.c
 libsocanmatic_iface_socketcan_la_LDFLAGS = -shared
@@ -58,10 +56,10 @@ test_sdo_SOURCES = src/test_sdo.c
 test_sdo_LDADD = libsocanmatic.la  libsocanmatic402.la
 
 canmat_SOURCES = src/canmat.c src/display.c
-canmat_LDADD = libsocanmatic.la libsocanmatic402.la libsocanmatic_iface_ntcan.la libsocanmatic_iface_socketcan.la libsocanmatic_util.la
+canmat_LDADD = libsocanmatic.la libsocanmatic402.la libsocanmatic_iface_ntcan.la libsocanmatic_iface_socketcan.la
 
 can402_SOURCES = src/can402.c
-can402_LDADD = libsocanmatic.la libsocanmatic402.la libsocanmatic_iface_ntcan.la libsocanmatic_iface_socketcan.la -lsns libsocanmatic_util.la
+can402_LDADD = libsocanmatic.la libsocanmatic402.la libsocanmatic_iface_ntcan.la libsocanmatic_iface_socketcan.la -lsns -lach
 
 
 BUILT_SOURCES =                              \

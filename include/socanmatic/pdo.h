@@ -108,6 +108,8 @@ enum canmat_status canmat_rpdo_remap(
     uint8_t cnt, const struct canmat_obj *objs,
     uint32_t *err );
 
+#define CANMAT_RPDO_COBID( node, num ) ((CANMAT_FUNC_CODE_PDO1_RX + ((num)<<2))|(node))
+
 #ifdef __cplusplus
 }
 #endif
