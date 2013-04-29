@@ -124,6 +124,14 @@ enum canmat_status canmat_402_init( struct canmat_iface *cif, uint8_t id, struct
     CHECK_STATUS( canmat_402_ul_velocity_actual_value( cif, drive->node_id,
                                                        &drive->actual_vel_raw, &drive->abort_code ) );
 
+    // op mode
+    {
+        int8_t i;
+        CHECK_STATUS( canmat_402_ul_modes_of_operation( cif, drive->node_id,
+                                                        &i, &drive->abort_code ) );
+        drive->op_mode = (enum canmat_402_op_mode)i;
+    }
+
     // current
     /* { */
     /*     canmat_obj_t *obj = canmat_dict_search_name( &canmat_dict402, "current actual value" ); */
@@ -237,18 +245,22 @@ enum canmat_status canmat_402_set_op_mode( struct canmat_iface *cif, struct canm
     }
     if( NULL == ref_obj ) return CANMAT_ERR_PARAM;
 
-    // Make sure the drive is halted
-    if( ! (drive->ctrl_word & CANMAT_402_CTRLMASK_HALT) ) {
-        return CANMAT_ERR_MOTION;
+    // Set mode unless already set
+    if( op_mode != drive->op_mode ) {
+        // Make sure the drive is halted
+        if( ! (drive->ctrl_word & CANMAT_402_CTRLMASK_HALT) ) {
+            return CANMAT_ERR_MOTION;
+        }
+
+        // set the mode
+        CHECK_STATUS( canmat_402_dl_modes_of_operation( cif, drive->node_id, op_mode,
+                                                        &(drive->abort_code) ) );
+        drive->op_mode = op_mode;
+
+        // Set reference to no-motion value
+        CHECK_STATUS( canmat_obj_dl( cif, drive->node_id, ref_obj, &ref_val, &(drive->abort_code) ) );
     }
 
-    // set the mode
-    CHECK_STATUS( canmat_402_dl_modes_of_operation( cif, drive->node_id, op_mode,
-                                                    &(drive->abort_code) ) );
-    drive->op_mode = op_mode;
-
-    // Set reference to no-motion value
-    CHECK_STATUS( canmat_obj_dl( cif, drive->node_id, ref_obj, &ref_val, &(drive->abort_code) ) );
 
     // Map the RPDO
     canmat_status_t r = canmat_rpdo_remap( cif, drive->node_id, (uint8_t)(drive->rpdo_user),
@@ -261,10 +273,8 @@ enum canmat_status canmat_402_set_op_mode( struct canmat_iface *cif, struct canm
                                     0xFF, &(drive->abort_code)) );
 
     // set control word
-    printf("%x %x %x\n", drive->ctrl_word, ctrl_and, ctrl_or);
     CHECK_STATUS( canmat_402_dl_ctrlmask( cif, drive,
                                           ctrl_and,
                                           ctrl_or ) );
-    printf("%x %x %x\n", drive->ctrl_word, ctrl_and, ctrl_or);
     return r;
 }
