@@ -101,3 +101,14 @@ enum canmat_status canmat_rpdo_remap(
 
     return r;
 }
+
+enum canmat_status canmat_rpdo_send(
+    struct canmat_iface *cif, uint8_t node, uint8_t pdo,
+    uint8_t len, uint8_t data[] ) {
+    // build can frame
+    struct can_frame can;
+    can.can_dlc = len;
+    can.can_id = CANMAT_RPDO_COBID( node, pdo );
+    memcpy( can.data, data, can.can_dlc );
+    return canmat_iface_send( cif, &can );
+}

@@ -108,6 +108,26 @@ enum canmat_status canmat_rpdo_remap(
     uint8_t cnt, const struct canmat_obj *objs,
     uint32_t *err );
 
+enum canmat_status canmat_rpdo_send(
+    struct canmat_iface *cif, uint8_t node, uint8_t pdo,
+    uint8_t len, uint8_t data[] );
+
+static inline enum canmat_status canmat_rpdo_send_u16(
+    struct canmat_iface *cif, uint8_t node, uint8_t pdo,
+    uint16_t val ) {
+    uint8_t data[sizeof(val)] = { (uint8_t)(val & 0xFF),
+                                  (uint8_t)((val >> 8) & 0xFF) };
+    return canmat_rpdo_send( cif, node, pdo, sizeof(val), data );
+}
+static inline enum canmat_status canmat_rpdo_send_i16(
+    struct canmat_iface *cif, uint8_t node, uint8_t pdo,
+    int16_t val ) {
+    uint8_t data[sizeof(val)] = { (uint8_t)(val & 0xFF),
+                                  (uint8_t)((val >> 8) & 0xFF) };
+    return canmat_rpdo_send( cif, node, pdo, sizeof(val), data );
+}
+
+
 #define CANMAT_RPDO_COBID( node, num ) ((CANMAT_FUNC_CODE_PDO1_RX + ((num)<<8))|(node))
 
 #ifdef __cplusplus

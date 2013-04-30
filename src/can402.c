@@ -133,9 +133,6 @@ int main( int argc, char ** argv ) {
 static void parse( struct can402_cx *cx, int argc, char **argv )
 {
     assert( 0 == cx->drive_set.n );
-    //static uint8_t node[CANMAT_NODE_MASK+1];
-    //static uint8_t rpdo_ctrl[CANMAT_NODE_MASK+1];
-    //static uint8_t rpdo_user[CANMAT_NODE_MASK+1];
     for( int c; -1 != (c = getopt(argc, argv, "c:hH?Vf:a:n:R:C:" SNS_OPTSTRING)); ) {
         switch(c) {
             SNS_OPTCASES
@@ -346,15 +343,11 @@ static void process( struct can402_cx *cx ) {
             if( val > INT16_MAX ) vl_target = INT16_MAX;
             else if (val < INT16_MIN ) vl_target = INT16_MIN;
             else vl_target = (int16_t) val;
-            // build can frame
-            struct can_frame can;
-            can.can_dlc = 2;
-            can.can_id = CANMAT_RPDO_COBID( cx->drive_set.drive[i].node_id,
-                                            cx->drive_set.drive[i].rpdo_user );
-            can.data[0] = (uint8_t)(vl_target & 0xFF);
-            can.data[1] = (uint8_t)((vl_target >> 8) & 0xFF);
-            // send frame
-            canmat_status_t cr = canmat_iface_send( cx->drive_set.cif, &can );
+            // send pdo
+            canmat_status_t cr = canmat_rpdo_send_i16( cx->drive_set.cif,
+                                                       cx->drive_set.drive[i].node_id,
+                                                       cx->drive_set.drive[i].rpdo_user,
+                                                       vl_target );
             SNS_CHECK( CANMAT_OK == cr, LOG_ERR, 0, "Couldn't send PDO: %s\n",
                        canmat_iface_strerror( cx->drive_set.cif, cr) );
 
