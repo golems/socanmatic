@@ -213,6 +213,13 @@ static void parse( struct can402_cx *cx, int argc, char **argv )
     SNS_REQUIRE( cx->drive_set.n, "can402: missing node IDs.\nTry `can402 -H' for more information.\n");
 
     cx->msg_ref = sns_msg_motor_ref_alloc ( cx->drive_set.n );
+
+    for( size_t i = 0; i < cx->drive_set.n; i++ ) {
+        SNS_REQUIRE( cx->drive_set.drive[i].rpdo_user != cx->drive_set.drive[i].rpdo_ctrl,
+                     "Need distinct user and controlword PDOs.  Drive %"PRIuPTR" using RPDO %d for both\n",
+                     i, cx->drive_set.drive[i].rpdo_user );
+    }
+
 }
 
 
@@ -237,11 +244,22 @@ static void init( struct can402_cx *cx ) {
                      cx->drive_set.drive[i].node_id, canmat_iface_strerror( cx->drive_set.cif, r) );
     }
 
-    // set mode
+    // Map the control
+    for( size_t i = 0; i < cx->drive_set.n; i ++ ) {
+        r = canmat_rpdo_remap( cx->drive_set.cif, cx->drive_set.drive[i].node_id, (uint8_t)(cx->drive_set.drive[i].rpdo_ctrl),
+                               1, CANMAT_402_OBJ_CONTROLWORD, &cx->drive_set.drive[i].abort_code );
+        if( r != CANMAT_OK ) {
+            SNS_LOG( LOG_EMERG, "can402: couldn't map control rpdo: '%s'\n",
+                     canmat_iface_strerror( cx->drive_set.cif, r) );
+            goto FAIL;
+        }
+    }
+
+    // set mode and PDOs
     for( size_t i = 0; i < cx->drive_set.n; i ++ ) {
         r = canmat_402_set_op_mode( cx->drive_set.cif, &cx->drive_set.drive[i], CANMAT_402_OP_MODE_VELOCITY );
         if( r != CANMAT_OK ) {
-            sns_die( 0, "can402: couldn't set op mode: '%s'\n",
+            SNS_LOG( LOG_EMERG, "can402: couldn't set op mode: '%s'\n",
                    canmat_iface_strerror( cx->drive_set.cif, r) );
             goto FAIL;
         }
@@ -251,9 +269,9 @@ static void init( struct can402_cx *cx ) {
     for( size_t i = 0; i < cx->drive_set.n; i ++ ) {
         r = canmat_402_start( cx->drive_set.cif, &cx->drive_set.drive[i] );
         if( CANMAT_OK != r ) {
-            sns_die( 0, "can402: couldn't start drive 0x%x: '%s', state: '%s'\n",
-                     cx->drive_set.drive[i].node_id, canmat_iface_strerror( cx->drive_set.cif, r),
-                     canmat_402_state_string( canmat_402_state(&cx->drive_set.drive[i]) ) );
+            SNS_LOG( LOG_EMERG, "can402: couldn't start drive 0x%x: '%s', state: '%s'\n",
+                      cx->drive_set.drive[i].node_id, canmat_iface_strerror( cx->drive_set.cif, r),
+                      canmat_402_state_string( canmat_402_state(&cx->drive_set.drive[i]) ) );
             goto FAIL;
         }
 
