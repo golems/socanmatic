@@ -179,6 +179,8 @@ struct canmat_402_drive {
 
     // PDO number (zero indexed) to configure based on the selected op mode
     int rpdo_user;
+
+    int rpdo_ctrl; ///< RPDO for setting control word
 };
 
 ///< initialize drive variables in struct

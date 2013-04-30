@@ -58,6 +58,9 @@ enum canmat_status canmat_rpdo_remap(
     uint16_t idx_com = (CANMAT_RPDO_COM_BASE+pdo) & 0xFFFF;
     uint16_t idx_map = (CANMAT_RPDO_MAP_BASE+pdo) & 0xFFFF;
 
+    // TODO: Upload some of these SDOs first and don't remap them if
+    // they are already set properly
+
     // Read COMM
     uint32_t comm;
     r = canmat_sdo_ul_u32( cif, node, idx_com, 1,
@@ -92,11 +95,9 @@ enum canmat_status canmat_rpdo_remap(
     if( CANMAT_OK != r ) return r;
 
     // Set valid bit 0 of sub-index 1 in COMM
-    if( 0 == (comm & CANMAT_COBID_PDO_MASK_VALID) ) {
-        r = canmat_sdo_dl_u32( cif, node, idx_com, 1,
-                              comm & ~CANMAT_COBID_PDO_MASK_VALID, err );
-        if( CANMAT_OK != r ) return r;
-    }
+    r = canmat_sdo_dl_u32( cif, node, idx_com, 1,
+                           comm & ~CANMAT_COBID_PDO_MASK_VALID, err );
+    if( CANMAT_OK != r ) return r;
 
     return r;
 }
