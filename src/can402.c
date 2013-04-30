@@ -74,6 +74,9 @@ struct can402_cx {
     struct canmat_402_set drive_set;
     struct sns_msg_motor_ref *msg_ref;
 
+    enum canmat_402_op_mode op_mode;
+    _Bool halt;
+
     ach_channel_t chan_ref;
 };
 
@@ -84,6 +87,7 @@ const char **opt_pos = NULL;
 size_t opt_npos = 0;
 int opt_rpdo_ctrl = 0;
 int opt_rpdo_user = 1;
+double opt_timeout_sec = 0.1;
 
 // FIXME: 1
 double opt_vel_factor = 180/M_PI*1000;
@@ -95,6 +99,7 @@ double opt_vel_factor = 180/M_PI*1000;
 static void init( struct can402_cx *cx );
 static void run( struct can402_cx *cx );
 static void process( struct can402_cx *cx );
+static void halt( struct can402_cx *cx, _Bool is_halt );
 static void stop( struct can402_cx *cx );
 static void parse( struct can402_cx *cx, int argc, char **argv );
 
@@ -107,6 +112,10 @@ struct canmat_iface *open_iface( const char *type, const char *name );
 int main( int argc, char ** argv ) {
     struct can402_cx cx;
     memset( &cx, 0, sizeof(cx));
+
+    // defaults
+    cx.op_mode = CANMAT_402_OP_MODE_VELOCITY;
+    cx.halt = 1;
 
     //parse
     parse( &cx, argc, argv );
@@ -285,13 +294,17 @@ FAIL:
 }
 
 static void run( struct can402_cx *cx ) {
+    uint64_t timeout_ns = 1e9*opt_timeout_sec;
     while( ! sns_cx.shutdown ) {
         size_t frame_size;
         cx->msg_ref->n = cx->drive_set.n;
         const size_t expected_size = sns_msg_motor_ref_size(cx->msg_ref);
+        struct timespec now;
+        clock_gettime( ACH_DEFAULT_CLOCK, &now );
+        struct timespec timeout = sns_time_add_ns( now, timeout_ns );
         ach_status_t r = ach_get( &cx->chan_ref, cx->msg_ref,
                                   expected_size,
-                                  &frame_size, NULL, ACH_O_WAIT | ACH_O_LAST );
+                                  &frame_size, &timeout, ACH_O_WAIT | ACH_O_LAST );
         switch(r) {
         case ACH_MISSED_FRAME: /* This is probably OK */
         case ACH_OK:
@@ -309,7 +322,7 @@ static void run( struct can402_cx *cx ) {
             break;
         case ACH_TIMEOUT:
             /* TODO: halt and post feedback */
-
+            halt(cx, 1);
             break;
             /* Really bad things we just give up on */
         case ACH_BUG:
@@ -333,9 +346,11 @@ static void process( struct can402_cx *cx ) {
     // Check if expired
 
     // TODO: op mode switching
+    // TODO: check that mode is supported
     switch( cx->msg_ref->mode ) {
     case SNS_MOTOR_MODE_VEL:
-        // TODO: check that mode is supported
+        halt(cx, 0); // unhalt
+        if( cx->halt ) return;  // make sure we unhalted
         for( size_t i = 0; i < cx->msg_ref->n; i ++ ) {
             double val = cx->msg_ref->u[i] * opt_vel_factor;
             int16_t vl_target = 0;
@@ -356,6 +371,31 @@ static void process( struct can402_cx *cx ) {
     default:
         SNS_LOG( LOG_ERR, "unhandled op mode in motor_ref msg: '%d'\n", cx->msg_ref->mode );
     }
+}
+
+
+static void halt( struct can402_cx *cx, _Bool is_halt ) {
+    for( size_t i = 0; i < cx->drive_set.n; i ++ ) {
+        _Bool halted = cx->drive_set.drive[i].ctrl_word & CANMAT_402_CTRLMASK_HALT;
+        if( (is_halt && !halted) || (!is_halt && halted) ) {
+            uint16_t new_ctrl = is_halt ?
+                (cx->drive_set.drive[i].ctrl_word | CANMAT_402_CTRLMASK_HALT ) :
+                (cx->drive_set.drive[i].ctrl_word & ~CANMAT_402_CTRLMASK_HALT );
+            canmat_status_t r = canmat_rpdo_send_u16( cx->drive_set.cif,
+                                                      cx->drive_set.drive[i].node_id,
+                                                      cx->drive_set.drive[i].rpdo_ctrl,
+                                                      new_ctrl );
+            if( CANMAT_OK != r ) {
+                SNS_LOG( LOG_EMERG, "Couldn't send halting PDO: %s\n",
+                         canmat_iface_strerror( cx->drive_set.cif, r) );
+                // try to halt (probably will fail again)
+                if( !is_halt ) {  halt(cx,1); return; }
+            } else {
+                cx->drive_set.drive[i].ctrl_word = new_ctrl;
+            }
+        }
+    }
+    cx->halt = is_halt;
 }
 
 

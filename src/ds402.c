@@ -236,7 +236,7 @@ enum canmat_status canmat_402_set_op_mode( struct canmat_iface *cif, struct canm
     case CANMAT_402_OP_MODE_VELOCITY:
         ref_obj = CANMAT_402_OBJ_VL_TARGET_VELOCITY;
         ref_val.u16 = 0;
-        ctrl_and = (~(CANMAT_402_CTRLMASK_HALT)) & 0xFFFF;
+        ctrl_and = 0xFFFF;
         ctrl_or = ( CANMAT_402_CTRLMASK_VL_RFG_ENABLE |
                     CANMAT_402_CTRLMASK_VL_RFG_UNLOCK |
                     CANMAT_402_CTRLMASK_VL_RFG_USE_REF );
