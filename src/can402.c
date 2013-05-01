@@ -41,6 +41,16 @@
  */
 
 
+/* CAN402: Driver daemon for CANopen servo drives
+ *
+ * Reads reference commands from Ach channel, sends to drives.
+ * Reads feedback from drives, posts to Ach channel
+ *
+ * PDO Usage:
+ *   - Needs two RPDOs, one for control word and one for reference value
+ *
+ */
+
 #include "config.h"
 
 #include <stdarg.h>
@@ -78,6 +88,7 @@ struct can402_cx {
     _Bool halt;
 
     ach_channel_t chan_ref;
+    struct timespec now;
 };
 
 const char *opt_chan = "motor-ref";
@@ -294,17 +305,17 @@ FAIL:
 }
 
 static void run( struct can402_cx *cx ) {
-    uint64_t timeout_ns = 1e9*opt_timeout_sec;
+    int64_t timeout_ns = (int64_t)(1e9*opt_timeout_sec);
+    clock_gettime( ACH_DEFAULT_CLOCK, &cx->now );
     while( ! sns_cx.shutdown ) {
         size_t frame_size;
         cx->msg_ref->n = cx->drive_set.n;
         const size_t expected_size = sns_msg_motor_ref_size(cx->msg_ref);
-        struct timespec now;
-        clock_gettime( ACH_DEFAULT_CLOCK, &now );
-        struct timespec timeout = sns_time_add_ns( now, timeout_ns );
+        struct timespec timeout = sns_time_add_ns( cx->now, timeout_ns );
         ach_status_t r = ach_get( &cx->chan_ref, cx->msg_ref,
                                   expected_size,
                                   &frame_size, &timeout, ACH_O_WAIT | ACH_O_LAST );
+        clock_gettime( ACH_DEFAULT_CLOCK, &cx->now );
         switch(r) {
         case ACH_MISSED_FRAME: /* This is probably OK */
         case ACH_OK:
@@ -322,6 +333,7 @@ static void run( struct can402_cx *cx ) {
             break;
         case ACH_TIMEOUT:
             /* TODO: halt and post feedback */
+            SNS_LOG( LOG_NOTICE, "Reference timeout\n");
             halt(cx, 1);
             break;
             /* Really bad things we just give up on */
@@ -340,10 +352,11 @@ static void process( struct can402_cx *cx ) {
     if( SNS_LOG_PRIORITY(LOG_DEBUG + 1) ) {
         sns_msg_motor_ref_dump( stderr, cx->msg_ref );
     }
-    // process message
-
-
     // Check if expired
+    if( sns_msg_is_expired(&cx->msg_ref->header, &cx->now) ) {
+        SNS_LOG( LOG_WARNING, "Reference message expired\n");
+        return;
+    }
 
     // TODO: op mode switching
     // TODO: check that mode is supported
@@ -361,7 +374,7 @@ static void process( struct can402_cx *cx ) {
             // send pdo
             canmat_status_t cr = canmat_rpdo_send_i16( cx->drive_set.cif,
                                                        cx->drive_set.drive[i].node_id,
-                                                       cx->drive_set.drive[i].rpdo_user,
+                                                       (uint8_t)cx->drive_set.drive[i].rpdo_user,
                                                        vl_target );
             SNS_CHECK( CANMAT_OK == cr, LOG_ERR, 0, "Couldn't send PDO: %s\n",
                        canmat_iface_strerror( cx->drive_set.cif, cr) );
@@ -378,12 +391,12 @@ static void halt( struct can402_cx *cx, _Bool is_halt ) {
     for( size_t i = 0; i < cx->drive_set.n; i ++ ) {
         _Bool halted = cx->drive_set.drive[i].ctrl_word & CANMAT_402_CTRLMASK_HALT;
         if( (is_halt && !halted) || (!is_halt && halted) ) {
-            uint16_t new_ctrl = is_halt ?
-                (cx->drive_set.drive[i].ctrl_word | CANMAT_402_CTRLMASK_HALT ) :
-                (cx->drive_set.drive[i].ctrl_word & ~CANMAT_402_CTRLMASK_HALT );
+            uint16_t new_ctrl = (uint16_t)(is_halt ?
+                                           (cx->drive_set.drive[i].ctrl_word | CANMAT_402_CTRLMASK_HALT ) :
+                                           (cx->drive_set.drive[i].ctrl_word & ~CANMAT_402_CTRLMASK_HALT ));
             canmat_status_t r = canmat_rpdo_send_u16( cx->drive_set.cif,
                                                       cx->drive_set.drive[i].node_id,
-                                                      cx->drive_set.drive[i].rpdo_ctrl,
+                                                      (uint8_t)cx->drive_set.drive[i].rpdo_ctrl,
                                                       new_ctrl );
             if( CANMAT_OK != r ) {
                 SNS_LOG( LOG_EMERG, "Couldn't send halting PDO: %s\n",
