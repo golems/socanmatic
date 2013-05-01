@@ -53,7 +53,7 @@
 enum canmat_status canmat_pdo_remap(
     struct canmat_iface *cif, uint8_t node, uint8_t pdo, enum canmat_direction dir,
     int transmission_type, int inhibit_time, int event_timer,
-    uint8_t cnt, const struct canmat_obj *objs, uint32_t *err )
+    uint8_t cnt, const struct canmat_obj *objs[], uint32_t *err )
 {
 
     // check parameters
@@ -99,11 +99,11 @@ enum canmat_status canmat_pdo_remap(
 
     // Modify mapping
     for( uint8_t i = 1; i <= cnt; i ++ ) {
-        const struct canmat_obj *obj = objs + i - 1;
+        const struct canmat_obj *obj = objs[i - 1];
         int objsize = canmat_obj_bitsize( obj );
         if( objsize < 1 || 0 != objsize % 8 ) return CANMAT_ERR_PARAM;
         uint32_t map = (uint32_t)( (obj->index << 16) | (obj->subindex << 8) | (objsize & 0xFF) );
-        r = canmat_sdo_dl_u32( cif, node, idx_map, 1,
+        r = canmat_sdo_dl_u32( cif, node, idx_map, i,
                                map, err );
         if( CANMAT_OK != r ) return r;
     }

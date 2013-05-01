@@ -106,7 +106,7 @@ enum canmat_status canmat_pdo_process(
 enum canmat_status canmat_pdo_remap(
     struct canmat_iface *cif, uint8_t node, uint8_t pdo, enum canmat_direction dir,
     int transmission_type, int inhibit_time, int event_timer,
-    uint8_t cnt, const struct canmat_obj *objs,
+    uint8_t cnt, const struct canmat_obj *objs[],
     uint32_t *err );
 
 enum canmat_status canmat_rpdo_send(

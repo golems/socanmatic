@@ -263,10 +263,11 @@ static void init( struct can402_cx *cx ) {
 
     // Map the control
     for( size_t i = 0; i < cx->drive_set.n; i ++ ) {
+        const struct canmat_obj *obj[1] =  {CANMAT_402_OBJ_CONTROLWORD};
         r = canmat_pdo_remap( cx->drive_set.cif, cx->drive_set.drive[i].node_id,
                               (uint8_t)(cx->drive_set.drive[i].rpdo_ctrl), CANMAT_DL,
                               CANMAT_PDO_TRANSMISSION_TYPE_EVENT_DRIVEN, -1, -1,
-                               1, CANMAT_402_OBJ_CONTROLWORD, &cx->drive_set.drive[i].abort_code );
+                              1, obj, &cx->drive_set.drive[i].abort_code );
         if( r != CANMAT_OK ) {
             SNS_LOG( LOG_EMERG, "can402: couldn't map control rpdo: '%s'\n",
                      canmat_iface_strerror( cx->drive_set.cif, r) );
@@ -275,17 +276,19 @@ static void init( struct can402_cx *cx ) {
     }
 
     // map the feedback
-    /* for( size_t i = 0; i < cx->drive_set.n; i ++ ) { */
-    /*     r = canmat_pdo_remap( cx->drive_set.cif, cx->drive_set.drive[i].node_id, */
-    /*                           (uint8_t)(cx->drive_set.drive[i].tpdo_user), CANMAT_UL, */
-    /*                           0xFF, -1, 1000, */
-    /*                           1, CANMAT_402_OBJ_STATUSWORD, &cx->drive_set.drive[i].abort_code ); */
-    /*     if( r != CANMAT_OK ) { */
-    /*         SNS_LOG( LOG_EMERG, "can402: couldn't map control rpdo: '%s'\n", */
-    /*                  canmat_iface_strerror( cx->drive_set.cif, r) ); */
-    /*         goto FAIL; */
-    /*     } */
-    /* } */
+    for( size_t i = 0; i < cx->drive_set.n; i ++ ) {
+        const canmat_obj_t *objs[2] = { CANMAT_402_OBJ_POSITION_ACTUAL_VALUE,
+                                        CANMAT_402_OBJ_VELOCITY_ACTUAL_VALUE };
+        r = canmat_pdo_remap( cx->drive_set.cif, cx->drive_set.drive[i].node_id,
+                              (uint8_t)(cx->drive_set.drive[i].tpdo_user), CANMAT_UL,
+                              0xFF, -1, 10000,
+                              2, objs, &cx->drive_set.drive[i].abort_code );
+        if( r != CANMAT_OK ) {
+            SNS_LOG( LOG_EMERG, "can402: couldn't map control rpdo: '%s'\n",
+                     canmat_iface_strerror( cx->drive_set.cif, r) );
+            goto FAIL;
+        }
+    }
 
 
     // set mode and PDOs

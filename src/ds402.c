@@ -229,12 +229,12 @@ enum canmat_status canmat_402_set_op_mode( struct canmat_iface *cif, struct canm
     if( drive->rpdo_user < 0 || drive->rpdo_user > 0xFF ) return CANMAT_ERR_PARAM;
 
     // Check that opmode is handled
-    canmat_obj_t *ref_obj = NULL;
+    struct canmat_obj *ref_obj[1] = {NULL};
     uint16_t ctrl_and = 0xFFFF, ctrl_or = 0;
     canmat_scalar_t ref_val = {0};
     switch( op_mode ) {
     case CANMAT_402_OP_MODE_VELOCITY:
-        ref_obj = CANMAT_402_OBJ_VL_TARGET_VELOCITY;
+        ref_obj[0] = CANMAT_402_OBJ_VL_TARGET_VELOCITY;
         ref_val.u16 = 0;
         ctrl_and = 0xFFFF;
         ctrl_or = ( CANMAT_402_CTRLMASK_VL_RFG_ENABLE |
@@ -243,7 +243,7 @@ enum canmat_status canmat_402_set_op_mode( struct canmat_iface *cif, struct canm
         break;
     default: return CANMAT_ERR_PARAM;
     }
-    if( NULL == ref_obj ) return CANMAT_ERR_PARAM;
+    if( NULL == ref_obj[0] ) return CANMAT_ERR_PARAM;
 
     // Set mode unless already set
     if( op_mode != drive->op_mode ) {
@@ -258,7 +258,7 @@ enum canmat_status canmat_402_set_op_mode( struct canmat_iface *cif, struct canm
         drive->op_mode = op_mode;
 
         // Set reference to no-motion value
-        CHECK_STATUS( canmat_obj_dl( cif, drive->node_id, ref_obj, &ref_val, &(drive->abort_code) ) );
+        CHECK_STATUS( canmat_obj_dl( cif, drive->node_id, ref_obj[0], &ref_val, &(drive->abort_code) ) );
     }
 
 
