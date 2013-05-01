@@ -437,6 +437,10 @@ ParameterName=Error behavior/communication error
 DataType=UNSIGNED8
 AccessType=RW
 
+[enum:pdo_transmission_type]
+SYNCHRONOUS.value = 0x00
+EVENT_DRIVEN.value = 0xFF
+
 ; [1200] ; to 127F
 ; ParameterName=SDO service parameter
 ; ObjectType=RECORD

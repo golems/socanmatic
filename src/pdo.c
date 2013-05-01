@@ -50,13 +50,32 @@
 
 
 
-enum canmat_status canmat_rpdo_remap(
-    struct canmat_iface *cif, uint8_t node, uint8_t pdo, uint8_t cnt, const struct canmat_obj *objs, uint32_t *err )
+enum canmat_status canmat_pdo_remap(
+    struct canmat_iface *cif, uint8_t node, uint8_t pdo, enum canmat_direction dir,
+    int transmission_type, int inhibit_time, int event_timer,
+    uint8_t cnt, const struct canmat_obj *objs, uint32_t *err )
 {
-    canmat_status_t  r;
 
-    uint16_t idx_com = (CANMAT_RPDO_COM_BASE+pdo) & 0xFFFF;
-    uint16_t idx_map = (CANMAT_RPDO_MAP_BASE+pdo) & 0xFFFF;
+    // check parameters
+    if( transmission_type > 0xFF ||
+        inhibit_time > 0xFFFF    ||
+        event_timer > 0xFFFF  )
+    {
+        return CANMAT_ERR_PARAM;
+    }
+
+    canmat_status_t  r;
+    uint16_t idx_com;
+    uint16_t idx_map;
+    if( CANMAT_DL == dir ) {
+        idx_com = (uint16_t)( (CANMAT_RPDO_COM_BASE+pdo) & 0xFFFF );
+        idx_map = (uint16_t)( (CANMAT_RPDO_MAP_BASE+pdo) & 0xFFFF );
+    } else if (CANMAT_UL == dir) {
+        idx_com = (uint16_t)( (CANMAT_TPDO_COM_BASE+pdo) & 0xFFFF );
+        idx_map = (uint16_t)( (CANMAT_TPDO_MAP_BASE+pdo) & 0xFFFF );
+    } else {
+        return CANMAT_ERR_PARAM;
+    }
 
     // TODO: Upload some of these SDOs first and don't remap them if
     // they are already set properly
@@ -86,6 +105,23 @@ enum canmat_status canmat_rpdo_remap(
         uint32_t map = (uint32_t)( (obj->index << 16) | (obj->subindex << 8) | (objsize & 0xFF) );
         r = canmat_sdo_dl_u32( cif, node, idx_map, 1,
                                map, err );
+        if( CANMAT_OK != r ) return r;
+    }
+
+    // Set transmission options
+    if( transmission_type >= 0 ) {
+        r = canmat_sdo_dl_u8( cif, node, idx_com, 2,
+                              (uint8_t)transmission_type, err );
+        if( CANMAT_OK != r ) return r;
+    }
+    if( inhibit_time >= 0 ) {
+        r = canmat_sdo_dl_u16( cif, node, idx_com, 3,
+                              (uint8_t)inhibit_time, err );
+        if( CANMAT_OK != r ) return r;
+    }
+    if( event_timer >= 0 ) {
+        r = canmat_sdo_dl_u16( cif, node, idx_com, 5,
+                              (uint8_t)event_timer, err );
         if( CANMAT_OK != r ) return r;
     }
 

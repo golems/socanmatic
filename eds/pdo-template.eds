@@ -31,6 +31,10 @@
 ;   POSSIBILITY OF SUCH DAMAGE.
 
 
+;;;;;;;;;;
+;; RPDO ;;
+;;;;;;;;;;
+
 ;; Communication ;;
 [14XXsub0]
 ParameterName=RPDOXX communication parameter/highest sub-index supported
@@ -58,7 +62,7 @@ DataType=UNSIGNED8
 AccessType=RW
 
 [14XXsub5]
-ParameterName=RPDOXX communication parameter/event-timer
+ParameterName=RPDOXX communication parameter/event timer
 DataType=UNSIGNED16
 AccessType=RW
 
@@ -103,5 +107,65 @@ DataType=UNSIGNED32
 AccessType=RW
 [16XXsub8]
 ParameterName=RPDOXX mapping parameter/8th object
+DataType=UNSIGNED32
+AccessType=RW
+
+
+;;;;;;;;;;
+;; TPDO ;;
+;;;;;;;;;;
+
+[18XXsub1]
+ParameterName=TPDOXX communication parameter/COB-ID
+DataType=UNSIGNED32
+AccessType=RW
+
+[18XXsub2]
+ParameterName=TPDOXX communication parameter/Transmission type
+DataType=UNSIGNED8
+AccessType=RW
+
+[18XXsub5]
+ParameterName=TPDOXX communication parameter/Event timer
+DataType=UNSIGNED16
+AccessType=RW
+
+
+
+[1AXXsub0]
+ParameterName=TPDOXX mapping parameter/number of mapped objects
+DataType=UNSIGNED8
+AccessType=RW
+
+[1AXXsub1]
+ParameterName=TPDOXX mapping parameter/1st object
+DataType=UNSIGNED32
+AccessType=RW
+[1AXXsub2]
+ParameterName=TPDOXX mapping parameter/2nd object
+DataType=UNSIGNED32
+AccessType=RW
+[1AXXsub3]
+ParameterName=TPDOXX mapping parameter/3rd object
+DataType=UNSIGNED32
+AccessType=RW
+[1AXXsub4]
+ParameterName=TPDOXX mapping parameter/4th object
+DataType=UNSIGNED32
+AccessType=RW
+[1AXXsub5]
+ParameterName=TPDOXX mapping parameter/5th object
+DataType=UNSIGNED32
+AccessType=RW
+[1AXXsub6]
+ParameterName=TPDOXX mapping parameter/6th object
+DataType=UNSIGNED32
+AccessType=RW
+[1AXXsub7]
+ParameterName=TPDOXX mapping parameter/7th object
+DataType=UNSIGNED32
+AccessType=RW
+[1AXXsub8]
+ParameterName=TPDOXX mapping parameter/8th object
 DataType=UNSIGNED32
 AccessType=RW

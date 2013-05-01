@@ -277,6 +277,22 @@ MFR_SPECIFIC1.value           = 1 << 14
 MFR_SPECIFIC2.value           = 1 << 15
 
 
+[605D]
+ParameterName=Halt option code
+ObjectType=VAR
+DataType=INTEGER16
+AccessType=RW
+DefaultValue=1
+ValueEnum=halt_option
+
+[enum:halt_option]
+; -32768 ... -1 are mfr specific
+DISABLE.value                 = 0
+SLOW_DOWN_RAMP.value          = 1
+QUICK_STOP.value              = 2
+CURRENT_LIMIT.value           = 3
+VOLTAGE_LIMIT.value           = 4
+
 [605E]
 ; what to do if a fault occurs
 ParameterName=Fault reaction option code

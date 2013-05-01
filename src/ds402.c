@@ -263,14 +263,9 @@ enum canmat_status canmat_402_set_op_mode( struct canmat_iface *cif, struct canm
 
 
     // Map the RPDO
-    canmat_status_t r = canmat_rpdo_remap( cif, drive->node_id, (uint8_t)(drive->rpdo_user),
-                                           1, ref_obj, &(drive->abort_code) );
-
-    // Make transmission asynchronous
-    CHECK_STATUS( canmat_sdo_dl_u8( cif, drive->node_id,
-                                    (uint16_t)(CANMAT_RPDO_COM_BASE + drive->rpdo_user),
-                                    CANMAT_402_OBJ_RPDO00_COMMUNICATION_PARAMETER_SUB_TRANSMISSION_TYPE->subindex,
-                                    0xFF, &(drive->abort_code)) );
+    canmat_status_t r = canmat_pdo_remap( cif, drive->node_id, (uint8_t)(drive->rpdo_user), CANMAT_DL,
+                                          CANMAT_PDO_TRANSMISSION_TYPE_EVENT_DRIVEN, -1, -1,
+                                          1, ref_obj, &(drive->abort_code) );
 
     // set control word
     CHECK_STATUS( canmat_402_dl_ctrlmask( cif, drive,

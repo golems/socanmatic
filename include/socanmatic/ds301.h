@@ -49,6 +49,11 @@ extern "C" {
 /** COB-ID mask for node bits */
 #define CANMAT_NODE_MASK ((uint16_t)0x7F)
 
+enum canmat_direction {
+    CANMAT_DL = 0,  ///< node -> client (PC)
+    CANMAT_UL = 1   ///< client (PC) -> node
+};
+
 /* ID for all nodes */
 #define CANMAT_NODE_ALL 0x00
 

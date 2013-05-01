@@ -163,11 +163,13 @@ static canmat_status_t v_open( struct canmat_iface *cif, const char *name ) {
 }
 
 static canmat_status_t v_set_kbps( struct canmat_iface *cif, unsigned kbps ) {
+    (void)cif; (void)kbps;
     // TODO
     return CANMAT_ERR_NOT_SUP;
 }
 
 static canmat_status_t v_print_info( struct canmat_iface *cif, FILE *fptr ) {
+    (void)cif; (void)fptr;
     return CANMAT_ERR_NOT_SUP;
 }
 
