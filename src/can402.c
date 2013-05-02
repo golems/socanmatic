@@ -83,15 +83,18 @@ struct canmat_402_set {
 struct can402_cx {
     struct canmat_402_set drive_set;
     struct sns_msg_motor_ref *msg_ref;
+    struct sns_msg_motor_state *msg_state;
 
     enum canmat_402_op_mode op_mode;
     _Bool halt;
 
     ach_channel_t chan_ref;
+    ach_channel_t chan_state;
     struct timespec now;
 };
 
-const char *opt_chan = "motor-ref";
+const char *opt_chan_ref = "motor-ref";
+const char *opt_chan_state = "motor-state";
 const char *opt_cmd = NULL;
 const char *opt_api = "socketcan";
 const char **opt_pos = NULL;
@@ -120,7 +123,7 @@ static void feedback_recv( struct can402_cx *cx );
 static void *feedback_recv_start( void *cx );
 
 /* Called from main thread */
-static void post_feedback( struct can402_cx *cx );
+static void send_feedback( struct can402_cx *cx );
 
 static unsigned long parse_u( const char *arg, int base, uint64_t max );
 //static unsigned long parse_u( const char *arg, uint64_t max );
@@ -169,7 +172,7 @@ int main( int argc, char ** argv ) {
 static void parse( struct can402_cx *cx, int argc, char **argv )
 {
     assert( 0 == cx->drive_set.n );
-    for( int c; -1 != (c = getopt(argc, argv, "c:hH?Vf:a:n:R:C:" SNS_OPTSTRING)); ) {
+    for( int c; -1 != (c = getopt(argc, argv, "c:s:hH?Vf:a:n:R:C:" SNS_OPTSTRING)); ) {
         switch(c) {
             SNS_OPTCASES
         case 'V':   /* version     */
@@ -188,8 +191,11 @@ static void parse( struct can402_cx *cx, int argc, char **argv )
         case 'f':   /* interface  */
             cx->drive_set.cif = open_iface( opt_api, optarg );
             break;
-        case 'c':   /* interface  */
-            opt_chan = strdup(optarg);
+        case 'c':   /* reference channel  */
+            opt_chan_ref = strdup(optarg);
+            break;
+        case 's':   /* state channel  */
+            opt_chan_state = strdup(optarg);
             break;
         case 'n':   /* node  */
             SNS_REQUIRE( cx->drive_set.n < CANMAT_NODE_MASK-1, "Too many nodes\n" );
@@ -197,7 +203,7 @@ static void parse( struct can402_cx *cx, int argc, char **argv )
             cx->drive_set.drive[ cx->drive_set.n ].rpdo_ctrl = opt_rpdo_ctrl;
             cx->drive_set.drive[ cx->drive_set.n ].rpdo_user = opt_rpdo_user;
             cx->drive_set.drive[ cx->drive_set.n ].pos_factor = opt_pos_factor;
-            cx->drive_set.drive[ cx->drive_set.n ].pos_factor = opt_pos_factor;
+            cx->drive_set.drive[ cx->drive_set.n ].vel_factor = opt_vel_factor;
             cx->drive_set.n++;
             break;
         case 'C':   /* RPDO-Ctrl  */
@@ -248,6 +254,7 @@ static void parse( struct can402_cx *cx, int argc, char **argv )
     SNS_REQUIRE( cx->drive_set.n, "can402: missing node IDs.\nTry `can402 -H' for more information.\n");
 
     cx->msg_ref = sns_msg_motor_ref_alloc ( cx->drive_set.n );
+    cx->msg_state = sns_msg_motor_state_alloc ( cx->drive_set.n );
 
     for( size_t i = 0; i < cx->drive_set.n; i++ ) {
         SNS_REQUIRE( cx->drive_set.drive[i].rpdo_user != cx->drive_set.drive[i].rpdo_ctrl,
@@ -262,7 +269,8 @@ static void init( struct can402_cx *cx ) {
 
     sns_start();
 
-    sns_chan_open( &cx->chan_ref, opt_chan, NULL );
+    sns_chan_open( &cx->chan_ref, opt_chan_ref, NULL );
+    sns_chan_open( &cx->chan_state, opt_chan_state, NULL );
 
 
     enum canmat_status r;
@@ -345,6 +353,7 @@ static void run( struct can402_cx *cx ) {
     int64_t timeout_ns = (int64_t)(1e9*opt_timeout_sec);
     clock_gettime( ACH_DEFAULT_CLOCK, &cx->now );
     while( ! sns_cx.shutdown ) {
+        /*-- reference --*/
         size_t frame_size;
         cx->msg_ref->n = cx->drive_set.n;
         const size_t expected_size = sns_msg_motor_ref_size(cx->msg_ref);
@@ -352,7 +361,12 @@ static void run( struct can402_cx *cx ) {
         ach_status_t r = ach_get( &cx->chan_ref, cx->msg_ref,
                                   expected_size,
                                   &frame_size, &timeout, ACH_O_WAIT | ACH_O_LAST );
-        clock_gettime( ACH_DEFAULT_CLOCK, &cx->now );
+        if( ACH_TIMEOUT == r ) {
+            /* If it's a timout, use the previously gotten time */
+            memcpy(&cx->now, &timeout, sizeof(timeout));
+        } else {
+            clock_gettime( ACH_DEFAULT_CLOCK, &cx->now );
+        }
         switch(r) {
         case ACH_MISSED_FRAME: /* This is probably OK */
         case ACH_OK:
@@ -380,8 +394,9 @@ static void run( struct can402_cx *cx ) {
             break;
         default:
             SNS_LOG( LOG_ERR, "ach_get failed: '%s'\n", ach_result_to_string(r) );
-
         }
+        /*-- send_feedback --*/
+        send_feedback(cx);
     }
 }
 
@@ -402,7 +417,7 @@ static void process( struct can402_cx *cx ) {
         halt(cx, 0); // unhalt
         if( cx->halt ) return;  // make sure we unhalted
         for( size_t i = 0; i < cx->msg_ref->n; i ++ ) {
-            double val = cx->msg_ref->u[i] * opt_vel_factor;
+            double val = cx->msg_ref->u[i] * cx->drive_set.drive[i].vel_factor;
             int16_t vl_target = 0;
             // clamp value
             if( val > INT16_MAX ) vl_target = INT16_MAX;
@@ -448,6 +463,28 @@ static void halt( struct can402_cx *cx, _Bool is_halt ) {
     cx->halt = is_halt;
 }
 
+
+static void send_feedback( struct can402_cx *cx ) {
+    for( size_t i = 0; i < cx->drive_set.n; i++ ) {
+        // compute MKS values
+        struct canmat_402_drive *drive = &cx->drive_set.drive[i];
+        drive->actual_pos =  drive->actual_pos_raw / drive->pos_factor;
+        drive->actual_vel =  drive->actual_vel_raw / drive->vel_factor;
+        // build message
+        cx->msg_state->X[i].pos = drive->actual_pos;
+        cx->msg_state->X[i].vel = drive->actual_vel;
+        cx->msg_state->header.seq++;
+        sns_msg_set_time( &cx->msg_state->header, &cx->now, (int64_t)(opt_timeout_sec*1e9*2) );
+        // send message
+        ach_status_t r = ach_put( &cx->chan_state, cx->msg_state,
+                                  sns_msg_motor_state_size(cx->msg_state) );
+        if( ACH_OK != r ) {
+            SNS_LOG( LOG_ERR, "Couldn't put ach frame: %s\n", ach_result_to_string(r) );
+        }
+
+    }
+}
+
 /* Feedback thread:
  * - Only write (atomically) the raw values for velocity and position.
  * - Main thread will do unit conversions and Ach posting
@@ -475,7 +512,6 @@ static void feedback_recv( struct can402_cx *cx ) {
                 if( CANMAT_TPDO_COBID( drive->node_id, drive->tpdo_user ) ==
                     (int)can.can_id ) {
                     // found matching drive
-                    printf("TPDO: %x\n", drive->node_id);
                     // validate
                     if( 8 == can.can_dlc ) {
                         canmat_scalar_t pos, vel;
