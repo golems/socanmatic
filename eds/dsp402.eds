@@ -343,6 +343,17 @@ DataType=INTEGER8
 AccessType=RO
 PDOMapping=1
 
+
+
+
+;;;;;
+
+[607c]
+ParameterName=Home offset
+ObjectType=VAR
+DataType=INTEGER32
+AccessType=RW
+
 ;;;;;;;;;;;;;;;;;;
 ;; FACTOR GROUP ;;
 ;;;;;;;;;;;;;;;;;;
