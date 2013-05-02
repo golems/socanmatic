@@ -123,6 +123,7 @@ static void feedback_recv( struct can402_cx *cx );
 static void *feedback_recv_start( void *cx );
 
 /* Called from main thread */
+static void update_feedback( struct can402_cx *cx );
 static void send_feedback( struct can402_cx *cx );
 
 static unsigned long parse_u( const char *arg, int base, uint64_t max );
@@ -367,6 +368,7 @@ static void run( struct can402_cx *cx ) {
         } else {
             clock_gettime( ACH_DEFAULT_CLOCK, &cx->now );
         }
+        update_feedback(cx);
         switch(r) {
         case ACH_MISSED_FRAME: /* This is probably OK */
         case ACH_OK:
@@ -463,13 +465,20 @@ static void halt( struct can402_cx *cx, _Bool is_halt ) {
     cx->halt = is_halt;
 }
 
-
-static void send_feedback( struct can402_cx *cx ) {
+static void update_feedback( struct can402_cx *cx ) {
     for( size_t i = 0; i < cx->drive_set.n; i++ ) {
         // compute MKS values
         struct canmat_402_drive *drive = &cx->drive_set.drive[i];
-        drive->actual_pos =  drive->actual_pos_raw / drive->pos_factor;
-        drive->actual_vel =  drive->actual_vel_raw / drive->vel_factor;
+        int32_t pos_raw = __atomic_load_n( &drive->actual_pos_raw , __ATOMIC_RELAXED );
+        int32_t vel_raw = __atomic_load_n( &drive->actual_vel_raw , __ATOMIC_RELAXED );
+        drive->actual_pos =  pos_raw / drive->pos_factor;
+        drive->actual_vel =  vel_raw / drive->vel_factor;
+    }
+}
+
+static void send_feedback( struct can402_cx *cx ) {
+    for( size_t i = 0; i < cx->drive_set.n; i++ ) {
+        struct canmat_402_drive *drive = &cx->drive_set.drive[i];
         // build message
         cx->msg_state->X[i].pos = drive->actual_pos;
         cx->msg_state->X[i].vel = drive->actual_vel;
