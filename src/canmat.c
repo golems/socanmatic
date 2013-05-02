@@ -593,9 +593,10 @@ static int cmd_map_rpdo( can_set_t *canset, size_t n, const char **arg ) {
     hard_assert( NULL != obj, "Unknown parameter: %s\n", param );
 
     uint32_t err;
+    const canmat_obj_t *obj_ar[1] = {obj};
     canmat_status_t r = canmat_pdo_remap( canset->cif[0], node, pdo_num, CANMAT_DL,
                                           -1, -1, -1,
-                                           1, obj, &err );
+                                          1, obj_ar, &err );
     if( CANMAT_ERR_ABORT == r ) {
         fail("Transfer aborted: '%s' (0x%08x)\n", canmat_sdo_strerror(err), err );
     }

@@ -130,6 +130,7 @@ static inline enum canmat_status canmat_rpdo_send_i16(
 
 
 #define CANMAT_RPDO_COBID( node, num ) ((CANMAT_FUNC_CODE_PDO1_RX + ((num)<<8))|(node))
+#define CANMAT_TPDO_COBID( node, num ) ((CANMAT_FUNC_CODE_PDO1_TX + ((num)<<8))|(node))
 
 #ifdef __cplusplus
 }

@@ -60,7 +60,7 @@
 #include <string.h>
 #include <getopt.h>
 #include <assert.h>
-#include <poll.h>
+#include <pthread.h>
 
 
 #include <syslog.h>
@@ -102,6 +102,7 @@ double opt_timeout_sec = 0.1;
 
 // FIXME: 1
 double opt_vel_factor = 180/M_PI*1000;
+double opt_pos_factor = 180/M_PI*1000;
 
 /**********/
 /* PROTOS */
@@ -113,6 +114,13 @@ static void process( struct can402_cx *cx );
 static void halt( struct can402_cx *cx, _Bool is_halt );
 static void stop( struct can402_cx *cx );
 static void parse( struct can402_cx *cx, int argc, char **argv );
+
+/* Feedback thread */
+static void feedback_recv( struct can402_cx *cx );
+static void *feedback_recv_start( void *cx );
+
+/* Called from main thread */
+static void post_feedback( struct can402_cx *cx );
 
 static unsigned long parse_u( const char *arg, int base, uint64_t max );
 //static unsigned long parse_u( const char *arg, uint64_t max );
@@ -141,9 +149,17 @@ int main( int argc, char ** argv ) {
     init(&cx);
 
     // run
+    pthread_t feedback_thread;
+    if( pthread_create( &feedback_thread, NULL, feedback_recv_start, &cx ) ) {
+        sns_die( 0, "Couldn't create feedback thread: %s\n", strerror(errno) );
+        exit(EXIT_FAILURE);
+    }
     run(&cx);
 
     // stop
+    if( pthread_join( feedback_thread, NULL ) ) {
+        SNS_LOG( LOG_ERR, "Couldn't join feedback thread: %s\n", strerror(errno) );
+    }
     stop(&cx);
 
     return 0;
@@ -180,6 +196,8 @@ static void parse( struct can402_cx *cx, int argc, char **argv )
             cx->drive_set.drive[ cx->drive_set.n ].node_id = (uint8_t) parse_u( optarg, 16, CANMAT_NODE_MASK );
             cx->drive_set.drive[ cx->drive_set.n ].rpdo_ctrl = opt_rpdo_ctrl;
             cx->drive_set.drive[ cx->drive_set.n ].rpdo_user = opt_rpdo_user;
+            cx->drive_set.drive[ cx->drive_set.n ].pos_factor = opt_pos_factor;
+            cx->drive_set.drive[ cx->drive_set.n ].pos_factor = opt_pos_factor;
             cx->drive_set.n++;
             break;
         case 'C':   /* RPDO-Ctrl  */
@@ -430,6 +448,50 @@ static void halt( struct can402_cx *cx, _Bool is_halt ) {
     cx->halt = is_halt;
 }
 
+/* Feedback thread:
+ * - Only write (atomically) the raw values for velocity and position.
+ * - Main thread will do unit conversions and Ach posting
+ */
+static void *feedback_recv_start( void *cx ) {
+    feedback_recv( (struct can402_cx*)cx );
+    return NULL;
+}
+static void feedback_recv( struct can402_cx *cx ) {
+    while(!sns_cx.shutdown) {
+        struct can_frame can;
+        // FIXME: add a timeout in case we need to terminate and node isn't responding
+        enum canmat_status i = canmat_iface_recv( cx->drive_set.cif, &can);
+        if( CANMAT_OK != i ) {
+            SNS_LOG( LOG_ERR, "Error receiving CAN frame: %s\n",
+                     canmat_iface_strerror(cx->drive_set.cif, i) );
+        }
+        // TODO: Binary search is better (but this array is tiny)
+        // filter non-TPDOs
+        if( can.can_id >= CANMAT_TPDO_COBID( 0, 0 ) &&
+            can.can_id <= CANMAT_TPDO_COBID( CANMAT_NODE_MASK, 0xFF ) )
+        { // got a TPDO
+            for( size_t j = 0; j < cx->drive_set.n; j ++ ) {
+                struct canmat_402_drive *drive = & cx->drive_set.drive[j];
+                if( CANMAT_TPDO_COBID( drive->node_id, drive->tpdo_user ) ==
+                    (int)can.can_id ) {
+                    // found matching drive
+                    printf("TPDO: %x\n", drive->node_id);
+                    // validate
+                    if( 8 == can.can_dlc ) {
+                        canmat_scalar_t pos, vel;
+                        pos.u32 = canmat_byte_ldle32( &can.data[0] );
+                        vel.u32 = canmat_byte_ldle32( &can.data[4] );
+                        /* FIXME: portability */
+                        __atomic_store_n( &drive->actual_pos_raw, pos.i32, __ATOMIC_RELAXED );
+                        __atomic_store_n( &drive->actual_vel_raw, vel.i32, __ATOMIC_RELAXED );
+                    } else {
+                        SNS_LOG(LOG_WARNING, "PDO message to short: %d, expected 8\n", can.can_dlc);
+                    }
+                }
+            }
+        }
+    }
+}
 
 static void stop( struct can402_cx *cx ) {
     for( size_t i = 0; i < cx->drive_set.n; i ++ ) {
