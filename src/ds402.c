@@ -42,6 +42,7 @@
 
 
 #include <assert.h>
+#include <math.h>
 #include "socanmatic.h"
 #include "socanmatic/dict402.h"
 
@@ -130,6 +131,21 @@ enum canmat_status canmat_402_init( struct canmat_iface *cif, uint8_t id, struct
         CHECK_STATUS( canmat_402_ul_modes_of_operation( cif, drive->node_id,
                                                         &i, &drive->abort_code ) );
         drive->op_mode = (enum canmat_402_op_mode)i;
+    }
+
+    // limits
+    {
+        int32_t min, max; // raw values
+        CHECK_STATUS( canmat_402_ul_software_position_limit_sub_min_position_range_limit(cif, drive->node_id,
+                                                                                         &min, &drive->abort_code) );
+        CHECK_STATUS( canmat_402_ul_software_position_limit_sub_max_position_range_limit(cif, drive->node_id,
+                                                                                         &max, &drive->abort_code) );
+
+        // FIXME: parametrize limits better
+        drive->pos_max_hard = max / drive->pos_factor - 2*M_PI/180;
+        drive->pos_min_hard = min / drive->pos_factor + 2*M_PI/180;
+        drive->pos_max_soft = drive->pos_max_hard - 5*M_PI/180;
+        drive->pos_min_soft = drive->pos_min_hard + 5*M_PI/180;
     }
 
     // current

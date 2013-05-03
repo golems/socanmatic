@@ -173,6 +173,11 @@ struct canmat_402_drive {
     int32_t actual_vel_raw;
     int32_t actual_cur_raw;
 
+    double pos_max_soft;
+    double pos_min_soft;
+    double pos_max_hard;
+    double pos_min_hard;
+
     double actual_pos;
     double actual_vel;
     double actual_cur;

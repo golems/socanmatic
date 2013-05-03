@@ -152,6 +152,17 @@ int main( int argc, char ** argv ) {
     // init
     init(&cx);
 
+    if( sns_cx.verbosity ) {
+        for( size_t i = 0; i < cx.drive_set.n; i ++ ) {
+            SNS_LOG( LOG_INFO, "limits 0x%x: %f (%f) -- %f (%f)\n",
+                     cx.drive_set.drive[i].node_id,
+                     cx.drive_set.drive[i].pos_min_soft,
+                     cx.drive_set.drive[i].pos_min_hard,
+                     cx.drive_set.drive[i].pos_max_soft,
+                     cx.drive_set.drive[i].pos_max_hard );
+        }
+    }
+
     // run
     pthread_t feedback_thread;
     if( pthread_create( &feedback_thread, NULL, feedback_recv_start, &cx ) ) {
@@ -402,6 +413,34 @@ static void run( struct can402_cx *cx ) {
     }
 }
 
+static double pos_limit_phi(double phi, double val ) {
+    /* phi is in [-1,+1] */
+
+    /* tan(pi/2*phi) is convenient here because it smoothly maps from zero
+     * at phi = 0 to +/-inifinity at phi = +/-1.
+     */
+
+    phi *= M_PI_2;
+    if( phi > M_PI_2 ) phi = M_PI_2;
+    else if( phi < -M_PI_2 ) phi = -M_PI_2;
+
+    return val - tan(phi);
+}
+static double pos_limit( struct canmat_402_drive *drive, double val ) {
+    double pos = drive->actual_pos;
+    if ( pos > drive->pos_max_soft  ) {
+        double phi = ((pos - drive->pos_max_soft) /
+                        (drive->pos_max_hard - drive->pos_max_soft));
+        return pos_limit_phi( phi, val );
+    } else if ( pos < drive->pos_min_soft  ) {
+        double phi = -((pos - drive->pos_min_soft) /
+                         (drive->pos_min_hard - drive->pos_min_soft));
+        return pos_limit_phi( phi, val );
+    } else {
+        return val;
+    }
+}
+
 static void process( struct can402_cx *cx ) {
     if( SNS_LOG_PRIORITY(LOG_DEBUG + 1) ) {
         sns_msg_motor_ref_dump( stderr, cx->msg_ref );
@@ -419,9 +458,11 @@ static void process( struct can402_cx *cx ) {
         halt(cx, 0); // unhalt
         if( cx->halt ) return;  // make sure we unhalted
         for( size_t i = 0; i < cx->msg_ref->n; i ++ ) {
-            double val = cx->msg_ref->u[i] * cx->drive_set.drive[i].vel_factor;
-            int16_t vl_target = 0;
+            // position limit
+            double val = pos_limit( &cx->drive_set.drive[i], cx->msg_ref->u[i] );
             // clamp value
+            val *= cx->drive_set.drive[i].vel_factor;
+            int16_t vl_target = 0;
             if( val > INT16_MAX ) vl_target = INT16_MAX;
             else if (val < INT16_MIN ) vl_target = INT16_MIN;
             else vl_target = (int16_t) val;
