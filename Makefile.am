@@ -59,7 +59,7 @@ canmat_SOURCES = src/canmat.c src/display.c
 canmat_LDADD = libsocanmatic.la libsocanmatic402.la libsocanmatic_iface_ntcan.la libsocanmatic_iface_socketcan.la
 
 can402_SOURCES = src/can402.c
-can402_LDADD = libsocanmatic.la libsocanmatic402.la libsocanmatic_iface_ntcan.la libsocanmatic_iface_socketcan.la -lsns -lach -lm
+can402_LDADD = libsocanmatic.la libsocanmatic402.la libsocanmatic_iface_ntcan.la libsocanmatic_iface_socketcan.la -lsns -lach
 
 
 BUILT_SOURCES =                              \

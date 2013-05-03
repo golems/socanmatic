@@ -413,33 +413,19 @@ static void run( struct can402_cx *cx ) {
     }
 }
 
-static double pos_limit_phi(double phi, double val ) {
-    /* phi is in [-1,+1] */
-
-    /* tan(pi/2*phi) is convenient here because it smoothly maps from zero
-     * at phi = 0 to +/-inifinity at phi = +/-1.
-     */
-
-    phi *= M_PI_2;
-    if( phi > M_PI_2 ) phi = M_PI_2;
-    else if( phi < -M_PI_2 ) phi = -M_PI_2;
-
-    return val - tan(phi);
-}
 static double pos_limit( struct canmat_402_drive *drive, double val ) {
     double pos = drive->actual_pos;
+    double off = 0;
     if ( pos > drive->pos_max_soft  ) {
-        double phi = ((pos - drive->pos_max_soft) /
-                        (drive->pos_max_hard - drive->pos_max_soft));
-        return pos_limit_phi( phi, val );
+        off = ((pos - drive->pos_max_soft) /
+               (pos - drive->pos_max_hard));
     } else if ( pos < drive->pos_min_soft  ) {
-        double phi = -((pos - drive->pos_min_soft) /
-                         (drive->pos_min_hard - drive->pos_min_soft));
-        return pos_limit_phi( phi, val );
-    } else {
-        return val;
+        off = -((pos - drive->pos_min_soft) /
+                (pos - drive->pos_min_hard));
     }
+    return val + off;
 }
+
 
 static void process( struct can402_cx *cx ) {
     if( SNS_LOG_PRIORITY(LOG_DEBUG + 1) ) {
