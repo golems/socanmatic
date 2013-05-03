@@ -142,8 +142,8 @@ enum canmat_status canmat_402_init( struct canmat_iface *cif, uint8_t id, struct
                                                                                          &max, &drive->abort_code) );
 
         // FIXME: parametrize limits better
-        drive->pos_max_hard = max / drive->pos_factor - 2*M_PI/180;
-        drive->pos_min_hard = min / drive->pos_factor + 2*M_PI/180;
+        drive->pos_max_hard = max / drive->pos_factor - 5*M_PI/180;
+        drive->pos_min_hard = min / drive->pos_factor + 5*M_PI/180;
         drive->pos_max_soft = drive->pos_max_hard - 5*M_PI/180;
         drive->pos_min_soft = drive->pos_min_hard + 5*M_PI/180;
     }

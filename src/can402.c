@@ -101,7 +101,7 @@ const char **opt_pos = NULL;
 size_t opt_npos = 0;
 int opt_rpdo_ctrl = 0;
 int opt_rpdo_user = 1;
-double opt_timeout_sec = 0.1;
+double opt_timeout_sec = 0.01; // 100 Hz
 
 // FIXME: 1
 double opt_vel_factor = 180/M_PI*1000;
@@ -364,9 +364,9 @@ FAIL:
 static void run( struct can402_cx *cx ) {
     int64_t timeout_ns = (int64_t)(1e9*opt_timeout_sec);
     clock_gettime( ACH_DEFAULT_CLOCK, &cx->now );
+    size_t frame_size = 0; // outside to maintain frame size when we get ACH_TIMEOUT
     while( ! sns_cx.shutdown ) {
         /*-- reference --*/
-        size_t frame_size;
         cx->msg_ref->n = cx->drive_set.n;
         const size_t expected_size = sns_msg_motor_ref_size(cx->msg_ref);
         struct timespec timeout = sns_time_add_ns( cx->now, timeout_ns );
@@ -381,6 +381,12 @@ static void run( struct can402_cx *cx ) {
         }
         update_feedback(cx);
         switch(r) {
+        case ACH_TIMEOUT:
+            if( sns_msg_is_expired(&cx->msg_ref->header, &cx->now) ) {
+                SNS_LOG( LOG_NOTICE, "Reference timeout\n");
+                halt(cx, 1);
+                break;
+            }
         case ACH_MISSED_FRAME: /* This is probably OK */
         case ACH_OK:
             // validate
@@ -394,11 +400,6 @@ static void run( struct can402_cx *cx ) {
                          cx->msg_ref->n, cx->drive_set.n,
                          frame_size, expected_size );
             }
-            break;
-        case ACH_TIMEOUT:
-            /* TODO: halt and post feedback */
-            SNS_LOG( LOG_NOTICE, "Reference timeout\n");
-            halt(cx, 1);
             break;
             /* Really bad things we just give up on */
         case ACH_BUG:
