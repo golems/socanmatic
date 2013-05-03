@@ -125,6 +125,10 @@ enum canmat_status canmat_402_init( struct canmat_iface *cif, uint8_t id, struct
     CHECK_STATUS( canmat_402_ul_velocity_actual_value( cif, drive->node_id,
                                                        &drive->actual_vel_raw, &drive->abort_code ) );
 
+    // vl target
+    CHECK_STATUS( canmat_402_ul_vl_target_velocity( cif, drive->node_id,
+                                                    &drive->target_vel_raw, &drive->abort_code ) );
+
     // op mode
     {
         int8_t i;

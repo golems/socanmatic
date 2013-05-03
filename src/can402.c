@@ -383,7 +383,7 @@ static void run( struct can402_cx *cx ) {
         switch(r) {
         case ACH_TIMEOUT:
             if( sns_msg_is_expired(&cx->msg_ref->header, &cx->now) ) {
-                SNS_LOG( LOG_NOTICE, "Reference timeout\n");
+                //SNS_LOG( LOG_NOTICE, "Reference timeout\n");
                 halt(cx, 1);
                 break;
             }
@@ -440,6 +440,10 @@ static void process( struct can402_cx *cx ) {
 
     // TODO: op mode switching
     // TODO: check that mode is supported
+    /* TODO: maybe some congestion control
+     *       If too many messages are sent, write() returns ENOBUFS
+     *       Could prioritize messages based on difference from previous target
+     */
     switch( cx->msg_ref->mode ) {
     case SNS_MOTOR_MODE_VEL:
         halt(cx, 0); // unhalt
@@ -453,13 +457,20 @@ static void process( struct can402_cx *cx ) {
             if( val > INT16_MAX ) vl_target = INT16_MAX;
             else if (val < INT16_MIN ) vl_target = INT16_MIN;
             else vl_target = (int16_t) val;
-            // send pdo
-            canmat_status_t cr = canmat_rpdo_send_i16( cx->drive_set.cif,
-                                                       cx->drive_set.drive[i].node_id,
-                                                       (uint8_t)cx->drive_set.drive[i].rpdo_user,
-                                                       vl_target );
-            SNS_CHECK( CANMAT_OK == cr, LOG_ERR, 0, "Couldn't send PDO: %s\n",
-                       canmat_iface_strerror( cx->drive_set.cif, cr) );
+            // check if update necessary to save bandwidth
+            if( vl_target != cx->drive_set.drive[i].target_vel_raw ) {
+                // send pdo
+                canmat_status_t cr = canmat_rpdo_send_i16( cx->drive_set.cif,
+                                                           cx->drive_set.drive[i].node_id,
+                                                           (uint8_t)cx->drive_set.drive[i].rpdo_user,
+                                                           vl_target );
+                if( CANMAT_OK == cr ) {
+                    cx->drive_set.drive[i].target_vel_raw = vl_target;
+                } else {
+                    SNS_LOG( LOG_ERR, "Couldn't send PDO: %s\n",
+                             canmat_iface_strerror( cx->drive_set.cif, cr) );
+                }
+            }
 
         }
         break;

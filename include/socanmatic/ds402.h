@@ -173,6 +173,8 @@ struct canmat_402_drive {
     int32_t actual_vel_raw;
     int32_t actual_cur_raw;
 
+    int16_t target_vel_raw;
+
     double pos_max_soft;
     double pos_min_soft;
     double pos_max_hard;
@@ -181,6 +183,7 @@ struct canmat_402_drive {
     double actual_pos;
     double actual_vel;
     double actual_cur;
+
 
     // PDO number (zero indexed) to configure based on the selected op mode
     int rpdo_user;
