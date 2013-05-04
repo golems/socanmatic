@@ -521,15 +521,14 @@ static void send_feedback( struct can402_cx *cx ) {
         // build message
         cx->msg_state->X[i].pos = drive->actual_pos;
         cx->msg_state->X[i].vel = drive->actual_vel;
-        cx->msg_state->header.seq++;
-        sns_msg_set_time( &cx->msg_state->header, &cx->now, (int64_t)(opt_timeout_sec*1e9*2) );
-        // send message
-        ach_status_t r = ach_put( &cx->chan_state, cx->msg_state,
-                                  sns_msg_motor_state_size(cx->msg_state) );
-        if( ACH_OK != r ) {
-            SNS_LOG( LOG_ERR, "Couldn't put ach frame: %s\n", ach_result_to_string(r) );
-        }
-
+    }
+    cx->msg_state->header.seq++;
+    sns_msg_set_time( &cx->msg_state->header, &cx->now, (int64_t)(opt_timeout_sec*1e9*2) );
+    // send message
+    ach_status_t r = ach_put( &cx->chan_state, cx->msg_state,
+                              sns_msg_motor_state_size(cx->msg_state) );
+    if( ACH_OK != r ) {
+        SNS_LOG( LOG_ERR, "Couldn't put ach frame: %s\n", ach_result_to_string(r) );
     }
 }
 
