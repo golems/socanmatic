@@ -121,7 +121,7 @@ enum canmat_status canmat_pdo_remap(
     }
     if( event_timer >= 0 ) {
         r = canmat_sdo_dl_u16( cif, node, idx_com, 5,
-                              (uint8_t)event_timer, err );
+                              (uint16_t)event_timer, err );
         if( CANMAT_OK != r ) return r;
     }
 

@@ -319,7 +319,7 @@ static void init( struct can402_cx *cx ) {
                                         CANMAT_402_OBJ_VELOCITY_ACTUAL_VALUE };
         r = canmat_pdo_remap( cx->drive_set.cif, cx->drive_set.drive[i].node_id,
                               (uint8_t)(cx->drive_set.drive[i].tpdo_user), CANMAT_UL,
-                              0xFF, -1, 10000,
+                              0xFE, -1, 10,
                               2, objs, &cx->drive_set.drive[i].abort_code );
         if( r != CANMAT_OK ) {
             SNS_LOG( LOG_EMERG, "can402: couldn't map control rpdo: '%s'\n",
