@@ -418,12 +418,26 @@ static double pos_limit( struct canmat_402_drive *drive, double val ) {
     double pos = drive->actual_pos;
     double off = 0;
     if ( pos > drive->pos_max_soft  ) {
-        off = ((pos - drive->pos_max_soft) /
-               (pos - drive->pos_max_hard));
+        SNS_LOG(LOG_DEBUG, "limit+ 0x%x, %f > %f \n",
+                 drive->node_id,
+                 pos, drive->pos_max_soft );
+        if( pos > drive->pos_max_hard ) {
+            return -HUGE_VAL;
+        } else {
+            off = ((pos - drive->pos_max_soft) /
+                   (pos - drive->pos_max_hard));
+        }
     } else if ( pos < drive->pos_min_soft  ) {
-        off = -((pos - drive->pos_min_soft) /
-                (pos - drive->pos_min_hard));
+        SNS_LOG( LOG_DEBUG, "limit- 0x%x %f < %f \n", drive->node_id,
+                 pos, drive->pos_min_soft );
+        if( pos < drive->pos_min_hard ) {
+            return HUGE_VAL;
+        } else {
+            off = -((pos - drive->pos_min_soft) /
+                    (pos - drive->pos_min_hard));
+        }
     }
+
     return val + off;
 }
 
@@ -454,9 +468,13 @@ static void process( struct can402_cx *cx ) {
             // clamp value
             val *= cx->drive_set.drive[i].vel_factor;
             int16_t vl_target = 0;
-            if( val > INT16_MAX ) vl_target = INT16_MAX;
-            else if (val < INT16_MIN ) vl_target = INT16_MIN;
-            else vl_target = (int16_t) val;
+            if( val > INT16_MAX ) {
+                vl_target = INT16_MAX;
+                SNS_LOG(LOG_DEBUG, "clamp+ %f -> %d 0x%x\n", val, vl_target, cx->drive_set.drive[i].node_id);
+            } else if (val < INT16_MIN ) {
+                vl_target = INT16_MIN;
+                SNS_LOG(LOG_DEBUG, "clamp- %f -> %d 0x%x\n", val, vl_target, cx->drive_set.drive[i].node_id);
+            } else vl_target = (int16_t) val;
             // check if update necessary to save bandwidth
             if( vl_target != cx->drive_set.drive[i].target_vel_raw ) {
                 // send pdo
