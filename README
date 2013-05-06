@@ -5,9 +5,9 @@ CAN Protocol Library for CANopen.
 
 Electronic Data Sheets (EDS)
 ----------------------------
-The included `sociac` program translates CiA EDS files to C code. The
-socia library provides routines for communicating with CANopen nodes
-using this generated code
+The included `canmatc` program translates CiA EDS files to C code. The
+socanmatic library provides routines for communicating with CANopen
+nodes using this generated code
 
 See Also
 --------
