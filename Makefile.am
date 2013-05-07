@@ -10,9 +10,18 @@ include_HEADERS = include/socanmatic.h
 pkginclude_HEADERS = 	                     \
 	include/socanmatic/byteorder.h       \
 	include/socanmatic/status.h          \
+	include/socanmatic/descriptor.h      \
 	include/socanmatic/nmt.h             \
 	include/socanmatic/sdo.h             \
 	include/socanmatic/dict.h            \
+	include/socanmatic/dict_fun.h        \
+	include/socanmatic/pdo.h             \
+	include/socanmatic/probe.h           \
+	include/socanmatic/iface.h           \
+	socanmatic/enum301.h                 \
+	socanmatic/enum402.h                 \
+	include/socanmatic/ds301.h           \
+	include/socanmatic/emcy.h            \
 	include/socanmatic/ds402.h
 
 noinst_HEADERS = include/socanmatic_private.h
