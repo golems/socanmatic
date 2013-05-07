@@ -85,3 +85,11 @@ const char *canmat_sdo_abort_code2str( uint32_t code ) {
     default: return "Reserved";
     }
 }
+
+
+enum canmat_status
+canmat_sync( struct canmat_iface *cif ) {
+    struct can_frame can = { .can_dlc = 0,
+                             .can_id = CANMAT_FUNC_CODE_SYNC_EMCY };
+    return canmat_iface_send( cif, &can );
+}

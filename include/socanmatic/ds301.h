@@ -122,6 +122,12 @@ typedef enum canmat_cobid_pdo_mask {
     CANMAT_COBID_PDO_MASK_VALID = (uint32_t)(1 << 31)
 } canmat_cobid_pdo_mask_t;
 
+
+
+enum canmat_status
+canmat_sync( struct canmat_iface *cif );
+
+
 #ifdef __cplusplus
 }
 #endif
