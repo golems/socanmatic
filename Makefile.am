@@ -29,8 +29,8 @@ noinst_HEADERS = include/socanmatic_private.h
 lib_LTLIBRARIES =                            \
 	libsocanmatic.la                     \
 	libsocanmatic402.la                  \
-	libsocanmatic_iface_socketcan.la     \
-	libsocanmatic_iface_ntcan.la
+	libsocanmatic_iface_socketcan.la
+
 
 m4_dnl bin_PROGRAMS = esdcantool
 
@@ -57,18 +57,21 @@ libsocanmatic402_la_SOURCES = dict402.c src/ds402.c
 libsocanmatic_iface_socketcan_la_SOURCES = src/iface/iface_socketcan.c
 libsocanmatic_iface_socketcan_la_LDFLAGS = -shared
 
+if HAVE_NTCAN
+lib_LTLIBRARIES += libsocanmatic_iface_ntcan.la
 libsocanmatic_iface_ntcan_la_SOURCES = src/iface/iface_ntcan.c
 libsocanmatic_iface_ntcan_la_LIBADD = -lntcan
 libsocanmatic_iface_ntcan_la_LDFLAGS = -shared
+endif
 
 test_sdo_SOURCES = src/test_sdo.c
 test_sdo_LDADD = libsocanmatic.la  libsocanmatic402.la
 
 canmat_SOURCES = src/canmat.c src/display.c
-canmat_LDADD = libsocanmatic.la libsocanmatic402.la libsocanmatic_iface_ntcan.la libsocanmatic_iface_socketcan.la
+canmat_LDADD = libsocanmatic.la libsocanmatic402.la
 
 can402_SOURCES = src/can402.c
-can402_LDADD = libsocanmatic.la libsocanmatic402.la libsocanmatic_iface_ntcan.la libsocanmatic_iface_socketcan.la -lsns -lach
+can402_LDADD = libsocanmatic.la libsocanmatic402.la -lsns -lach
 
 
 BUILT_SOURCES =                              \

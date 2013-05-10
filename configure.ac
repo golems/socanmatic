@@ -45,14 +45,11 @@ AC_CHECK_DECL([PRIuPTR],
         [AC_DEFINE([PRIuPTR], ["ul"], [Assume this is unsigned long])])
 
 # Checks for library functions.
-AC_FUNC_FORK
-AC_FUNC_MALLOC
-AC_FUNC_MMAP
-AC_FUNC_REALLOC
-AC_FUNC_STRTOD
-AC_CHECK_FUNCS([ftruncate isascii memmove memset munmap socket strcasecmp strchr strdup strerror strtol])
 AC_SEARCH_LIBS([clock_gettime],[rt])
 
+# Look for ntcan library
+AC_CHECK_HEADER([ntcan.h], [FOUND_NTCAN=yes])
+AM_CONDITIONAL([HAVE_NTCAN], [test x$FOUND_NTCAN = xyes])
 
 # Enable maximum warnings
 AX_CFLAGS_WARN_ALL
