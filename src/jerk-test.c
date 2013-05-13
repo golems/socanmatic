@@ -127,6 +127,7 @@ static void init( struct can402_cx *cx );
 static void run( struct can402_cx *cx );
 static void stop( struct can402_cx *cx );
 static void parse( struct can402_cx *cx, int argc, char **argv );
+static void halt( struct can402_cx *cx, _Bool is_halt );
 
 /* Feedback thread */
 static void feedback_recv( struct can402_cx *cx );
@@ -424,6 +425,8 @@ static double pos_limit( struct canmat_402_drive *drive, double val ) {
 
 
 static void run( struct can402_cx *cx ) {
+    halt(cx,0);
+
     clock_gettime( CLOCK_MONOTONIC, &cx->now );
     double T = 0;
     while( ! sig_shutdown ) {
@@ -465,29 +468,29 @@ static void run( struct can402_cx *cx ) {
 }
 
 
-/* static void halt( struct can402_cx *cx, _Bool is_halt ) { */
-/*     for( size_t i = 0; i < cx->drive_set.n; i ++ ) { */
-/*         _Bool halted = cx->drive_set.drive[i].ctrl_word & CANMAT_402_CTRLMASK_HALT; */
-/*         if( (is_halt && !halted) || (!is_halt && halted) ) { */
-/*             uint16_t new_ctrl = (uint16_t)(is_halt ? */
-/*                                            (cx->drive_set.drive[i].ctrl_word | CANMAT_402_CTRLMASK_HALT ) : */
-/*                                            (cx->drive_set.drive[i].ctrl_word & ~CANMAT_402_CTRLMASK_HALT )); */
-/*             canmat_status_t r = canmat_rpdo_send_u16( cx->drive_set.cif, */
-/*                                                       cx->drive_set.drive[i].node_id, */
-/*                                                       (uint8_t)cx->drive_set.drive[i].rpdo_ctrl, */
-/*                                                       new_ctrl ); */
-/*             if( CANMAT_OK != r ) { */
-/*                 SNS_LOG( LOG_EMERG, "Couldn't send halting PDO: %s\n", */
-/*                          canmat_iface_strerror( cx->drive_set.cif, r) ); */
-/*                 // try to halt (probably will fail again) */
-/*                 if( !is_halt ) {  halt(cx,1); return; } */
-/*             } else { */
-/*                 cx->drive_set.drive[i].ctrl_word = new_ctrl; */
-/*             } */
-/*         } */
-/*     } */
-/*     cx->halt = is_halt; */
-/* } */
+static void halt( struct can402_cx *cx, _Bool is_halt ) {
+    for( size_t i = 0; i < cx->drive_set.n; i ++ ) {
+        _Bool halted = cx->drive_set.drive[i].ctrl_word & CANMAT_402_CTRLMASK_HALT;
+        if( (is_halt && !halted) || (!is_halt && halted) ) {
+            uint16_t new_ctrl = (uint16_t)(is_halt ?
+                                           (cx->drive_set.drive[i].ctrl_word | CANMAT_402_CTRLMASK_HALT ) :
+                                           (cx->drive_set.drive[i].ctrl_word & ~CANMAT_402_CTRLMASK_HALT ));
+            canmat_status_t r = canmat_rpdo_send_u16( cx->drive_set.cif,
+                                                      cx->drive_set.drive[i].node_id,
+                                                      (uint8_t)cx->drive_set.drive[i].rpdo_ctrl,
+                                                      new_ctrl );
+            if( CANMAT_OK != r ) {
+                SNS_LOG( LOG_EMERG, "Couldn't send halting PDO: %s\n",
+                         canmat_iface_strerror( cx->drive_set.cif, r) );
+                // try to halt (probably will fail again)
+                if( !is_halt ) {  halt(cx,1); return; }
+            } else {
+                cx->drive_set.drive[i].ctrl_word = new_ctrl;
+            }
+        }
+    }
+    cx->halt = is_halt;
+}
 
 static void update_feedback( struct can402_cx *cx ) {
     for( size_t i = 0; i < cx->drive_set.n; i++ ) {
