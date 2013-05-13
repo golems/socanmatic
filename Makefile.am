@@ -2,6 +2,9 @@ ACLOCAL_AMFLAGS = -I m4
 
 SUBDIRS = . doc
 
+
+EXTRA_DIST = eds/dsp301.eds eds/dsp402.eds eds/pdo-template.eds
+
 AM_CPPFLAGS = -I$(top_srcdir)/include
 
 TESTS = test_sdo
@@ -12,6 +15,7 @@ pkginclude_HEADERS = 	                     \
 	include/socanmatic/status.h          \
 	include/socanmatic/descriptor.h      \
 	include/socanmatic/nmt.h             \
+	include/socanmatic/eds.h             \
 	include/socanmatic/sdo.h             \
 	include/socanmatic/dict.h            \
 	include/socanmatic/dict_fun.h        \
@@ -35,6 +39,7 @@ lib_LTLIBRARIES =                            \
 m4_dnl bin_PROGRAMS = esdcantool
 
 bin_PROGRAMS = canmat
+dist_bin_SCRIPTS = canmatc
 noinst_PROGRAMS = test_sdo
 
 libsocanmatic_la_SOURCES =                   \
@@ -86,10 +91,11 @@ BUILT_SOURCES =                              \
 	socanmatic/enum402.h
 
 
-socanmatic/dict402.h dict402.c: $(top_srcdir)/canmatc $(top_srcdir)/eds/dsp301.eds $(top_srcdir)/eds/dsp402.eds $(top_srcdir)/pdo.eds
+socanmatic/dict402.h dict402.c: $(top_srcdir)/canmatc $(top_srcdir)/eds/dsp301.eds $(top_srcdir)/eds/dsp402.eds pdo.eds
+	if ! test  -d socanmatic; then mkdir socanmatic; fi
 	$(top_srcdir)/canmatc --exclude-enum -n canmat_dict402 -N canmat_402 \
 		-o dict402.c --header socanmatic/dict402.h                   \
-		$(top_srcdir)/eds/dsp301.eds $(top_srcdir)/pdo.eds $(top_srcdir)/eds/dsp402.eds
+		$(top_srcdir)/eds/dsp301.eds pdo.eds $(top_srcdir)/eds/dsp402.eds
 
 socanmatic/enum301.h: $(top_srcdir)/canmatc $(top_srcdir)/eds/dsp301.eds
 	if ! test  -d socanmatic; then mkdir socanmatic; fi
@@ -107,6 +113,10 @@ pdo.eds: $(top_srcdir)/eds/pdo-template.eds
 		sed  $(top_srcdir)/eds/pdo-template.eds -e s/XX/`printf %02x $$i`/ -e '/^;.*/d' >> pdo.eds; \
 		i=$$((i+1)); \
 	done
+
+
+distclean-local:
+	-rm -rf pdo.eds socanmatic/dict402.h dict402.c
 
 #clean-local:
 #rm -f dict402.c
