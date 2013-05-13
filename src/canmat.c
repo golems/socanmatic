@@ -51,6 +51,7 @@
 #include <getopt.h>
 #include <assert.h>
 #include <poll.h>
+#include <time.h>
 
 #include "socanmatic.h"
 #include "socanmatic/dict402.h"
@@ -64,6 +65,7 @@ static const char *opt_api = "socketcan";
 
 static const char **opt_pos = NULL;
 static size_t opt_npos = 0;
+static size_t opt_timestamp = 0;
 
 //uint16_t opt_canid = 0;
 //uint8_t opt_can_dlc = 0;
@@ -126,7 +128,7 @@ static void invalid_arg( const char *arg );
 static unsigned long parse_uhex( const char *arg, uint64_t max );
 static unsigned long parse_u( const char *arg, uint64_t max );
 static struct canmat_iface *open_iface( const char *type, const char *name );
-
+static void timestamp(void);
 
 /***************/
 /* ARG PARSING */
@@ -186,7 +188,7 @@ int main( int argc, char ** argv ) {
     can_set_t canset = {0};
 
     int c, i = 0;
-    while( (c = getopt( argc, argv, "vhH?Vf:a:")) != -1 ) {
+    while( (c = getopt( argc, argv, "tvhH?Vf:a:")) != -1 ) {
         switch(c) {
         case 'V':   /* version     */
             puts( "canmat " PACKAGE_VERSION "\n"
@@ -200,6 +202,9 @@ int main( int argc, char ** argv ) {
             exit(EXIT_SUCCESS);
         case 'v':   /* verbose  */
             opt_verbosity++;
+            break;
+        case 't':   /* timestamp  */
+            opt_timestamp = 1;
             break;
         case 'a':   /* api  */
             opt_api = optarg;
@@ -217,6 +222,7 @@ int main( int argc, char ** argv ) {
                   "  -v,                       Make output more verbose\n"
                   "  -a api_type,              CAN API, e.g, socketcan, ntcan\n"
                   "  -f interface,             CAN interface (multiple allowed)\n"
+                  "  -t,                       Timestamp output\n"
                   "  -?,                       Give program help list\n"
                   "  -V,                       Print program version\n"
                   "\n"
@@ -291,6 +297,7 @@ static void pollin1( const char *name, canmat_iface_t *cif, void (printer)(struc
     hard_assert( CANMAT_OK == r, "Couldn't recv frame: %s\n", canmat_iface_strerror(cif, r) );
 
     if( CANMAT_OK == r ) {
+        timestamp();
         fprintf( stdout, "%s: ", name );
         printer( &can );
     }
@@ -678,4 +685,13 @@ struct canmat_iface *open_iface( const char *type, const char *name ) {
     verbf( 1, "Opened interface %s, type %s\n", name, type);
 
     return cif;
+}
+
+
+static void timestamp() {
+    if( !opt_timestamp ) return;
+
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    printf("%"PRIuPTR".%09lu: ", now.tv_sec, now.tv_nsec );
 }
