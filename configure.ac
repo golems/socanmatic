@@ -51,6 +51,11 @@ AC_SEARCH_LIBS([clock_gettime],[rt])
 AC_CHECK_HEADER([ntcan.h], [FOUND_NTCAN=yes])
 AM_CONDITIONAL([HAVE_NTCAN], [test x$FOUND_NTCAN = xyes])
 
+
+# Look for sns library
+AC_CHECK_HEADER([sns.h], [FOUND_SNS=yes])
+AM_CONDITIONAL([HAVE_SNS], [test x$FOUND_SNS = xyes])
+
 # Enable maximum warnings
 AX_CFLAGS_WARN_ALL
 

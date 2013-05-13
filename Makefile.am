@@ -34,7 +34,7 @@ lib_LTLIBRARIES =                            \
 
 m4_dnl bin_PROGRAMS = esdcantool
 
-bin_PROGRAMS = canmat can402
+bin_PROGRAMS = canmat
 noinst_PROGRAMS = test_sdo
 
 libsocanmatic_la_SOURCES =                   \
@@ -70,8 +70,13 @@ test_sdo_LDADD = libsocanmatic.la  libsocanmatic402.la
 canmat_SOURCES = src/canmat.c src/display.c
 canmat_LDADD = libsocanmatic.la libsocanmatic402.la
 
+
+if HAVE_SNS
+bin_PROGRAMS += can402
 can402_SOURCES = src/can402.c
 can402_LDADD = libsocanmatic.la libsocanmatic402.la -lsns -lach
+endif
+
 
 
 BUILT_SOURCES =                              \
