@@ -110,3 +110,7 @@ pdo.eds: $(top_srcdir)/eds/pdo-template.eds
 
 #clean-local:
 #rm -f dict402.c
+
+bin_PROGRAMS += jerk-test
+jerk_test_SOURCES = src/jerk-test.c
+jerk_test_LDADD = libsocanmatic.la libsocanmatic402.la -lm

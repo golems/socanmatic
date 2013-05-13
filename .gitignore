@@ -33,3 +33,4 @@ doc/Makefile.in
 /can402
 /pdo.eds
 /socanmatic-*
+/jerk-test
