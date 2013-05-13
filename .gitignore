@@ -32,3 +32,4 @@ doc/Makefile.in
 /enum402.c
 /can402
 /pdo.eds
+/socanmatic-*
