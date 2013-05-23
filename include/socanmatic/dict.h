@@ -53,6 +53,7 @@ typedef enum canmat_access_type {
     CANMAT_ACCESS_RW,         ///< Read-Write
     CANMAT_ACCESS_RWR,        ///< Read-Write on process input
     CANMAT_ACCESS_RWW,        ///< Read-Write on process output
+    CANMAT_ACCESS_CONST       ///< Constant data
 } canmat_access_type_t;
 
 
@@ -62,6 +63,8 @@ typedef uint32_t CANMAT_UNSIGNED32;
 typedef int8_t   CANMAT_INTEGER8;
 typedef int16_t  CANMAT_INTEGER16;
 typedef int32_t  CANMAT_INTEGER32;
+typedef float    CANMAT_REAL32;
+typedef double   CANMAT_REAL64;
 
 
 /** Description of a CiA Object */
