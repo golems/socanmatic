@@ -167,7 +167,7 @@ int main( int argc, char ** argv ) {
     // run
     pthread_t feedback_thread;
     if( pthread_create( &feedback_thread, NULL, feedback_recv_start, &cx ) ) {
-        sns_die( 0, "Couldn't create feedback thread: %s\n", strerror(errno) );
+        SNS_DIE( "Couldn't create feedback thread: %s\n", strerror(errno) );
         exit(EXIT_FAILURE);
     }
     run(&cx);
@@ -255,11 +255,11 @@ static void parse( struct can402_cx *cx, int argc, char **argv )
             exit(EXIT_SUCCESS);
             break;
         default:
-            sns_die( 0, "Invalid argument: %s\n", optarg );
+            SNS_DIE( "Invalid argument: %s\n", optarg );
         }
     }
     if( optind < argc ) {
-        sns_die( 0, "Invalid argument: %s\n", argv[optind] );
+        SNS_DIE( "Invalid argument: %s\n", argv[optind] );
     }
 
 
@@ -409,7 +409,7 @@ static void run( struct can402_cx *cx ) {
             /* Really bad things we just give up on */
         case ACH_BUG:
         case ACH_CORRUPT:
-            sns_die( 0, "ach_get failed badly, aborting: '%s'\n", ach_result_to_string(r) );
+            SNS_DIE( "ach_get failed badly, aborting: '%s'\n", ach_result_to_string(r) );
             break;
         case ACH_CANCELED:
             break;
