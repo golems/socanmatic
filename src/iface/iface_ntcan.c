@@ -61,6 +61,7 @@ static canmat_status_t v_open( struct canmat_iface *cif, const char *name );
 static canmat_status_t v_send( struct canmat_iface *cif, const struct can_frame *frame );
 static canmat_status_t v_recv( struct canmat_iface *cif, struct can_frame *frame );
 static canmat_status_t v_destroy( struct canmat_iface *cif );
+static canmat_status_t v_filter( struct canmat_iface *cif, const struct can_filter *filters, size_t n );
 static const char *v_strerror( struct canmat_iface *cif );
 static canmat_status_t v_set_kbps( struct canmat_iface *cif, unsigned kbps );
 static canmat_status_t v_print_info( struct canmat_iface *cif, FILE *fptr );
@@ -75,6 +76,7 @@ static struct canmat_iface_vtable vtable = {
     .send=v_send,
     .recv=v_recv,
     .destroy=v_destroy,
+    .filter=v_filter,
     .strerror=v_strerror,
     .set_kbps=v_set_kbps,
     .print_info=v_print_info
@@ -317,6 +319,27 @@ static canmat_status_t v_print_info( struct canmat_iface *cif, FILE *fptr ) {
     return CANMAT_OK;
 }
 
+static canmat_status_t v_filter( struct canmat_iface *cif, const struct can_filter *filters, size_t n ) {
+    canmat_iface_ntcan_t *ntcif = (canmat_iface_ntcan_t*)cif;
+    for( canid_t i = 0; i <= CANMAT_COB_ID_MAX_BASE; i ++ ) {
+        int matched = 0;
+        for( size_t j = 0; !matched && j < n; j ++ ) {
+            if ( (i & filters[j].can_mask) ==
+                 (filters[j].can_id & filters[j].can_mask) )
+            {
+                matched = 1;
+            }
+        }
+        if( !matched ) {
+            NTCAN_RESULT r  = canIdDelete( ntcif->handle, (int32_t)i );
+            if( NTCAN_SUCCESS != r ) {
+                cif->err = r;
+                return CANMAT_ERR_OS;
+            }
+        }
+    }
+    return CANMAT_OK;
+}
 
 /* ex: set shiftwidth=4 tabstop=4 expandtab: */
 /* Local Variables:                          */

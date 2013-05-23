@@ -133,6 +133,7 @@ struct canmat_iface *open_iface( const char *type, const char *name );
 //static void error( int level , const char fmt[], ...)          ATTR_PRINTF(2,3);
 
 int main( int argc, char ** argv ) {
+    sns_init();
     struct can402_cx cx;
     memset( &cx, 0, sizeof(cx));
 
@@ -166,7 +167,7 @@ int main( int argc, char ** argv ) {
     // run
     pthread_t feedback_thread;
     if( pthread_create( &feedback_thread, NULL, feedback_recv_start, &cx ) ) {
-        sns_die( 0, "Couldn't create feedback thread: %s\n", strerror(errno) );
+        SNS_DIE( "Couldn't create feedback thread: %s\n", strerror(errno) );
         exit(EXIT_FAILURE);
     }
     run(&cx);
@@ -254,11 +255,11 @@ static void parse( struct can402_cx *cx, int argc, char **argv )
             exit(EXIT_SUCCESS);
             break;
         default:
-            sns_die( 0, "Invalid argument: %s\n", optarg );
+            SNS_DIE( "Invalid argument: %s\n", optarg );
         }
     }
     if( optind < argc ) {
-        sns_die( 0, "Invalid argument: %s\n", argv[optind] );
+        SNS_DIE( "Invalid argument: %s\n", argv[optind] );
     }
 
 
@@ -283,6 +284,10 @@ static void init( struct can402_cx *cx ) {
 
     sns_chan_open( &cx->chan_ref, opt_chan_ref, NULL );
     sns_chan_open( &cx->chan_state, opt_chan_state, NULL );
+    {
+        ach_channel_t *chans[] = {&cx->chan_ref, NULL};
+        sns_sigcancel( chans, sns_sig_term_default );
+    }
 
 
     enum canmat_status r;
@@ -404,7 +409,9 @@ static void run( struct can402_cx *cx ) {
             /* Really bad things we just give up on */
         case ACH_BUG:
         case ACH_CORRUPT:
-            sns_die( 0, "ach_get failed badly, aborting: '%s'\n", ach_result_to_string(r) );
+            SNS_DIE( "ach_get failed badly, aborting: '%s'\n", ach_result_to_string(r) );
+            break;
+        case ACH_CANCELED:
             break;
         default:
             SNS_LOG( LOG_ERR, "ach_get failed: '%s'\n", ach_result_to_string(r) );

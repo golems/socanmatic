@@ -56,6 +56,7 @@ static canmat_status_t v_open( struct canmat_iface *cif, const char *name );
 static canmat_status_t v_send( struct canmat_iface *cif, const struct can_frame *frame );
 static canmat_status_t v_recv( struct canmat_iface *cif, struct can_frame *frame );
 static canmat_status_t v_destroy( struct canmat_iface *cif );
+static canmat_status_t v_filter( struct canmat_iface *cif, const struct can_filter *filters, size_t n );
 static const char *v_strerror( struct canmat_iface *cif );
 static canmat_status_t v_set_kbps( struct canmat_iface *cif, unsigned kbps );
 static canmat_status_t v_print_info( struct canmat_iface *cif, FILE *fptr );
@@ -65,6 +66,7 @@ static struct canmat_iface_vtable vtable = {
     .send=v_send,
     .recv=v_recv,
     .destroy=v_destroy,
+    .filter=v_filter,
     .strerror=v_strerror,
     .set_kbps=v_set_kbps,
     .print_info=v_print_info
@@ -171,6 +173,13 @@ static canmat_status_t v_set_kbps( struct canmat_iface *cif, unsigned kbps ) {
 static canmat_status_t v_print_info( struct canmat_iface *cif, FILE *fptr ) {
     (void)cif; (void)fptr;
     return CANMAT_ERR_NOT_SUP;
+}
+
+static canmat_status_t v_filter( struct canmat_iface *cif, const struct can_filter *filters, size_t n ) {
+    int i = setsockopt( cif->fd, SOL_CAN_RAW, CAN_RAW_FILTER,
+                        filters, (socklen_t)(n*sizeof(filters[0])) );
+    return i ? CANMAT_ERR_OS : CANMAT_OK;
+
 }
 
 /* ex: set shiftwidth=4 tabstop=4 expandtab: */

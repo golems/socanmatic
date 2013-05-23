@@ -30,18 +30,11 @@ pkginclude_HEADERS = 	                     \
 
 noinst_HEADERS = include/socanmatic_private.h
 
-lib_LTLIBRARIES =                            \
-	libsocanmatic.la                     \
-	libsocanmatic402.la                  \
-	libsocanmatic_iface_socketcan.la
-
-
-m4_dnl bin_PROGRAMS = esdcantool
-
 bin_PROGRAMS = canmat
 dist_bin_SCRIPTS = canmatc
 noinst_PROGRAMS = test_sdo
 
+lib_LTLIBRARIES = libsocanmatic.la
 libsocanmatic_la_SOURCES =                   \
 	src/sdo.c                            \
 	src/ds301.c                          \
@@ -52,13 +45,17 @@ libsocanmatic_la_SOURCES =                   \
 	src/probe.c                          \
 	src/pdo.c                            \
 	src/nmt.c
-
 libsocanmatic_la_LIBADD = -ldl
 
+
+# Profiles
+lib_LTLIBRARIES += libsocanmatic402.la
 libsocanmatic402_la_SOURCES = dict402.c src/ds402.c
 
 
 
+# Interfaces
+lib_LTLIBRARIES += libsocanmatic_iface_socketcan.la
 libsocanmatic_iface_socketcan_la_SOURCES = src/iface/iface_socketcan.c
 libsocanmatic_iface_socketcan_la_LDFLAGS = -shared
 
@@ -79,7 +76,7 @@ canmat_LDADD = libsocanmatic.la libsocanmatic402.la
 if HAVE_SNS
 bin_PROGRAMS += can402
 can402_SOURCES = src/can402.c
-can402_LDADD = libsocanmatic.la libsocanmatic402.la -lsns -lach
+can402_LDADD = libsocanmatic.la libsocanmatic402.la -lsns -lach -llapack -lblas
 endif
 
 
@@ -92,27 +89,37 @@ BUILT_SOURCES =                              \
 
 
 socanmatic/dict402.h dict402.c: $(top_srcdir)/canmatc $(top_srcdir)/eds/dsp301.eds $(top_srcdir)/eds/dsp402.eds pdo.eds
-	if ! test  -d socanmatic; then mkdir socanmatic; fi
+	@MKDIR_P@ socanmatic
 	$(top_srcdir)/canmatc --exclude-enum -n canmat_dict402 -N canmat_402 \
 		-o dict402.c --header socanmatic/dict402.h                   \
 		$(top_srcdir)/eds/dsp301.eds pdo.eds $(top_srcdir)/eds/dsp402.eds
 
 socanmatic/enum301.h: $(top_srcdir)/canmatc $(top_srcdir)/eds/dsp301.eds
-	if ! test  -d socanmatic; then mkdir socanmatic; fi
+	@MKDIR_P@ socanmatic
 	$(top_srcdir)/canmatc --exclude-dictionary -o enum301.c --header socanmatic/enum301.h \
 		 $(top_srcdir)/eds/dsp301.eds
 
 socanmatic/enum402.h: $(top_srcdir)/canmatc $(top_srcdir)/eds/dsp402.eds
-	if ! test  -d socanmatic; then mkdir socanmatic; fi
+	@MKDIR_P@ socanmatic
 	$(top_srcdir)/canmatc --exclude-dictionary -N canmat_402_ -o enum402.c --header socanmatic/enum402.h \
 		 $(top_srcdir)/eds/dsp402.eds
 
 pdo.eds: $(top_srcdir)/eds/pdo-template.eds
-	rm -rf pdo.eds
+	rm -f pdo.eds
 	i=0; while [ $$i -lt 10 ]; do \
 		sed  $(top_srcdir)/eds/pdo-template.eds -e s/XX/`printf %02x $$i`/ -e '/^;.*/d' >> pdo.eds; \
 		i=$$((i+1)); \
 	done
+
+
+lib_LTLIBRARIES += libsocanmatic_prof_mfr_schunk.la
+libsocanmatic_prof_mfr_schunk_la_SOURCES = mfr_schunk.c
+
+socanmatic/mfr_schunk.h mfr_schunk.c: $(top_srcdir)/canmatc $(top_srcdir)/eds/dsp301.eds $(top_srcdir)/eds/dsp402.eds pdo.eds $(top_srcdir)/eds/mfr/schunk.eds
+	@MKDIR_P@ socanmatic
+	$(top_srcdir)/canmatc --exclude-enum -n canmat_dict402 -N canmat_402 \
+		-o mfr_schunk.c --header socanmatic/mfr_schunk.h             \
+		$(top_srcdir)/eds/dsp301.eds pdo.eds $(top_srcdir)/eds/dsp402.eds $(top_srcdir)/eds/mfr/schunk.eds
 
 
 distclean-local:

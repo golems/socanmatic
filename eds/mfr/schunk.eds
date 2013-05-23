@@ -1,0 +1,376 @@
+;; Manufacturer-specific parameters for Schunk PRL/ERB/PG modules
+
+[2000]
+ParameterName=manufacturer debug flags
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW
+DefaultValue=0
+PDOMapping=0
+ObjFlags=0x0
+
+[2001]
+ParameterName=debug values int32
+ObjectType=ARRAY
+SubNumber=5
+
+[2001sub0]
+ParameterName=nb debug values int32
+ObjectType=VAR
+DataType=UNSIGNED8
+AccessType=const
+DefaultValue=4
+PDOMapping=0
+
+[2001sub1]
+ParameterName=debug value int32 1
+ObjectType=VAR
+DataType=INTEGER32
+AccessType=RWR
+PDOMapping=1
+
+[2001sub2]
+ParameterName=debug value int32 2
+ObjectType=VAR
+DataType=INTEGER32
+AccessType=RWR
+PDOMapping=1
+
+[2001sub3]
+ParameterName=debug value int32 3
+ObjectType=VAR
+DataType=INTEGER32
+AccessType=RWR
+PDOMapping=1
+
+[2001sub4]
+ParameterName=debug value int32 4
+ObjectType=VAR
+DataType=INTEGER32
+AccessType=RWR
+PDOMapping=1
+
+[2002]
+ParameterName=debug values float
+ObjectType=ARRAY
+SubNumber=5
+
+[2002sub0]
+ParameterName=nb debug values float
+ObjectType=VAR
+DataType=UNSIGNED8
+AccessType=const
+DefaultValue=4
+PDOMapping=0
+
+[2002sub1]
+ParameterName=debug value float 1
+ObjectType=VAR
+DataType=REAL32
+AccessType=RWR
+PDOMapping=1
+
+[2002sub2]
+ParameterName=debug value float 2
+ObjectType=VAR
+DataType=REAL32
+AccessType=RWR
+PDOMapping=1
+
+[2002sub3]
+ParameterName=debug value float 3
+ObjectType=VAR
+DataType=REAL32
+AccessType=RWR
+PDOMapping=1
+
+[2002sub4]
+ParameterName=debug value float 4
+ObjectType=VAR
+DataType=REAL32
+AccessType=RWR
+PDOMapping=1
+
+[2003]
+ParameterName=debug message
+ObjectType=VAR
+DataType=VISIBLE_STRING
+AccessType=ro
+PDOMapping=1
+
+[2004]
+ParameterName=logging
+ObjectType=RECORD
+SubNumber=3
+ObjFlags=0x3
+
+[2004sub0]
+ParameterName=nb logging
+ObjectType=VAR
+DataType=UNSIGNED8
+AccessType=const
+DefaultValue=2
+PDOMapping=0
+ObjFlags=3
+
+[2004sub1]
+ParameterName=logging state
+ObjectType=VAR
+DataType=UNSIGNED16
+AccessType=RW
+DefaultValue=0x8001
+PDOMapping=0
+ObjFlags=3
+
+[2004sub2]
+ParameterName=logging trigger time
+ObjectType=VAR
+DataType=REAL32
+AccessType=RW
+PDOMapping=0
+ObjFlags=3
+
+[2007]
+ParameterName=EEPROM Parameters
+ObjectType=RECORD
+SubNumber=2
+
+[2007sub0]
+ParameterName=Number of entries
+ObjectType=VAR
+DataType=UNSIGNED8
+AccessType=ro
+DefaultValue=1
+PDOMapping=0
+
+[2007sub1]
+ParameterName=SECT CONFIG
+ObjectType=VAR
+DataType=0x000a
+AccessType=ro
+PDOMapping=0
+ObjFlags=3
+
+[2008]
+ParameterName=Password
+ObjectType=VAR
+DataType=VISIBLE_STRING
+AccessType=wo
+PDOMapping=0
+ObjFlags=0x1
+
+[2009]
+ParameterName=User
+ObjectType=VAR
+DataType=UNSIGNED8
+AccessType=ro
+DefaultValue=0
+PDOMapping=0
+
+[200A]
+ParameterName=Disconnect Reset
+ObjectType=VAR
+DataType=UNSIGNED8
+AccessType=wo
+PDOMapping=0
+ObjFlags=0x3
+
+[200B]
+ParameterName=error details
+ObjectType=RECORD
+DataType=REAL32
+AccessType=ro
+SubNumber=4
+
+[200Bsub0]
+ParameterName=Number of entries
+ObjectType=VAR
+DataType=UNSIGNED8
+AccessType=ro
+DefaultValue=3
+PDOMapping=0
+
+[200Bsub1]
+ParameterName=detail
+ObjectType=VAR
+DataType=REAL32
+AccessType=ro
+PDOMapping=0
+
+[200Bsub2]
+ParameterName=file
+ObjectType=VAR
+DataType=VISIBLE_STRING
+AccessType=ro
+PDOMapping=0
+ObjFlags=2
+
+[200Bsub3]
+ParameterName=line
+ObjectType=VAR
+DataType=UNSIGNED16
+AccessType=ro
+PDOMapping=0
+
+[200C]
+ParameterName=communication mode
+ObjectType=VAR
+DataType=UNSIGNED8
+AccessType=RW
+PDOMapping=0
+
+[200D]
+ParameterName=pcb temperature
+ObjectType=RECORD
+SubNumber=3
+
+[200Dsub0]
+ParameterName=Number of entries
+ObjectType=VAR
+DataType=UNSIGNED8
+AccessType=ro
+DefaultValue=2
+PDOMapping=0
+
+[200Dsub1]
+ParameterName=actual pcb temperature
+ObjectType=VAR
+DataType=REAL32
+AccessType=ro
+PDOMapping=1
+
+[200Dsub2]
+ParameterName=pcb temperature update period ms
+ObjectType=VAR
+DataType=UNSIGNED32
+AccessType=RW
+DefaultValue=20000
+PDOMapping=0
+LowLimit=1000
+HighLimit=3600000
+
+[200E]
+ParameterName=sync timeout factor
+ObjectType=VAR
+DataType=UNSIGNED8
+AccessType=RW
+DefaultValue=6
+PDOMapping=0
+
+[2010]
+ParameterName=KR Current
+ObjectType=VAR
+DataType=REAL32
+AccessType=RW
+PDOMapping=0
+
+[2011]
+ParameterName=TN Current
+ObjectType=VAR
+DataType=REAL32
+AccessType=RW
+PDOMapping=0
+
+[2012]
+ParameterName=TD Current
+ObjectType=VAR
+DataType=REAL32
+AccessType=RW
+PDOMapping=0
+
+[2013]
+ParameterName=KC Current
+ObjectType=VAR
+DataType=REAL32
+AccessType=RW
+PDOMapping=0
+
+[2020]
+ParameterName=KR Speed
+ObjectType=VAR
+DataType=REAL32
+AccessType=RW
+PDOMapping=0
+
+[2021]
+ParameterName=TN Speed
+ObjectType=VAR
+DataType=REAL32
+AccessType=RW
+PDOMapping=0
+
+[2022]
+ParameterName=TD Speed
+ObjectType=VAR
+DataType=REAL32
+AccessType=RW
+PDOMapping=0
+
+[2023]
+ParameterName=KC Speed
+ObjectType=VAR
+DataType=REAL32
+AccessType=RW
+PDOMapping=0
+
+[2024]
+ParameterName=KS FeedForward
+ObjectType=VAR
+DataType=REAL32
+AccessType=RW
+PDOMapping=0
+
+[2030]
+ParameterName=KR Pos
+ObjectType=VAR
+DataType=REAL32
+AccessType=RW
+PDOMapping=0
+
+[2031]
+ParameterName=TN Pos
+ObjectType=VAR
+DataType=REAL32
+AccessType=RW
+PDOMapping=0
+
+[2032]
+ParameterName=TD Pos
+ObjectType=VAR
+DataType=REAL32
+AccessType=RW
+PDOMapping=0
+
+[2033]
+ParameterName=KC Pos
+ObjectType=VAR
+DataType=REAL32
+AccessType=RW
+PDOMapping=0
+
+[2034]
+ParameterName=KP FeedForward
+ObjectType=VAR
+DataType=REAL32
+AccessType=RW
+PDOMapping=0
+
+[2041]
+ParameterName=Delta Position
+ObjectType=VAR
+DataType=REAL32
+AccessType=RW
+PDOMapping=0
+
+[2050]
+ParameterName=extended status
+ObjectType=VAR
+DataType=UNSIGNED8
+AccessType=RO
+DefaultValue=0
+PDOMapping=1
+ObjFlags=0x1
+
+; Local Variables:
+; mode: conf
+; End:
