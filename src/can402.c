@@ -448,6 +448,9 @@ static double pos_limit( struct canmat_402_drive *drive, double val ) {
     return val + off;
 }
 
+// workaround for Schunk PRL+ 0.62 firmware
+#define VEL_MIN (INT16_MIN+1)
+#define VEL_MAX (INT16_MAX)
 
 static void process( struct can402_cx *cx ) {
     if( SNS_LOG_PRIORITY(LOG_DEBUG + 1) ) {
@@ -475,11 +478,11 @@ static void process( struct can402_cx *cx ) {
             // clamp value
             val *= cx->drive_set.drive[i].vel_factor;
             int16_t vl_target = 0;
-            if( val > INT16_MAX ) {
-                vl_target = INT16_MAX;
+            if( val > VEL_MAX ) {
+                vl_target = VEL_MAX;
                 SNS_LOG(LOG_DEBUG, "clamp+ %f -> %d 0x%x\n", val, vl_target, cx->drive_set.drive[i].node_id);
-            } else if (val < INT16_MIN ) {
-                vl_target = INT16_MIN;
+            } else if (val < VEL_MIN ) {
+                vl_target = VEL_MIN;
                 SNS_LOG(LOG_DEBUG, "clamp- %f -> %d 0x%x\n", val, vl_target, cx->drive_set.drive[i].node_id);
             } else vl_target = (int16_t) val;
             // check if update necessary to save bandwidth
