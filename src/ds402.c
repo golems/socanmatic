@@ -203,7 +203,10 @@ enum canmat_status canmat_402_start( struct canmat_iface *cif, struct canmat_402
         case CANMAT_402_STATE_VAL_ON_OP_EN:
             return CANMAT_OK;
         case CANMAT_402_STATE_VAL_ON_QUICK_STOP:
-            return CANMAT_ERR_PARAM; // TODO
+            CHECK_STATUS( canmat_402_dl_ctrlmask( cif, drive,
+                                                  CANMAT_402_CTRLCMD_MASK_AND_DISABLE_VOLTAGE,
+                                                  CANMAT_402_CTRLCMD_MASK_OR_DISABLE_VOLTAGE ) );
+            break;
         case CANMAT_402_STATE_VAL_FAULT_REACTION_ACTIVE:
         case CANMAT_402_STATE_VAL_FAULT:
             CHECK_STATUS( canmat_402_dl_ctrlmask( cif, drive,

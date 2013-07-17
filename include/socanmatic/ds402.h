@@ -121,7 +121,7 @@ typedef enum canmat_402_state_val {
     CANMAT_402_STATE_VAL_OFF_RDY               = 0x21,  ///< ready to switch on
     CANMAT_402_STATE_VAL_ON_OP_DIS             = 0x23,  ///< switched on
     CANMAT_402_STATE_VAL_ON_OP_EN              = 0x27,  ///< operation enabled
-    CANMAT_402_STATE_VAL_ON_QUICK_STOP         = 0x03,  ///< quick stop active
+    CANMAT_402_STATE_VAL_ON_QUICK_STOP         = 0x07,  ///< quick stop active
     CANMAT_402_STATE_VAL_FAULT_REACTION_ACTIVE = 0x0F,  ///< fault reaction active
     CANMAT_402_STATE_VAL_FAULT                 = 0x08,  ///< fault
     CANMAT_402_STATE_VAL_UNKNOWN               = 0xFFFF ///< Unknown state

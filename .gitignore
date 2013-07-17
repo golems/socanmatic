@@ -33,3 +33,5 @@ doc/Makefile.in
 /can402
 /pdo.eds
 /socanmatic-*
+/mfr_schunk.c
+/core
