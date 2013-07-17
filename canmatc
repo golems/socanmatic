@@ -56,12 +56,20 @@ def config2objdict( config, section ):
         d[o] = config.get(section,o)
     return d
 
+class EnumElt:
+    "Entry in an enum"
+    def __init__(self, name, value, desc ):
+        self.name = name
+        self.value = value
+        self.desc = desc
+
 def config2enumdict( config, section ):
     d = {}
     def ensure_param(name):
         if not name in d:
             d[name] = {}
         return d[name]
+    # construct dict
     for o in config.options(section):
         if re.match(r'^[a-zA-Z0-9_]+\.value$', o):
             name = o.split(".")[0]
@@ -69,7 +77,21 @@ def config2enumdict( config, section ):
         elif re.match(r'^[a-zA-Z0-9_]+\.description$', o):
             name = o.split(".")[0]
             ensure_param(name)["description"] = config.get(section,o)
-    return d
+    # sort
+    e = []
+    for name in d:
+        val = 0;
+        desc = name
+        if "value" in d[name]:
+            val = d[name]["value"]
+        if "description" in d[name]:
+            desc = d[name]["description"]
+        e.append( EnumElt(name,val,desc) )
+
+    def key(x):
+        return x.value
+    e.sort( key=key )
+    return e
 
 def is_section_index(section):
     return re.match(r'^[0-9a-fA-F]$', section)
@@ -123,14 +145,9 @@ def sect2index( section ):
     return (index,subindex)
 
 def map_enum( function, enum_dict, typename ):
-    for elementname in enum_dict[typename]:
-        val = 0;
-        desc = elementname
-        if "value" in enum_dict[typename][elementname]:
-            val = enum_dict[typename][elementname]["value"]
-        if "description" in enum_dict[typename][elementname]:
-            desc = enum_dict[typename][elementname]["description"]
-        function( elementname, val, desc )
+    def h(elt):
+        function(elt.name, elt.value, elt.desc)
+    map( h, enum_dict[typename] )
 
 def escape_const(s):
        s = re.sub(r' |-',"_", s.upper())
