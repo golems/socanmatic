@@ -190,6 +190,7 @@ struct canmat_402_drive {
 
     // PDO number (zero indexed) to configure for feedback
     int tpdo_user;
+    int tpdo_stat;
 
     int rpdo_ctrl; ///< RPDO for setting control word
 };

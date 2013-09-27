@@ -101,6 +101,10 @@ const char **opt_pos = NULL;
 size_t opt_npos = 0;
 int opt_rpdo_ctrl = 0;
 int opt_rpdo_user = 1;
+int opt_tpdo_user = 0;
+int opt_tpdo_stat = -1;
+
+
 double opt_timeout_sec = 0.01; // 100 Hz
 
 // FIXME: 1
@@ -215,6 +219,8 @@ static void parse( struct can402_cx *cx, int argc, char **argv )
             cx->drive_set.drive[ cx->drive_set.n ].node_id = (uint8_t) parse_u( optarg, 16, CANMAT_NODE_MASK );
             cx->drive_set.drive[ cx->drive_set.n ].rpdo_ctrl = opt_rpdo_ctrl;
             cx->drive_set.drive[ cx->drive_set.n ].rpdo_user = opt_rpdo_user;
+            cx->drive_set.drive[ cx->drive_set.n ].tpdo_user = opt_tpdo_user;
+            cx->drive_set.drive[ cx->drive_set.n ].tpdo_stat = opt_tpdo_stat;
             cx->drive_set.drive[ cx->drive_set.n ].pos_factor = opt_pos_factor;
             cx->drive_set.drive[ cx->drive_set.n ].vel_factor = opt_vel_factor;
             cx->drive_set.n++;
@@ -322,14 +328,28 @@ static void init( struct can402_cx *cx ) {
     for( size_t i = 0; i < cx->drive_set.n; i ++ ) {
         const canmat_obj_t *objs[2] = { CANMAT_402_OBJ_POSITION_ACTUAL_VALUE,
                                         CANMAT_402_OBJ_VELOCITY_ACTUAL_VALUE };
+        // user TPDO
         r = canmat_pdo_remap( cx->drive_set.cif, cx->drive_set.drive[i].node_id,
                               (uint8_t)(cx->drive_set.drive[i].tpdo_user), CANMAT_UL,
                               0xFE, -1, 10,
                               2, objs, &cx->drive_set.drive[i].abort_code );
         if( r != CANMAT_OK ) {
-            SNS_LOG( LOG_EMERG, "can402: couldn't map control rpdo: '%s'\n",
+            SNS_LOG( LOG_EMERG, "can402: couldn't map user tpdo: '%s'\n",
                      canmat_iface_strerror( cx->drive_set.cif, r) );
             goto FAIL;
+        }
+        // status TPDO
+        if( 0 <= cx->drive_set.drive[i].tpdo_stat ) {
+            const canmat_obj_t *stat_obj[1] = { CANMAT_402_OBJ_STATUSWORD };
+            r = canmat_pdo_remap( cx->drive_set.cif, cx->drive_set.drive[i].node_id,
+                                  (uint8_t)(cx->drive_set.drive[i].tpdo_stat), CANMAT_UL,
+                                  0xFE, -1, 10,
+                                  1, stat_obj, &cx->drive_set.drive[i].abort_code );
+            if( r != CANMAT_OK ) {
+                SNS_LOG( LOG_EMERG, "can402: couldn't map status tpdo: '%s'\n",
+                         canmat_iface_strerror( cx->drive_set.cif, r) );
+                goto FAIL;
+            }
         }
     }
 
@@ -512,9 +532,12 @@ static void halt( struct can402_cx *cx, _Bool is_halt ) {
     for( size_t i = 0; i < cx->drive_set.n; i ++ ) {
         _Bool halted = cx->drive_set.drive[i].ctrl_word & CANMAT_402_CTRLMASK_HALT;
         if( (is_halt && !halted) || (!is_halt && halted) ) {
+            uint16_t old_ctrl = cx->drive_set.drive[i].ctrl_word;
             uint16_t new_ctrl = (uint16_t)(is_halt ?
-                                           (cx->drive_set.drive[i].ctrl_word | CANMAT_402_CTRLMASK_HALT ) :
-                                           (cx->drive_set.drive[i].ctrl_word & ~CANMAT_402_CTRLMASK_HALT ));
+                                           (old_ctrl | CANMAT_402_CTRLMASK_HALT) :
+                                           (old_ctrl & ~CANMAT_402_CTRLMASK_HALT) );
+            printf("drive: %x, old_ctrl: %x, new_ctrl: %x\n",
+                   cx->drive_set.drive[i].node_id, old_ctrl, new_ctrl );
             canmat_status_t r = canmat_rpdo_send_u16( cx->drive_set.cif,
                                                       cx->drive_set.drive[i].node_id,
                                                       (uint8_t)cx->drive_set.drive[i].rpdo_ctrl,

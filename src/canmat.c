@@ -297,9 +297,22 @@ static void pollin1( const char *name, canmat_iface_t *cif, void (printer)(struc
     hard_assert( CANMAT_OK == r, "Couldn't recv frame: %s\n", canmat_iface_strerror(cif, r) );
 
     if( CANMAT_OK == r ) {
+
+        unsigned func = (unsigned)can.can_id & (unsigned)~CANMAT_NODE_MASK;
         timestamp();
         fprintf( stdout, "%s: ", name );
         printer( &can );
+
+        /* switch(func) { */
+        /* case CANMAT_FUNC_CODE_NMT: */
+        /* case CANMAT_FUNC_CODE_SYNC_EMCY: */
+        /* case CANMAT_FUNC_CODE_TIME: */
+        /* case CANMAT_FUNC_CODE_SDO_TX: */
+        /* case CANMAT_FUNC_CODE_SDO_RX: */
+        /* case CANMAT_FUNC_CODE_NMT_ERR: */
+        /* default: */
+        /*     break; */
+        /* } */
     }
 }
 

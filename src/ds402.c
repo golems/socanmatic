@@ -224,7 +224,7 @@ enum canmat_status canmat_402_start( struct canmat_iface *cif, struct canmat_402
             return CANMAT_ERR_PROTO;
         }
         // update status
-        CHECK_STATUS( canmat_402_ul_statusword( cif, drive->node_id, &drive->stat_word, &drive->abort_code ) );
+        //CHECK_STATUS( canmat_402_ul_statusword( cif, drive->node_id, &drive->stat_word, &drive->abort_code ) );
     }
     return CANMAT_ERR_DEV;
 
