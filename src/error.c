@@ -60,9 +60,9 @@ const char *canmat_strerror( canmat_status_t status ) {
     return "unknown status";
 }
 
-/* ex: set shiftwidth=4 tabstop=4 expandtab: */
 /* Local Variables:                          */
 /* mode: c                                   */
 /* c-basic-offset: 4                         */
 /* indent-tabs-mode:  nil                    */
 /* End:                                      */
+/* ex: set shiftwidth=4 tabstop=4 expandtab: */

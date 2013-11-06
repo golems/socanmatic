@@ -240,8 +240,8 @@ static void parse( struct can402_cx *cx, int argc, char **argv )
         case '?':   /* help     */
         case 'h':
         case 'H':
-            puts( "Usage: canmat [OPTIONS...] COMMAND [command-args...]\n"
-                  "Shell tool for CANopen\n"
+            puts( "Usage: can402 [OPTIONS...] \n"
+                  "Driver daemon for CANopen servo drivies\n"
                   "\n"
                   "Options:\n"
                   "  -v,                       Make output more verbose\n"
@@ -255,6 +255,7 @@ static void parse( struct can402_cx *cx, int argc, char **argv )
                   "  -V,                       Print program version\n"
                   "\n"
                   "Examples:\n"
+                  " can402 -f can0 -R 1 -C 0 -n 3 -n 4 -c ref -s state    Interface with nodes 3 and 4\n"
                   "\n"
                   "Report bugs to <ntd@gatech.edu>"
                 );
@@ -595,10 +596,12 @@ static void feedback_recv( struct can402_cx *cx ) {
     while(!sns_cx.shutdown) {
         struct can_frame can;
         // FIXME: add a timeout in case we need to terminate and node isn't responding
+        errno = 0;
         enum canmat_status i = canmat_iface_recv( cx->drive_set.cif, &can);
         if( CANMAT_OK != i ) {
             SNS_LOG( LOG_ERR, "Error receiving CAN frame: %s\n",
                      canmat_iface_strerror(cx->drive_set.cif, i) );
+            continue;
         }
         // TODO: Binary search is better (but this array is tiny)
         // filter non-TPDOs
