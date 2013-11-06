@@ -41,9 +41,28 @@
 #ifndef CANMAT_PRIVATE_H
 #define CANMAT_PRIVATE_H
 
+#include <errno.h>
+#include <stdlib.h>
+#include <string.h>
+
 
 void canmat_dump_frame (FILE *f, const struct can_frame *can );
 void canmat_display( const canmat_dict_t *dict, const struct can_frame *can );
+
+
+#ifdef __GNUC__
+#define ATTR_PRINTF(m,n) __attribute__((format(printf, m, n)))
+#else
+#define ATTR_PRINTF(m,n)
+#endif
+
+void hard_assert( _Bool test , const char fmt[], ...)          ATTR_PRINTF(2,3);
+
+unsigned long parse_uhex( const char *arg, uint64_t max );
+unsigned long parse_u( const char *arg, int base, uint64_t max );
+
+canmat_iface_t *open_iface( const char *type, const char *name );
+
 
 /* ex: set shiftwidth=4 tabstop=4 expandtab: */
 /* Local Variables:                          */

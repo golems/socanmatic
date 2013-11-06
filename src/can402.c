@@ -130,12 +130,6 @@ static void *feedback_recv_start( void *cx );
 static void update_feedback( struct can402_cx *cx );
 static void send_feedback( struct can402_cx *cx );
 
-static unsigned long parse_u( const char *arg, int base, uint64_t max );
-//static unsigned long parse_u( const char *arg, uint64_t max );
-struct canmat_iface *open_iface( const char *type, const char *name );
-
-//static void error( int level , const char fmt[], ...)          ATTR_PRINTF(2,3);
-
 int main( int argc, char ** argv ) {
     sns_init();
     struct can402_cx cx;
@@ -592,15 +586,18 @@ static void *feedback_recv_start( void *cx ) {
     feedback_recv( (struct can402_cx*)cx );
     return NULL;
 }
+
 static void feedback_recv( struct can402_cx *cx ) {
     while(!sns_cx.shutdown) {
         struct can_frame can;
-        // FIXME: add a timeout in case we need to terminate and node isn't responding
-        errno = 0;
         enum canmat_status i = canmat_iface_recv( cx->drive_set.cif, &can);
         if( CANMAT_OK != i ) {
-            SNS_LOG( LOG_ERR, "Error receiving CAN frame: %s\n",
-                     canmat_iface_strerror(cx->drive_set.cif, i) );
+            if( !(CANMAT_ERR_OS == i &&
+                  EINTR == cx->drive_set.cif->err ))
+            {
+                SNS_LOG( LOG_ERR, "Error receiving CAN frame: %s\n",
+                         canmat_iface_strerror(cx->drive_set.cif, i) );
+            }
             continue;
         }
         // TODO: Binary search is better (but this array is tiny)
@@ -640,40 +637,4 @@ static void stop( struct can402_cx *cx ) {
         }
     }
     sns_end();
-}
-
-static unsigned long parse_u( const char *arg, int base, uint64_t max ) {
-    char *endptr;
-    errno = 0;
-    unsigned long u  = strtoul( arg, &endptr, base );
-
-    SNS_REQUIRE( 0 == errno, "Invalid hex argument: %s (%s)\n", arg, strerror(errno) );
-    SNS_REQUIRE( u <= max, "Argument %s too big\n", arg );
-
-    return u;
-}
-
-
-/* static unsigned long parse_u( const char *arg, uint64_t max ) { */
-/*     char *endptr; */
-/*     errno = 0; */
-/*     unsigned long u  = strtoul( arg, &endptr, 0 ); */
-
-/*     SNS_REQUIRE( 0 == errno, "Invalid hex argument: %s (%s)\n", arg, strerror(errno) ); */
-/*     SNS_REQUIRE( u <= max, "Argument %s too big\n", arg ); */
-
-/*     return u; */
-/* } */
-
-struct canmat_iface *open_iface( const char *type, const char *name ) {
-    struct canmat_iface *cif = canmat_iface_new( type );
-    SNS_REQUIRE( cif, "Couldn't create interface of type: %s\n", type );
-
-    canmat_status_t r =  canmat_iface_open( cif, name);
-    SNS_REQUIRE( CANMAT_OK == r, "Couldn't open: %s, %s\n",
-                 name, canmat_iface_strerror( cif, r ) );
-
-    SNS_LOG( LOG_INFO, "Opened interface %s, type %s\n", name, type);
-
-    return cif;
 }

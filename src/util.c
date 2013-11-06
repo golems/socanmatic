@@ -42,6 +42,7 @@
 
 #include <errno.h>
 #include <string.h>
+#include <stdarg.h>
 #include "socanmatic.h"
 #include "socanmatic_private.h"
 
@@ -60,10 +61,57 @@ void canmat_dump_frame (FILE *f, const struct can_frame *can ) {
     fputc('\n',f);
 }
 
+void hard_assert( _Bool test , const char fmt[], ...)  {
+    if( ! test ) {
+        va_list argp;
+        va_start( argp, fmt );
+        vfprintf( stderr, fmt, argp );
+        va_end( argp );
+        abort();
+        exit(EXIT_FAILURE);
+    }
+}
 
-/* ex: set shiftwidth=4 tabstop=4 expandtab: */
+unsigned long parse_uhex( const char *arg, uint64_t max ) {
+    char *endptr;
+    errno = 0;
+    unsigned long u  = strtoul( arg, &endptr, 16 );
+
+    hard_assert( 0 == errno, "Invalid hex argument: %s (%s)\n", arg, strerror(errno) );
+    hard_assert( u <= max, "Argument %s too big\n", arg );
+
+    return u;
+}
+
+
+unsigned long parse_u( const char *arg, int base, uint64_t max ) {
+    char *endptr;
+    errno = 0;
+    unsigned long u  = strtoul( arg, &endptr, base );
+
+    hard_assert( 0 == errno, "Invalid hex argument: %s (%s)\n", arg, strerror(errno) );
+    hard_assert( u <= max, "Argument %s too big\n", arg );
+
+    return u;
+}
+
+struct canmat_iface *open_iface( const char *type, const char *name ) {
+    struct canmat_iface *cif = canmat_iface_new( type );
+    hard_assert( cif, "Couldn't create interface of type: %s\n", type );
+
+    canmat_status_t r =  canmat_iface_open( cif, name);
+    hard_assert( CANMAT_OK == r, "Couldn't open: %s, %s\n",
+                 name, canmat_iface_strerror( cif, r ) );
+
+    //verbf( 1, "Opened interface %s, type %s\n", name, type);
+
+    return cif;
+}
+
+
 /* Local Variables:                          */
 /* mode: c                                   */
 /* c-basic-offset: 4                         */
 /* indent-tabs-mode:  nil                    */
 /* End:                                      */
+/* ex: set shiftwidth=4 tabstop=4 expandtab: */

@@ -115,19 +115,9 @@ static int cmd_nmt( can_set_t *canset, size_t n, const char **args );
 static int cmd_probe( can_set_t *canset, size_t n, const char **args );
 static int cmd_map_rpdo( can_set_t *canset, size_t n, const char **args );
 
-#ifdef __GNUC__
-#define ATTR_PRINTF(m,n) __attribute__((format(printf, m, n)))
-#else
-#define ATTR_PRINTF(m,n)
-#endif
-
-static void hard_assert( _Bool test , const char fmt[], ...)          ATTR_PRINTF(2,3);
 static void verbf( int level , const char fmt[], ...)          ATTR_PRINTF(2,3);
 static void fail( const char fmt[], ...)          ATTR_PRINTF(1,2);
 static void invalid_arg( const char *arg );
-static unsigned long parse_uhex( const char *arg, uint64_t max );
-static unsigned long parse_u( const char *arg, uint64_t max );
-static struct canmat_iface *open_iface( const char *type, const char *name );
 static void timestamp(void);
 
 /***************/
@@ -523,7 +513,7 @@ static int cmd_set( can_set_t *canset, size_t n, const char **arg) {
         0 == strcasecmp( "baud", var ) ||
         0 == strcasecmp( "kbps", var ) )
     {
-        unsigned kbps = (unsigned)parse_u( val, 1000 );
+        unsigned kbps = (unsigned)parse_u( val, 10, 1000 );
         for( size_t i = 0; i < canset->n; i++ ) {
             canmat_status_t r = canmat_iface_set_kpbs( canset->cif[i], kbps );
             hard_assert( CANMAT_OK == r, "Couldn't set birate to %u kbps: %s\n",
@@ -605,7 +595,7 @@ static int cmd_map_rpdo( can_set_t *canset, size_t n, const char **arg ) {
     hard_assert( 1 == canset->n, "Only one CAN interface supported\n");
 
     uint8_t node = (uint8_t)parse_uhex( arg[0], CANMAT_NODE_MASK );
-    uint8_t pdo_num = (uint8_t)parse_u( arg[1], 0xFF );
+    uint8_t pdo_num = (uint8_t)parse_u( arg[1], 0, 0xFF );
     const char *param = arg[2];
 
 
@@ -625,20 +615,6 @@ static int cmd_map_rpdo( can_set_t *canset, size_t n, const char **arg ) {
 
     return 0;
 }
-
-
-
-
-static void hard_assert( _Bool test , const char fmt[], ...)  {
-    if( ! test ) {
-        va_list argp;
-        va_start( argp, fmt );
-        vfprintf( stderr, fmt, argp );
-        va_end( argp );
-        exit(EXIT_FAILURE);
-    }
-}
-
 
 static void verbf( int level , const char fmt[], ...) {
     if( level <= opt_verbosity ) {
@@ -660,44 +636,6 @@ static void fail( const char fmt[], ...)  {
 
 static void invalid_arg( const char *arg ) {
     hard_assert( 0, "Invalid argument: %s\n", arg );
-}
-
-
-
-static unsigned long parse_uhex( const char *arg, uint64_t max ) {
-    char *endptr;
-    errno = 0;
-    unsigned long u  = strtoul( arg, &endptr, 16 );
-
-    hard_assert( 0 == errno, "Invalid hex argument: %s (%s)\n", arg, strerror(errno) );
-    hard_assert( u <= max, "Argument %s too big\n", arg );
-
-    return u;
-}
-
-
-static unsigned long parse_u( const char *arg, uint64_t max ) {
-    char *endptr;
-    errno = 0;
-    unsigned long u  = strtoul( arg, &endptr, 0 );
-
-    hard_assert( 0 == errno, "Invalid hex argument: %s (%s)\n", arg, strerror(errno) );
-    hard_assert( u <= max, "Argument %s too big\n", arg );
-
-    return u;
-}
-
-struct canmat_iface *open_iface( const char *type, const char *name ) {
-    struct canmat_iface *cif = canmat_iface_new( type );
-    hard_assert( cif, "Couldn't create interface of type: %s\n", type );
-
-    canmat_status_t r =  canmat_iface_open( cif, name);
-    hard_assert( CANMAT_OK == r, "Couldn't open: %s, %s\n",
-                 name, canmat_iface_strerror( cif, r ) );
-
-    verbf( 1, "Opened interface %s, type %s\n", name, type);
-
-    return cif;
 }
 
 
