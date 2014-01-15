@@ -267,8 +267,8 @@ static void parse( struct can402_cx *cx, int argc, char **argv )
     SNS_REQUIRE( cx->drive_set.cif, "can402: missing interface.\nTry `can402 -H' for more information.\n");
     SNS_REQUIRE( cx->drive_set.n, "can402: missing node IDs.\nTry `can402 -H' for more information.\n");
 
-    cx->msg_ref = sns_msg_motor_ref_alloc ( cx->drive_set.n );
-    cx->msg_state = sns_msg_motor_state_alloc ( cx->drive_set.n );
+    cx->msg_ref = sns_msg_motor_ref_heap_alloc ( cx->drive_set.n );
+    cx->msg_state = sns_msg_motor_state_heap_alloc ( cx->drive_set.n );
 
     for( size_t i = 0; i < cx->drive_set.n; i++ ) {
         SNS_REQUIRE( cx->drive_set.drive[i].rpdo_user != cx->drive_set.drive[i].rpdo_ctrl,
@@ -387,7 +387,7 @@ static void run( struct can402_cx *cx ) {
     size_t frame_size = 0; // outside to maintain frame size when we get ACH_TIMEOUT
     while( ! sns_cx.shutdown ) {
         /*-- reference --*/
-        cx->msg_ref->n = cx->drive_set.n;
+        cx->msg_ref->header.n = cx->drive_set.n;
         const size_t expected_size = sns_msg_motor_ref_size(cx->msg_ref);
         struct timespec timeout = sns_time_add_ns( cx->now, timeout_ns );
         ach_status_t r = ach_get( &cx->chan_ref, cx->msg_ref,
@@ -410,14 +410,14 @@ static void run( struct can402_cx *cx ) {
         case ACH_MISSED_FRAME: /* This is probably OK */
         case ACH_OK:
             // validate
-            if( cx->msg_ref->n == cx->drive_set.n &&
+            if( cx->msg_ref->header.n == cx->drive_set.n &&
                 frame_size == expected_size )
             {
                 process(cx);
             } else {
                 SNS_LOG( LOG_ERR, "bogus message: n: %"PRIu32", expected: %"PRIu32", "
                          "size: %"PRIuPTR", expected: %"PRIuPTR"\n",
-                         cx->msg_ref->n, cx->drive_set.n,
+                         cx->msg_ref->header.n, cx->drive_set.n,
                          frame_size, expected_size );
             }
             break;
@@ -487,7 +487,7 @@ static void process( struct can402_cx *cx ) {
     case SNS_MOTOR_MODE_VEL:
         halt(cx, 0); // unhalt
         if( cx->halt ) return;  // make sure we unhalted
-        for( size_t i = 0; i < cx->msg_ref->n; i ++ ) {
+        for( size_t i = 0; i < cx->msg_ref->header.n; i ++ ) {
             // position limit
             double val = pos_limit( &cx->drive_set.drive[i], cx->msg_ref->u[i] );
             // clamp value
