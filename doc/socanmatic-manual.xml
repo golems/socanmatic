@@ -4,7 +4,7 @@
 <article>
 
   <articleinfo>
-    <title>SoCiA User Manual</title>
+    <title>SoCANmatic User Manual</title>
     <author>
        <firstname>Neil</firstname>
        <surname>Dantam</surname>
@@ -35,11 +35,11 @@
 
      <abstract>
         <para>
-          This is the manual for the SoCiA library.
+          This is the manual for the SoCANmatic library.
         </para>
 
          <para>
-           SoCiA implements the CANopen protocol, focusing on control of servo motors.
+           SoCANmatic implements the CANopen protocol, focusing on control of servo motors.
          </para>
 
      </abstract>
