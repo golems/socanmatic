@@ -76,7 +76,7 @@ canmat_LDADD = libsocanmatic.la libsocanmatic402.la
 if HAVE_SNS
 bin_PROGRAMS += can402
 can402_SOURCES = src/can402.c
-can402_LDADD = libsocanmatic.la libsocanmatic402.la -lsns -lach -llapack -lblas
+can402_LDADD = libsocanmatic.la libsocanmatic402.la -lsns -lamino -lach -llapack -lblas
 endif
 
 
