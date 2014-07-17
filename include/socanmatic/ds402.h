@@ -184,6 +184,7 @@ struct canmat_402_drive {
     double actual_vel;
     double actual_cur;
 
+    double pos_offset;
 
     // PDO number (zero indexed) to configure based on the selected op mode
     int rpdo_user;

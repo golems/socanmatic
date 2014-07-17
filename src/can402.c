@@ -183,13 +183,13 @@ int main( int argc, char ** argv ) {
 static void parse( struct can402_cx *cx, int argc, char **argv )
 {
     assert( 0 == cx->drive_set.n );
-    for( int c; -1 != (c = getopt(argc, argv, "c:s:hH?Vf:a:n:R:C:" SNS_OPTSTRING)); ) {
+    for( int c; -1 != (c = getopt(argc, argv, "c:s:hH?Vf:a:n:R:C:d:" SNS_OPTSTRING)); ) {
         switch(c) {
             SNS_OPTCASES
         case 'V':   /* version     */
             puts( "can402 " PACKAGE_VERSION "\n"
                   "\n"
-                  "Copyright (c) 2008-2013, Georgia Tech Research Corporation\n"
+                  "Copyright (c) 2008-2014, Georgia Tech Research Corporation\n"
                   "This is free software; see the source for copying conditions.  There is NO\n"
                   "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
                   "\n"
@@ -219,6 +219,10 @@ static void parse( struct can402_cx *cx, int argc, char **argv )
             cx->drive_set.drive[ cx->drive_set.n ].vel_factor = opt_vel_factor;
             cx->drive_set.n++;
             break;
+        case 'd': /* offset */
+            SNS_REQUIRE( cx->drive_set.n > 0, "Must give node ID before offset\n" );
+            cx->drive_set.drive[ cx->drive_set.n -1 ].pos_offset = atof(optarg) * M_PI / 180.0;
+            break;
         case 'C':   /* RPDO-Ctrl  */
             opt_rpdo_ctrl = (uint8_t) parse_u( optarg, 0, 255 );
             if( cx->drive_set.n ) {
@@ -242,6 +246,7 @@ static void parse( struct can402_cx *cx, int argc, char **argv )
                   "  -a api_type,              CAN API, e.g, socketcan, ntcan\n"
                   "  -f interface,             CAN interface\n"
                   "  -n id,                    Node (multiple allowed)\n"
+                  "  -d degrees,               Position offset of last node\n"
                   "  -c ref_channel,           Reference Ach Channel name\n"
                   "  -s state_channel,         State Ach Channel name\n"
                   "  -R number,                User RPDO (from zero)\n"
@@ -438,6 +443,7 @@ static void run( struct can402_cx *cx ) {
 }
 
 static double pos_limit( struct canmat_402_drive *drive, double val ) {
+    // TODO: should we consider the pos offset here?
     double pos = drive->actual_pos;
     double off = 0;
     if ( pos > drive->pos_max_soft  ) {
@@ -566,7 +572,7 @@ static void send_feedback( struct can402_cx *cx ) {
     for( size_t i = 0; i < cx->drive_set.n; i++ ) {
         struct canmat_402_drive *drive = &cx->drive_set.drive[i];
         // build message
-        cx->msg_state->X[i].pos = drive->actual_pos;
+        cx->msg_state->X[i].pos = drive->actual_pos + drive->pos_offset;
         cx->msg_state->X[i].vel = drive->actual_vel;
     }
     cx->msg_state->header.seq++;
