@@ -90,11 +90,13 @@ struct can402_cx {
 
     ach_channel_t chan_ref;
     ach_channel_t chan_state;
+    ach_channel_t chan_event;
     struct timespec now;
 };
 
 const char *opt_chan_ref = "motor-ref";
 const char *opt_chan_state = "motor-state";
+const char *opt_chan_event = NULL;
 const char *opt_cmd = NULL;
 const char *opt_api = "socketcan";
 const char **opt_pos = NULL;
@@ -183,7 +185,7 @@ int main( int argc, char ** argv ) {
 static void parse( struct can402_cx *cx, int argc, char **argv )
 {
     assert( 0 == cx->drive_set.n );
-    for( int c; -1 != (c = getopt(argc, argv, "c:s:hH?Vf:a:n:R:C:d:" SNS_OPTSTRING)); ) {
+    for( int c; -1 != (c = getopt(argc, argv, "c:s:hH?Vf:a:n:R:C:d:e:" SNS_OPTSTRING)); ) {
         switch(c) {
             SNS_OPTCASES
         case 'V':   /* version     */
@@ -207,6 +209,9 @@ static void parse( struct can402_cx *cx, int argc, char **argv )
             break;
         case 's':   /* state channel  */
             opt_chan_state = strdup(optarg);
+            break;
+        case 'e': /* event channel */
+            opt_chan_event = strdup(optarg);
             break;
         case 'n':   /* node  */
             SNS_REQUIRE( cx->drive_set.n < CANMAT_NODE_MASK-1, "Too many nodes\n" );
@@ -247,8 +252,9 @@ static void parse( struct can402_cx *cx, int argc, char **argv )
                   "  -f interface,             CAN interface\n"
                   "  -n id,                    Node (multiple allowed)\n"
                   "  -d degrees,               Position offset of last node\n"
-                  "  -c ref_channel,           Reference Ach Channel name\n"
+                  "  -c ref_channel,           Reference Ach Channel name (last-message only)\n"
                   "  -s state_channel,         State Ach Channel name\n"
+                  "  -e event_channel,         Event Ach Channel name (all messages)\n"
                   "  -R number,                User RPDO (from zero)\n"
                   "  -C number,                Control RPDO (from zero)\n"
                   "  -?,                       Give program help list\n"
@@ -295,6 +301,8 @@ static void init( struct can402_cx *cx ) {
         ach_channel_t *chans[] = {&cx->chan_ref, NULL};
         sns_sigcancel( chans, sns_sig_term_default );
     }
+    if( opt_chan_event )
+        sns_chan_open( &cx->chan_event, opt_chan_event, NULL );
 
 
     enum canmat_status r;
@@ -387,56 +395,70 @@ FAIL:
     exit(EXIT_FAILURE);
 }
 
+
+static void get_msg( struct can402_cx *cx, ach_channel_t *channel,
+                     struct timespec *timeout, int options  )
+{
+    const size_t expected_size = sns_msg_motor_ref_size_n(cx->drive_set.n);
+    size_t frame_size = 0;
+
+    ach_status_t r = ach_get( channel, cx->msg_ref,
+                              expected_size,
+                              &frame_size, timeout, options );
+
+    if( ACH_TIMEOUT == r ) {
+        /* If it's a timout, use the previously gotten time */
+        memcpy(&cx->now, &timeout, sizeof(timeout));
+    } else {
+        clock_gettime( ACH_DEFAULT_CLOCK, &cx->now );
+    }
+    update_feedback(cx);
+    switch(r) {
+    case ACH_TIMEOUT:
+        if( sns_msg_is_expired(&cx->msg_ref->header, &cx->now) ) {
+            //SNS_LOG( LOG_NOTICE, "Reference timeout\n");
+            halt(cx, 1);
+            break;
+        }
+    case ACH_MISSED_FRAME: /* This is probably OK */
+    case ACH_OK:
+        // validate
+        if( cx->msg_ref->header.n == cx->drive_set.n &&
+            frame_size == expected_size )
+        {
+            process(cx);
+        } else {
+            SNS_LOG( LOG_ERR, "bogus message: n: %"PRIu32", expected: %"PRIu32", "
+                     "size: %"PRIuPTR", expected: %"PRIuPTR"\n",
+                     cx->msg_ref->header.n, cx->drive_set.n,
+                     frame_size, expected_size );
+        }
+        break;
+        /* Really bad things we just give up on */
+    case ACH_BUG:
+    case ACH_CORRUPT:
+        SNS_DIE( "ach_get failed badly, aborting: '%s'\n", ach_result_to_string(r) );
+        break;
+    case ACH_CANCELED:
+    case ACH_STALE_FRAMES:
+        break;
+    default:
+        SNS_LOG( LOG_ERR, "ach_get failed: '%s'\n", ach_result_to_string(r) );
+    }
+
+}
+
 static void run( struct can402_cx *cx ) {
     int64_t timeout_ns = (int64_t)(1e9*opt_timeout_sec);
     clock_gettime( ACH_DEFAULT_CLOCK, &cx->now );
-    size_t frame_size = 0; // outside to maintain frame size when we get ACH_TIMEOUT
+    cx->msg_ref->header.n = cx->drive_set.n;
     while( ! sns_cx.shutdown ) {
         /*-- reference --*/
-        cx->msg_ref->header.n = cx->drive_set.n;
-        const size_t expected_size = sns_msg_motor_ref_size(cx->msg_ref);
         struct timespec timeout = sns_time_add_ns( cx->now, timeout_ns );
-        ach_status_t r = ach_get( &cx->chan_ref, cx->msg_ref,
-                                  expected_size,
-                                  &frame_size, &timeout, ACH_O_WAIT | ACH_O_LAST );
-        if( ACH_TIMEOUT == r ) {
-            /* If it's a timout, use the previously gotten time */
-            memcpy(&cx->now, &timeout, sizeof(timeout));
-        } else {
-            clock_gettime( ACH_DEFAULT_CLOCK, &cx->now );
-        }
-        update_feedback(cx);
-        switch(r) {
-        case ACH_TIMEOUT:
-            if( sns_msg_is_expired(&cx->msg_ref->header, &cx->now) ) {
-                //SNS_LOG( LOG_NOTICE, "Reference timeout\n");
-                halt(cx, 1);
-                break;
-            }
-        case ACH_MISSED_FRAME: /* This is probably OK */
-        case ACH_OK:
-            // validate
-            if( cx->msg_ref->header.n == cx->drive_set.n &&
-                frame_size == expected_size )
-            {
-                process(cx);
-            } else {
-                SNS_LOG( LOG_ERR, "bogus message: n: %"PRIu32", expected: %"PRIu32", "
-                         "size: %"PRIuPTR", expected: %"PRIuPTR"\n",
-                         cx->msg_ref->header.n, cx->drive_set.n,
-                         frame_size, expected_size );
-            }
-            break;
-            /* Really bad things we just give up on */
-        case ACH_BUG:
-        case ACH_CORRUPT:
-            SNS_DIE( "ach_get failed badly, aborting: '%s'\n", ach_result_to_string(r) );
-            break;
-        case ACH_CANCELED:
-            break;
-        default:
-            SNS_LOG( LOG_ERR, "ach_get failed: '%s'\n", ach_result_to_string(r) );
-        }
+        get_msg(  cx, &cx->chan_ref, &timeout, ACH_O_WAIT | ACH_O_LAST );
+        /*-- event --*/
+        if( opt_chan_event )
+            get_msg(  cx, &cx->chan_event, &timeout, 0 );
         /*-- send_feedback --*/
         send_feedback(cx);
     }
