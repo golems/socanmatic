@@ -423,7 +423,7 @@ static void get_msg( struct can402_cx *cx, ach_channel_t *channel,
     case ACH_MISSED_FRAME: /* This is probably OK */
     case ACH_OK:
         // validate
-        if( cx->msg_ref->header.n == cx->drive_set.n &&
+        if( 0 == sns_msg_motor_ref_check_size(cx->msg_ref, frame_size)  &&
             frame_size == expected_size )
         {
             process(cx);
@@ -544,6 +544,11 @@ static void process( struct can402_cx *cx ) {
                 }
             }
 
+        }
+        break;
+    case SNS_MOTOR_MODE_POS_OFFSET:
+        for( size_t i = 0; i < cx->msg_ref->header.n; i ++ ) {
+            cx->drive_set.drive[i].pos_offset = cx->msg_ref->u[i];
         }
         break;
     default:
