@@ -47,6 +47,7 @@ AC_CHECK_DECL([PRIuPTR],
 
 # Checks for library functions.
 AC_SEARCH_LIBS([clock_gettime],[rt])
+AC_SEARCH_LIBS([pthread_create],[pthread])
 
 # Look for ntcan library
 AC_CHECK_HEADER([ntcan.h], [FOUND_NTCAN=yes])
