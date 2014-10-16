@@ -408,7 +408,7 @@ static void get_msg( struct can402_cx *cx, ach_channel_t *channel,
 
     if( ACH_TIMEOUT == r ) {
         /* If it's a timout, use the previously gotten time */
-        memcpy(&cx->now, &timeout, sizeof(timeout));
+        memcpy(&cx->now, timeout, sizeof(*timeout));
     } else {
         clock_gettime( ACH_DEFAULT_CLOCK, &cx->now );
     }
