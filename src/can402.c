@@ -395,7 +395,10 @@ FAIL:
     exit(EXIT_FAILURE);
 }
 
-
+/**
+ * @function get_msg
+ * @brief 
+ */
 static void get_msg( struct can402_cx *cx, ach_channel_t *channel,
                      struct timespec *timeout, int options  )
 {
