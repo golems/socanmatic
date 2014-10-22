@@ -114,6 +114,7 @@ typedef enum canmat_402_ctrlcmd_mask {
  *
  * Set using the ControWord. Read using the status word.  Values of
  * the enum are the status word with don't care bits masked out.
+ * See Table 18, page 41
  */
 typedef enum canmat_402_state_val {
     CANMAT_402_STATE_VAL_OFF_NRDY              = 0x00,  ///< not ready to switch on
@@ -128,7 +129,7 @@ typedef enum canmat_402_state_val {
 } canmat_402_state_val_t;
 
 /** Mask out don't care bits for mapping status_word to drive state
- *  See table 19, p. 41.
+ *  See table 17-18, p. 41.
  */
 typedef enum canmat_402_state_val_mask {
     CANMAT_402_STATE_VAL_MASK_OFF_NRDY              = 0x4F,

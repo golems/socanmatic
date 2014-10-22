@@ -107,7 +107,10 @@ enum canmat_status canmat_402_dl_ctrlmask( struct canmat_iface *cif, struct canm
 enum canmat_status canmat_402_set_op_mode( struct canmat_iface *cif, struct canmat_402_drive *drive ,
                                            enum canmat_402_op_mode op_mode );
 
-
+/**
+ * @function canmat_402_init
+ * @brief Get control word, status word, position raw value, velocity actual value, velocity target
+ */
 enum canmat_status canmat_402_init( struct canmat_iface *cif, uint8_t id, struct canmat_402_drive *drive ) {
 
     drive->node_id = id;

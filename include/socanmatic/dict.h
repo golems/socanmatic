@@ -78,7 +78,7 @@ typedef struct canmat_obj {
     /* Name of the object */
     const char *parameter_name;
 
-    /** Number of sub-indices for an intex.
+    /** Number of sub-indices for an index.
      *  May be empty or absent of object has no sub-objects. */
     const uint8_t sub_number;
 
@@ -92,11 +92,11 @@ typedef struct canmat_obj {
      */
     enum canmat_object_type object_type;
 
-    /** inded of the data type of the object in the object dictionary.
+    /** index of the data type of the object in the object dictionary.
      */
     enum canmat_data_type data_type;
 
-    /** Can object be pammped into a PDO */
+    /** Can object be mapped into a PDO */
     const unsigned pdo_mapping : 1;
 
     struct canmat_code_descriptor *value_descriptor;

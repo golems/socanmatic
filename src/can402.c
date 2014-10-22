@@ -73,13 +73,18 @@
 
 #include <sns.h>
 
+/**
+ *
+ */
 struct canmat_402_set {
     struct canmat_iface *cif;
     uint8_t n;
     struct canmat_402_drive drive[CANMAT_NODE_MASK+1];
 } canmat_402_set_t;
 
-
+/**
+ * @struct can402_cx
+ */
 struct can402_cx {
     struct canmat_402_set drive_set;
     struct sns_msg_motor_ref *msg_ref;
@@ -106,7 +111,7 @@ int opt_rpdo_user = 1;
 int opt_tpdo_user = 0;
 int opt_tpdo_stat = -1;
 
-
+/** Frequency */
 double opt_timeout_sec = 0.01; // 100 Hz
 
 // FIXME: 1
@@ -132,6 +137,9 @@ static void *feedback_recv_start( void *cx );
 static void update_feedback( struct can402_cx *cx );
 static void send_feedback( struct can402_cx *cx );
 
+/**
+ * @function main
+ */
 int main( int argc, char ** argv ) {
     sns_init();
     struct can402_cx cx;
@@ -181,7 +189,10 @@ int main( int argc, char ** argv ) {
     return 0;
 }
 
-
+/**
+ * @function parse
+ * @brief Parse daemon options
+ */
 static void parse( struct can402_cx *cx, int argc, char **argv )
 {
     assert( 0 == cx->drive_set.n );
@@ -290,11 +301,16 @@ static void parse( struct can402_cx *cx, int argc, char **argv )
 
 }
 
-
+/**
+ * @function init 
+ * @brief Open reference/state channels.
+ */
 static void init( struct can402_cx *cx ) {
 
+    // Send signal to ACHCOP
     sns_start();
 
+    // Open channels
     sns_chan_open( &cx->chan_ref, opt_chan_ref, NULL );
     sns_chan_open( &cx->chan_state, opt_chan_state, NULL );
     {
@@ -310,7 +326,16 @@ static void init( struct can402_cx *cx ) {
     // init
     for( size_t i = 0; i < cx->drive_set.n; i ++ ) {
         r = canmat_402_init( cx->drive_set.cif, cx->drive_set.drive[i].node_id, &cx->drive_set.drive[i] );
-
+        ///////////////////////////////////////////
+        printf("[%d] Control word: %x \n", i, cx->drive_set.drive[i].ctrl_word );
+        printf("[%d] Status word: %x \n", i, cx->drive_set.drive[i].stat_word );
+        printf("[%d] Raw position: %x \n", i, cx->drive_set.drive[i].actual_pos_raw );
+        printf("[%d] Raw velocity: %x \n", i, cx->drive_set.drive[i].actual_vel_raw );
+        printf("[%d] Target velocity raw: %x \n", i, cx->drive_set.drive[i].target_vel_raw );
+        printf("[%d] Position factor: %f \n", i, cx->drive_set.drive[i].pos_factor );
+        printf("[%d] Velocity factor: %f \n", i, cx->drive_set.drive[i].vel_factor );
+        printf("[%d] Current factor: %f \n", i, cx->drive_set.drive[i].cur_factor );
+        ///////////////////////////////////////////
         SNS_LOG( LOG_DEBUG, "drive 0x%x: statusword 0x%x, state '%s' (0x%x) \n",
                  cx->drive_set.drive[i].node_id, cx->drive_set.drive[i].stat_word,
                  canmat_402_state_string( canmat_402_state(&cx->drive_set.drive[i]) ),
@@ -318,6 +343,7 @@ static void init( struct can402_cx *cx ) {
         SNS_REQUIRE( CANMAT_OK == r, "can402: couldn't init drive 0x%x: %s\n",
                      cx->drive_set.drive[i].node_id, canmat_iface_strerror( cx->drive_set.cif, r) );
     }
+
 
     // Map the control
     for( size_t i = 0; i < cx->drive_set.n; i ++ ) {
@@ -333,7 +359,7 @@ static void init( struct can402_cx *cx ) {
         }
     }
 
-    // map the feedback
+    // Map the feedback (TPDO Message for motor states and status word)
     for( size_t i = 0; i < cx->drive_set.n; i ++ ) {
         const canmat_obj_t *objs[2] = { CANMAT_402_OBJ_POSITION_ACTUAL_VALUE,
                                         CANMAT_402_OBJ_VELOCITY_ACTUAL_VALUE };
@@ -363,7 +389,7 @@ static void init( struct can402_cx *cx ) {
     }
 
 
-    // set mode and PDOs
+    // Set operation mode (position / velocity) and PDOs
     for( size_t i = 0; i < cx->drive_set.n; i ++ ) {
         r = canmat_402_set_op_mode( cx->drive_set.cif, &cx->drive_set.drive[i], CANMAT_402_OP_MODE_VELOCITY );
         if( r != CANMAT_OK ) {
@@ -373,7 +399,7 @@ static void init( struct can402_cx *cx ) {
         }
     }
 
-    // start
+    // Start: Set all drives to Operational mode
     for( size_t i = 0; i < cx->drive_set.n; i ++ ) {
         r = canmat_402_start( cx->drive_set.cif, &cx->drive_set.drive[i] );
         if( CANMAT_OK != r ) {
@@ -388,6 +414,15 @@ static void init( struct can402_cx *cx ) {
                  canmat_402_state_string( canmat_402_state(&cx->drive_set.drive[i]) ),
                  canmat_402_state(&cx->drive_set.drive[i]) );
     }
+
+    //////////////////////
+    printf("\t * After Starting all drives. I expect to see 0x27 for all the drives' status words \n");
+    for( size_t i = 0; i < cx->drive_set.n; ++i ) {
+    	printf("\t * Status of drive %d: %x \n", cx->drive_set.drive[i].node_id, cx->drive_set.drive[i].stat_word );
+    }
+    //////////////////////
+
+
     return;
 
 FAIL:
@@ -397,7 +432,7 @@ FAIL:
 
 /**
  * @function get_msg
- * @brief 
+ * @brief Attempts to read a message in channel within the timeout specified
  */
 static void get_msg( struct can402_cx *cx, ach_channel_t *channel,
                      struct timespec *timeout, int options  )
@@ -410,7 +445,7 @@ static void get_msg( struct can402_cx *cx, ach_channel_t *channel,
                               &frame_size, timeout, options );
 
     if( ACH_TIMEOUT == r ) {
-        /* If it's a timout, use the previously gotten time */
+        /* If it's a timeout, use the previously gotten time */
         memcpy(&cx->now, timeout, sizeof(*timeout));
     } else {
         clock_gettime( ACH_DEFAULT_CLOCK, &cx->now );
@@ -451,6 +486,10 @@ static void get_msg( struct can402_cx *cx, ach_channel_t *channel,
 
 }
 
+/**
+ * @function run
+ * @brief Get motor command, send motor state
+ */
 static void run( struct can402_cx *cx ) {
     int64_t timeout_ns = (int64_t)(1e9*opt_timeout_sec);
     clock_gettime( ACH_DEFAULT_CLOCK, &cx->now );
@@ -499,6 +538,9 @@ static double pos_limit( struct canmat_402_drive *drive, double val ) {
 #define VEL_MIN (INT16_MIN+1)
 #define VEL_MAX (INT16_MAX)
 
+/**
+ * @function process
+ */
 static void process( struct can402_cx *cx ) {
     if( SNS_LOG_PRIORITY(LOG_DEBUG + 1) ) {
         sns_msg_motor_ref_dump( stderr, cx->msg_ref );
@@ -559,7 +601,10 @@ static void process( struct can402_cx *cx ) {
     }
 }
 
-
+/**
+ * @function halt
+ * @brief Set all motors in drive_set to is_halt (0:unhalt, 1:halt)
+ */
 static void halt( struct can402_cx *cx, _Bool is_halt ) {
     for( size_t i = 0; i < cx->drive_set.n; i ++ ) {
         _Bool halted = cx->drive_set.drive[i].ctrl_word & CANMAT_402_CTRLMASK_HALT;
@@ -587,6 +632,10 @@ static void halt( struct can402_cx *cx, _Bool is_halt ) {
     cx->halt = is_halt;
 }
 
+/**
+ * @function update_feedback
+ * @brief Read the latest motor states (raw and then convert them accordingly)
+ */
 static void update_feedback( struct can402_cx *cx ) {
     for( size_t i = 0; i < cx->drive_set.n; i++ ) {
         // compute MKS values
@@ -656,7 +705,7 @@ static void feedback_recv( struct can402_cx *cx ) {
                         __atomic_store_n( &drive->actual_pos_raw, pos.i32, __ATOMIC_RELAXED );
                         __atomic_store_n( &drive->actual_vel_raw, vel.i32, __ATOMIC_RELAXED );
                     } else {
-                        SNS_LOG(LOG_WARNING, "PDO message to short: %d, expected 8\n", can.can_dlc);
+                        SNS_LOG(LOG_WARNING, "PDO message too short: %d, expected 8\n", can.can_dlc);
                     }
                 }
             }
