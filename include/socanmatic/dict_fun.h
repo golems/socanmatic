@@ -79,7 +79,9 @@ typedef int canmat_obj_print_fun(canmat_scalar_t);
 int canmat_obj_bitsize( const struct canmat_obj *obj );
 
 
-
+/**
+ * @brief Define upload and download functions (ul / dl) for data types
+ */
 #define CANMAT_OBJ_TYPE_FUN( T_CAN, T_SHORT )                           \
     static inline canmat_status_t canmat_obj_ul_ ## T_SHORT(            \
         canmat_iface_t *cif, uint8_t node, const canmat_obj_t *obj,     \

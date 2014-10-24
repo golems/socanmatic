@@ -175,6 +175,7 @@ struct canmat_402_drive {
     int32_t actual_cur_raw;
 
     int16_t target_vel_raw;
+    int16_t target_pos_raw;
 
     double pos_max_soft;
     double pos_min_soft;
@@ -224,9 +225,15 @@ enum canmat_status canmat_402_probe_pdo(
 
 const char *canmat_402_state_string( enum canmat_402_state_val s );
 
+///< Mode-specific bits for velocity mode
 #define CANMAT_402_CTRLMASK_VL_RFG_ENABLE  CANMAT_402_CTRLMASK_OP_MODE_SPECIFIC0
 #define CANMAT_402_CTRLMASK_VL_RFG_UNLOCK  CANMAT_402_CTRLMASK_OP_MODE_SPECIFIC1
 #define CANMAT_402_CTRLMASK_VL_RFG_USE_REF CANMAT_402_CTRLMASK_OP_MODE_SPECIFIC2
+
+///< Mode-specific bits for profile position mode
+#define CANMAT_402_CTRLMASK_PP_NEW_SET_POINT CANMAT_402_CTRLMASK_OP_MODE_SPECIFIC0
+#define CANMAT_402_CTRLMASK_PP_CHANGE_SET_IMMEDIATELY CANMAT_402_CTRLMASK_OP_MODE_SPECIFIC1
+#define CANMAT_402_CTRLMASK_PP_ABS_REL CANMAT_402_CTRLMASK_OP_MODE_SPECIFIC2
 
 #ifdef __cplusplus
 }

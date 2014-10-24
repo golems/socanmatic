@@ -232,6 +232,10 @@ static canmat_status_t canmat_sdo_query(
     }
 }
 
+/**
+ * @function canmat_sdo_dl
+ * @brief Expedited download from master to node (send data)
+ */
 canmat_status_t canmat_sdo_dl(
     canmat_iface_t *cif,
     const canmat_sdo_msg_t *req, canmat_sdo_msg_t *resp )
@@ -242,6 +246,10 @@ canmat_status_t canmat_sdo_dl(
     return canmat_sdo_query( cif, &req1, resp );
 }
 
+/**
+ * @function canmat_sdo_ul
+ * @brief Expedited upload from node to master (ask for data)
+ */
 canmat_status_t canmat_sdo_ul(
     canmat_iface_t *cif,
     const canmat_sdo_msg_t *req, canmat_sdo_msg_t *resp )

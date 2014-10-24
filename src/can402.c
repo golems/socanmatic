@@ -74,7 +74,8 @@
 #include <sns.h>
 
 /**
- *
+ * @struct canmat_402_set
+ * @brief Contains api interface for CAN, number of drives and each drive's object
  */
 struct canmat_402_set {
     struct canmat_iface *cif;
@@ -84,6 +85,7 @@ struct canmat_402_set {
 
 /**
  * @struct can402_cx
+ * @brief Communication channels, current time, mode of operation and halt boolean
  */
 struct can402_cx {
     struct canmat_402_set drive_set;
@@ -99,6 +101,9 @@ struct can402_cx {
     struct timespec now;
 };
 
+/*********************/
+/** GLOBAL VARIABLES */
+/*********************/
 const char *opt_chan_ref = "motor-ref";
 const char *opt_chan_state = "motor-state";
 const char *opt_chan_event = NULL;
@@ -115,13 +120,13 @@ int opt_tpdo_stat = -1;
 double opt_timeout_sec = 0.01; // 100 Hz
 
 // FIXME: 1
+//@ntd: Did you read this from the Schunk Motion software. Should be in its own object */
 double opt_vel_factor = 180/M_PI*1000;
 double opt_pos_factor = 180/M_PI*1000;
 
 /**********/
 /* PROTOS */
 /**********/
-
 static void init( struct can402_cx *cx );
 static void run( struct can402_cx *cx );
 static void process( struct can402_cx *cx );
@@ -137,19 +142,22 @@ static void *feedback_recv_start( void *cx );
 static void update_feedback( struct can402_cx *cx );
 static void send_feedback( struct can402_cx *cx );
 
-/**
- * @function main
- */
+/***********************/
+/*  MAIN FUNCTION      */
+/***********************/
 int main( int argc, char ** argv ) {
-    sns_init();
+
+
+	sns_init();
     struct can402_cx cx;
     memset( &cx, 0, sizeof(cx));
 
-    // defaults
+    /** Set default: Velocity mode, halted */
     cx.op_mode = CANMAT_402_OP_MODE_VELOCITY;
+    //cx.op_mode = CANMAT_402_OP_MODE_PROFILE_POSITION;
     cx.halt = 1;
 
-    //parse
+    /** Parse */
     parse( &cx, argc, argv );
 
     if( sns_cx.verbosity ) {
@@ -158,7 +166,7 @@ int main( int argc, char ** argv ) {
         }
     }
 
-    // init
+    /** Initialize drives */
     init(&cx);
 
     if( sns_cx.verbosity ) {
@@ -171,6 +179,74 @@ int main( int argc, char ** argv ) {
                      cx.drive_set.drive[i].pos_max_hard );
         }
     }
+
+    ////////////////////////////////////////////////////
+    for( int i = 0; i < cx.drive_set.n; ++i ) {
+    	printf("[%d] POS MIN: Soft:%f Hard:%f POS MAX:  Soft:%f Hard: %f \n",
+    			cx.drive_set.drive[i].node_id,
+    			cx.drive_set.drive[i].pos_min_soft,
+    			cx.drive_set.drive[i].pos_min_hard,
+    			cx.drive_set.drive[i].pos_max_soft,
+    			cx.drive_set.drive[i].pos_max_hard);
+        int32_t pos_raw; uint32_t error;
+        canmat_402_ul_position_actual_value( cx.drive_set.cif, cx.drive_set.drive[i].node_id,
+        									 &pos_raw,
+        									 &error );
+        double pos_double = pos_raw /cx.drive_set.drive[i].pos_factor;
+        printf("[%d] Position raw: hex: %x real: %f \n", cx.drive_set.drive[i].node_id,
+        		pos_raw, pos_double);
+
+        int16_t vel_raw;
+        canmat_402_ul_vl_target_velocity( cx.drive_set.cif, cx.drive_set.drive[i].node_id,
+        								  &vel_raw, &error );
+        double vel_double = vel_raw / cx.drive_set.drive[i].vel_factor;
+        printf("[%d] Velocity raw: hex: %x float: %f \n", cx.drive_set.drive[i].node_id,
+        		vel_raw, vel_double );
+
+        // Profile velocity
+    	uint32_t prof_vel;
+    	canmat_402_ul_profile_velocity( cx.drive_set.cif, cx.drive_set.drive[i].node_id,
+				  &prof_vel, &error );
+    	double prof_vel_double = prof_vel / cx.drive_set.drive[i].vel_factor;
+    	printf("[%d] Profile Velocity raw: hex: %x float: %f \n", cx.drive_set.drive[i].node_id,
+    	        		prof_vel, prof_vel_double );
+
+        // End velocity
+    	uint32_t end_vel;
+    	canmat_402_ul_end_velocity( cx.drive_set.cif, cx.drive_set.drive[i].node_id,
+				  &end_vel, &error );
+    	double end_vel_double = end_vel / cx.drive_set.drive[i].vel_factor;
+    	printf("[%d] End Velocity raw: hex: %x float: %f \n", cx.drive_set.drive[i].node_id,
+    	        		end_vel, end_vel_double );
+
+        // Profile acc
+    	uint32_t prof_acc;
+    	canmat_402_ul_profile_acceleration( cx.drive_set.cif, cx.drive_set.drive[i].node_id,
+				  &prof_acc, &error );
+    	double prof_acc_double = prof_acc / cx.drive_set.drive[i].vel_factor;
+    	printf("[%d] Profile Acceleration raw: hex: %x float: %f \n", cx.drive_set.drive[i].node_id,
+    	        		prof_acc, prof_acc_double );
+
+        // End acc
+    	uint32_t profile_dec;
+    	canmat_402_ul_profile_deceleration( cx.drive_set.cif, cx.drive_set.drive[i].node_id,
+				  &profile_dec, &error );
+    	double profile_dec_double = profile_dec / cx.drive_set.drive[i].vel_factor;
+    	printf("[%d] Prof decc raw: hex: %x float: %f \n", cx.drive_set.drive[i].node_id,
+    	        		profile_dec, profile_dec_double );
+
+    	// Position notation
+
+    	int8_t pos_notation;
+    	canmat_402_ul_position_notation_index( cx.drive_set.cif, cx.drive_set.drive[i].node_id,
+				  &pos_notation, &error );
+    	printf("[%d] Position notation raw: hex: %x \n", cx.drive_set.drive[i].node_id,
+    	        		pos_notation);
+
+
+    }
+
+    ////////////////////////////////////////////////////
 
     // run
     pthread_t feedback_thread;
@@ -323,7 +399,7 @@ static void init( struct can402_cx *cx ) {
 
     enum canmat_status r;
 
-    // init
+    // Initialize drives
     for( size_t i = 0; i < cx->drive_set.n; i ++ ) {
         r = canmat_402_init( cx->drive_set.cif, cx->drive_set.drive[i].node_id, &cx->drive_set.drive[i] );
         ///////////////////////////////////////////
@@ -335,6 +411,17 @@ static void init( struct can402_cx *cx ) {
         printf("[%d] Position factor: %f \n", i, cx->drive_set.drive[i].pos_factor );
         printf("[%d] Velocity factor: %f \n", i, cx->drive_set.drive[i].vel_factor );
         printf("[%d] Current factor: %f \n", i, cx->drive_set.drive[i].cur_factor );
+        // Get position notation index
+        canmat_status_t r;
+        uint8_t val;
+        uint32_t err;
+        /*
+        r = canmat_402_ul_position_dimension_index( cx->drive_set.cif,
+        											cx->drive_set.drive[i].node_id,
+        											&val,
+        											&err );
+        if( r != CANMAT_OK) { printf("OH CRAP, drive [%d] could not upload dim index \n", i);}
+*/
         ///////////////////////////////////////////
         SNS_LOG( LOG_DEBUG, "drive 0x%x: statusword 0x%x, state '%s' (0x%x) \n",
                  cx->drive_set.drive[i].node_id, cx->drive_set.drive[i].stat_word,
@@ -453,11 +540,12 @@ static void get_msg( struct can402_cx *cx, ach_channel_t *channel,
     update_feedback(cx);
     switch(r) {
     case ACH_TIMEOUT:
-        if( sns_msg_is_expired(&cx->msg_ref->header, &cx->now) ) {
+    	if( sns_msg_is_expired(&cx->msg_ref->header, &cx->now) ) {
             //SNS_LOG( LOG_NOTICE, "Reference timeout\n");
             halt(cx, 1);
             break;
         }
+    break;
     case ACH_MISSED_FRAME: /* This is probably OK */
     case ACH_OK:
         // validate
@@ -538,6 +626,11 @@ static double pos_limit( struct canmat_402_drive *drive, double val ) {
 #define VEL_MIN (INT16_MIN+1)
 #define VEL_MAX (INT16_MAX)
 
+// JUST COPIED FROM ABOVE. DO NOT USE IT UNTIL CHECKED AGAIN
+#define POS_MIN (INT16_MIN+1)
+#define POS_MAX (INT16_MAX)
+
+
 /**
  * @function process
  */
@@ -558,9 +651,12 @@ static void process( struct can402_cx *cx ) {
      *       Could prioritize messages based on difference from previous target
      */
     switch( cx->msg_ref->mode ) {
+    /** Velocity mode */
     case SNS_MOTOR_MODE_VEL:
-        halt(cx, 0); // unhalt
+
+    	halt(cx, 0); // unhalt
         if( cx->halt ) return;  // make sure we unhalted
+
         for( size_t i = 0; i < cx->msg_ref->header.n; i ++ ) {
             // position limit
             double val = pos_limit( &cx->drive_set.drive[i], cx->msg_ref->u[i] );
@@ -591,10 +687,47 @@ static void process( struct can402_cx *cx ) {
 
         }
         break;
+    /** Offset position */
     case SNS_MOTOR_MODE_POS_OFFSET:
         for( size_t i = 0; i < cx->msg_ref->header.n; i ++ ) {
             cx->drive_set.drive[i].pos_offset = cx->msg_ref->u[i];
         }
+        break;
+    /** Profile position mode */
+    case SNS_MOTOR_MODE_POS:
+    	halt(cx,0); // unhalt
+    	if( cx->halt ) return; // Make sure we unhalted
+    	for( size_t i = 0; i < cx->msg_ref->header.n; ++i ) {
+    		// Check position limit
+    		double pos = pos_limit( &cx->drive_set.drive[i], cx->msg_ref->u[i] );
+    		// Clamp value
+    		pos *= cx->drive_set.drive[i].pos_factor;
+    		int16_t target_position = 0;
+    		if( pos > POS_MAX ) {
+
+    		} else if( pos < POS_MIN ) {
+
+    		} else {
+    			target_position = (int16_t) pos;
+    		}
+
+    		// Check if update is necessary
+    		if( target_position != cx->drive_set.drive[i].target_pos_raw ) {
+    			// Send PDO
+    			canmat_status_t cr = canmat_rpdo_send_i16( cx->drive_set.cif,
+    													   cx->drive_set.drive[i].node_id,
+    													   (uint8_t)cx->drive_set.drive[i].rpdo_user,
+    													   target_position );
+
+    			if( CANMAT_OK == cr ) {
+    				cx->drive_set.drive[i].target_pos_raw = target_position;
+    			} else {
+    				SNS_LOG( LOG_ERR, "Couldn't send PDO: %s \n",
+    						canmat_iface_strerror(cx->drive_set.cif, cr) );
+    			}
+    		}
+
+    	}
         break;
     default:
         SNS_LOG( LOG_ERR, "unhandled op mode in motor_ref msg: '%d'\n", cx->msg_ref->mode );

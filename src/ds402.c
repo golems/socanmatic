@@ -132,7 +132,7 @@ enum canmat_status canmat_402_init( struct canmat_iface *cif, uint8_t id, struct
     CHECK_STATUS( canmat_402_ul_vl_target_velocity( cif, drive->node_id,
                                                     &drive->target_vel_raw, &drive->abort_code ) );
 
-    // op mode
+    // operational mode
     {
         int8_t i;
         CHECK_STATUS( canmat_402_ul_modes_of_operation( cif, drive->node_id,
@@ -148,7 +148,10 @@ enum canmat_status canmat_402_init( struct canmat_iface *cif, uint8_t id, struct
         CHECK_STATUS( canmat_402_ul_software_position_limit_sub_max_position_range_limit(cif, drive->node_id,
                                                                                          &max, &drive->abort_code) );
 
-        // FIXME: parametrize limits better
+        double max_val, min_val;
+        max_val = max / drive->pos_factor;
+
+        // FIXME: parameterize limits better
         drive->pos_max_hard = max / drive->pos_factor - 5*M_PI/180;
         drive->pos_min_hard = min / drive->pos_factor + 5*M_PI/180;
         drive->pos_max_soft = drive->pos_max_hard - 5*M_PI/180;
@@ -245,12 +248,16 @@ enum canmat_status canmat_402_probe_pdo(
 
 }
 
+/**
+ * @function canmat_402_set_op_mode
+ * @brief Set operation mode (velocity/profile position)
+ */
 enum canmat_status canmat_402_set_op_mode( struct canmat_iface *cif, struct canmat_402_drive *drive,
                                            enum canmat_402_op_mode op_mode ) {
     // Depend on a user-configurable RPDO for now
     if( drive->rpdo_user < 0 || drive->rpdo_user > 0xFF ) return CANMAT_ERR_PARAM;
 
-    // Check that opmode is handled
+    // Check that operation mode is handled
     struct canmat_obj *ref_obj = NULL;
     uint16_t ctrl_and = 0xFFFF, ctrl_or = 0;
     canmat_scalar_t ref_val = {0};
@@ -263,6 +270,14 @@ enum canmat_status canmat_402_set_op_mode( struct canmat_iface *cif, struct canm
                     CANMAT_402_CTRLMASK_VL_RFG_UNLOCK |
                     CANMAT_402_CTRLMASK_VL_RFG_USE_REF );
         break;
+    case CANMAT_402_OP_MODE_PROFILE_POSITION:
+    	ref_obj = CANMAT_402_OBJ_TARGET_POSITION;
+    	ref_val.u16 = 0;
+    	ctrl_and = 0xFFFF;
+    	ctrl_or = ( CANMAT_402_CTRLMASK_PP_NEW_SET_POINT |
+    				CANMAT_402_CTRLMASK_PP_CHANGE_SET_IMMEDIATELY |
+    				CANMAT_402_CTRLMASK_PP_ABS_REL );
+    	break;
     default: return CANMAT_ERR_PARAM;
     }
     if( NULL == ref_obj ) return CANMAT_ERR_PARAM;
