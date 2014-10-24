@@ -115,12 +115,15 @@ int opt_rpdo_ctrl = 0;
 int opt_rpdo_user = 1;
 int opt_tpdo_user = 0;
 int opt_tpdo_stat = -1;
+enum canmat_402_op_mode opt_op_mode = CANMAT_402_OP_MODE_VELOCITY;
+//enum canmat_402_op_mode opt_op_mode = CANMAT_402_OP_MODE_PROFILE_POSITION;
 
 /** Frequency */
 double opt_timeout_sec = 0.01; // 100 Hz
 
 // FIXME: 1
-//@ntd: Did you read this from the Schunk Motion software. Should be in its own object */
+// Unit system: INTEGER (MILI) m-degree/second
+// To know your unit system, check in the MTS Software (under the Device Tab)
 double opt_vel_factor = 180/M_PI*1000;
 double opt_pos_factor = 180/M_PI*1000;
 
@@ -147,14 +150,12 @@ static void send_feedback( struct can402_cx *cx );
 /***********************/
 int main( int argc, char ** argv ) {
 
-
 	sns_init();
     struct can402_cx cx;
     memset( &cx, 0, sizeof(cx));
 
     /** Set default: Velocity mode, halted */
-    cx.op_mode = CANMAT_402_OP_MODE_VELOCITY;
-    //cx.op_mode = CANMAT_402_OP_MODE_PROFILE_POSITION;
+    cx.op_mode = opt_op_mode;
     cx.halt = 1;
 
     /** Parse */
@@ -243,6 +244,12 @@ int main( int argc, char ** argv ) {
     	printf("[%d] Position notation raw: hex: %x \n", cx.drive_set.drive[i].node_id,
     	        		pos_notation);
 
+
+        // Want to see the default operation mode
+        int8_t mode;
+        canmat_402_ul_modes_of_operation( cx.drive_set.cif, cx.drive_set.drive[i].node_id,
+        								  &mode, error );
+        printf("[%d] Mode: %x \n", cx.drive_set.drive[i].node_id, mode );
 
     }
 
@@ -399,30 +406,10 @@ static void init( struct can402_cx *cx ) {
 
     enum canmat_status r;
 
-    // Initialize drives
+    /** Initialize drives */
     for( size_t i = 0; i < cx->drive_set.n; i ++ ) {
         r = canmat_402_init( cx->drive_set.cif, cx->drive_set.drive[i].node_id, &cx->drive_set.drive[i] );
-        ///////////////////////////////////////////
-        printf("[%d] Control word: %x \n", i, cx->drive_set.drive[i].ctrl_word );
-        printf("[%d] Status word: %x \n", i, cx->drive_set.drive[i].stat_word );
-        printf("[%d] Raw position: %x \n", i, cx->drive_set.drive[i].actual_pos_raw );
-        printf("[%d] Raw velocity: %x \n", i, cx->drive_set.drive[i].actual_vel_raw );
-        printf("[%d] Target velocity raw: %x \n", i, cx->drive_set.drive[i].target_vel_raw );
-        printf("[%d] Position factor: %f \n", i, cx->drive_set.drive[i].pos_factor );
-        printf("[%d] Velocity factor: %f \n", i, cx->drive_set.drive[i].vel_factor );
-        printf("[%d] Current factor: %f \n", i, cx->drive_set.drive[i].cur_factor );
-        // Get position notation index
-        canmat_status_t r;
-        uint8_t val;
-        uint32_t err;
-        /*
-        r = canmat_402_ul_position_dimension_index( cx->drive_set.cif,
-        											cx->drive_set.drive[i].node_id,
-        											&val,
-        											&err );
-        if( r != CANMAT_OK) { printf("OH CRAP, drive [%d] could not upload dim index \n", i);}
-*/
-        ///////////////////////////////////////////
+
         SNS_LOG( LOG_DEBUG, "drive 0x%x: statusword 0x%x, state '%s' (0x%x) \n",
                  cx->drive_set.drive[i].node_id, cx->drive_set.drive[i].stat_word,
                  canmat_402_state_string( canmat_402_state(&cx->drive_set.drive[i]) ),
@@ -432,7 +419,7 @@ static void init( struct can402_cx *cx ) {
     }
 
 
-    // Map the control
+    /** Map the control-word RPDO */
     for( size_t i = 0; i < cx->drive_set.n; i ++ ) {
         const struct canmat_obj *obj[1] =  {CANMAT_402_OBJ_CONTROLWORD};
         r = canmat_pdo_remap( cx->drive_set.cif, cx->drive_set.drive[i].node_id,
@@ -478,7 +465,7 @@ static void init( struct can402_cx *cx ) {
 
     // Set operation mode (position / velocity) and PDOs
     for( size_t i = 0; i < cx->drive_set.n; i ++ ) {
-        r = canmat_402_set_op_mode( cx->drive_set.cif, &cx->drive_set.drive[i], CANMAT_402_OP_MODE_VELOCITY );
+        r = canmat_402_set_op_mode( cx->drive_set.cif, &cx->drive_set.drive[i], opt_op_mode );
         if( r != CANMAT_OK ) {
             SNS_LOG( LOG_EMERG, "can402: couldn't set op mode: '%s'\n",
                    canmat_iface_strerror( cx->drive_set.cif, r) );
@@ -501,14 +488,6 @@ static void init( struct can402_cx *cx ) {
                  canmat_402_state_string( canmat_402_state(&cx->drive_set.drive[i]) ),
                  canmat_402_state(&cx->drive_set.drive[i]) );
     }
-
-    //////////////////////
-    printf("\t * After Starting all drives. I expect to see 0x27 for all the drives' status words \n");
-    for( size_t i = 0; i < cx->drive_set.n; ++i ) {
-    	printf("\t * Status of drive %d: %x \n", cx->drive_set.drive[i].node_id, cx->drive_set.drive[i].stat_word );
-    }
-    //////////////////////
-
 
     return;
 
@@ -622,13 +601,16 @@ static double pos_limit( struct canmat_402_drive *drive, double val ) {
     return val + off;
 }
 
+
 // workaround for Schunk PRL+ 0.62 firmware
 #define VEL_MIN (INT16_MIN+1)
 #define VEL_MAX (INT16_MAX)
 
-// JUST COPIED FROM ABOVE. DO NOT USE IT UNTIL CHECKED AGAIN
-#define POS_MIN (INT16_MIN+1)
-#define POS_MAX (INT16_MAX)
+// FIXME
+// Ask Varun or Neil. Just the extremes of the data type for position?
+// Probably won't need this since I am using the double values to check?
+#define POS_MIN (INT32_MIN+1)
+#define POS_MAX (INT32_MAX)
 
 
 /**
@@ -697,24 +679,26 @@ static void process( struct can402_cx *cx ) {
     case SNS_MOTOR_MODE_POS:
     	halt(cx,0); // unhalt
     	if( cx->halt ) return; // Make sure we unhalted
+
     	for( size_t i = 0; i < cx->msg_ref->header.n; ++i ) {
-    		// Check position limit
-    		double pos = pos_limit( &cx->drive_set.drive[i], cx->msg_ref->u[i] );
+
+            // Retrieve position from message
+            double pos = cx->msg_ref->u[i];
+
     		// Clamp value
     		pos *= cx->drive_set.drive[i].pos_factor;
-    		int16_t target_position = 0;
-    		if( pos > POS_MAX ) {
-
-    		} else if( pos < POS_MIN ) {
-
-    		} else {
-    			target_position = (int16_t) pos;
+    		int32_t target_position = 0;
+    		if( pos > cx->drive_set.drive[i].pos_max_soft ) {
+    			pos = cx->drive_set.drive[i].pos_max_soft;
+    		} else if( pos < cx->drive_set.drive[i].pos_min_soft ) {
+    			pos = cx->drive_set.drive[i].pos_min_soft;
     		}
+    		target_position = (int32_t) pos;
 
     		// Check if update is necessary
     		if( target_position != cx->drive_set.drive[i].target_pos_raw ) {
     			// Send PDO
-    			canmat_status_t cr = canmat_rpdo_send_i16( cx->drive_set.cif,
+    			canmat_status_t cr = canmat_rpdo_send_i32( cx->drive_set.cif,
     													   cx->drive_set.drive[i].node_id,
     													   (uint8_t)cx->drive_set.drive[i].rpdo_user,
     													   target_position );

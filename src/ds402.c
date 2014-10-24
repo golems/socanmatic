@@ -148,9 +148,6 @@ enum canmat_status canmat_402_init( struct canmat_iface *cif, uint8_t id, struct
         CHECK_STATUS( canmat_402_ul_software_position_limit_sub_max_position_range_limit(cif, drive->node_id,
                                                                                          &max, &drive->abort_code) );
 
-        double max_val, min_val;
-        max_val = max / drive->pos_factor;
-
         // FIXME: parameterize limits better
         drive->pos_max_hard = max / drive->pos_factor - 5*M_PI/180;
         drive->pos_min_hard = min / drive->pos_factor + 5*M_PI/180;
@@ -272,11 +269,17 @@ enum canmat_status canmat_402_set_op_mode( struct canmat_iface *cif, struct canm
         break;
     case CANMAT_402_OP_MODE_PROFILE_POSITION:
     	ref_obj = CANMAT_402_OBJ_TARGET_POSITION;
-    	ref_val.u16 = 0;
-    	ctrl_and = 0xFFFF;
-    	ctrl_or = ( CANMAT_402_CTRLMASK_PP_NEW_SET_POINT |
-    				CANMAT_402_CTRLMASK_PP_CHANGE_SET_IMMEDIATELY |
-    				CANMAT_402_CTRLMASK_PP_ABS_REL );
+
+    	// Reference value should be the same as the current position
+    	int32_t current_position_raw; uint32_t error;
+    	canmat_402_ul_position_actual_value( cif, drive->node_id,
+    										 &current_position_raw,
+    										 &error );
+    	ref_val.i32 = current_position_raw;
+    	ctrl_and = 0xFF8F; // Bits 4,5 and 6 zeros
+    	ctrl_or = ( CANMAT_402_CTRLMASK_PP_NEW_SET_POINT ); //|
+    				//CANMAT_402_CTRLMASK_PP_CHANGE_SET_IMMEDIATELY | // Finish current positioning
+    				//CANMAT_402_CTRLMASK_PP_ABS_REL ); // Absolute position
     	break;
     default: return CANMAT_ERR_PARAM;
     }

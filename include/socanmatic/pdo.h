@@ -93,7 +93,7 @@ struct canmat_pdo_descriptor_table {
 
 /** Lookup the descriptor for can_frame in and write message data to the pointed location.
  *
- * precondtion: table->descriptor is sorted by cob-id
+ * precondition: table->descriptor is sorted by cob-id
  *
  * postcondition: The data in frame is written to the memory locations
  * pointed to by the corresponding pdo_descriptor in table
@@ -128,6 +128,18 @@ static inline enum canmat_status canmat_rpdo_send_i16(
     return canmat_rpdo_send( cif, node, pdo, sizeof(val), data );
 }
 
+/**
+ * @brief 2014/10/24 - To send target position
+ */
+static inline enum canmat_status canmat_rpdo_send_i32(
+    struct canmat_iface *cif, uint8_t node, uint8_t pdo,
+    int32_t val ) {
+    uint8_t data[sizeof(val)] = { (uint8_t)(val & 0xFF),
+                                  (uint8_t)((val >>  8) & 0xFF),
+                                  (uint8_t)((val >> 16) & 0xFF),
+                                  (uint8_t)((val >> 24) & 0xFF) };
+    return canmat_rpdo_send( cif, node, pdo, sizeof(val), data );
+}
 
 #define CANMAT_RPDO_COBID( node, num ) ((CANMAT_FUNC_CODE_PDO1_RX + ((num)<<8))|(node))
 #define CANMAT_TPDO_COBID( node, num ) ((CANMAT_FUNC_CODE_PDO1_TX + ((num)<<8))|(node))
