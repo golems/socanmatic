@@ -127,10 +127,6 @@ static inline enum canmat_status canmat_rpdo_send_i16(
                                   (uint8_t)((val >> 8) & 0xFF) };
     return canmat_rpdo_send( cif, node, pdo, sizeof(val), data );
 }
-
-/**
- * @brief 2014/10/24 - To send target position
- */
 static inline enum canmat_status canmat_rpdo_send_i32(
     struct canmat_iface *cif, uint8_t node, uint8_t pdo,
     int32_t val ) {

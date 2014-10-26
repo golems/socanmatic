@@ -115,8 +115,8 @@ int opt_rpdo_ctrl = 0;
 int opt_rpdo_user = 1;
 int opt_tpdo_user = 0;
 int opt_tpdo_stat = 1; // WAS -1
-//enum canmat_402_op_mode opt_op_mode = CANMAT_402_OP_MODE_VELOCITY;
 enum canmat_402_op_mode opt_op_mode = CANMAT_402_OP_MODE_PROFILE_POSITION;
+//enum canmat_402_op_mode opt_op_mode = CANMAT_402_OP_MODE_VELOCITY;
 
 /** Frequency */
 double opt_timeout_sec = 0.01; // 100 Hz
@@ -144,6 +144,9 @@ static void *feedback_recv_start( void *cx );
 /* Called from main thread */
 static void update_feedback( struct can402_cx *cx );
 static void send_feedback( struct can402_cx *cx );
+
+/* Debug */
+static void print_debug( struct can402_cx cx );
 
 /***********************/
 /*  MAIN FUNCTION      */
@@ -181,108 +184,32 @@ int main( int argc, char ** argv ) {
         }
     }
 
-    // PROFILE VELOCITY
+    /** Set profile velocity and acceleration to low values for safety */
     {
+		uint32_t error;
+		uint32_t prof_vel; double prof_vel_d;
+		uint32_t prof_acc; double prof_acc_d;
+
     	for( int i = 0; i < cx.drive_set.n; ++i ) {
-    		double prof_vel_d = 0.17; //0.698; // 40degrees/s
-    		uint32_t prof_vel = prof_vel_d*cx.drive_set.drive[i].vel_factor;
-    		uint32_t error;
+    		prof_vel_d = 0.17; // 9.7 degrees/s
+    		prof_vel = prof_vel_d*cx.drive_set.drive[i].vel_factor;
+
     		canmat_402_dl_profile_velocity( cx.drive_set.cif, cx.drive_set.drive[i].node_id,
     										prof_vel, &error );
 
-    	}
-    }
+    		prof_acc_d = 0.7; // 40degrees/s^2
+    		prof_acc = prof_acc_d*cx.drive_set.drive[i].vel_factor;
 
-    // PROFILE ACCELERATION
-    {
-    	for( int i = 0; i < cx.drive_set.n; ++i ) {
-    		double prof_acc_d = 0.7; //2.9; // 40degrees/s
-    		uint32_t prof_acc = prof_acc_d*cx.drive_set.drive[i].vel_factor;
-    		uint32_t error;
     		canmat_402_dl_profile_acceleration( cx.drive_set.cif, cx.drive_set.drive[i].node_id,
     											prof_acc, &error );
-
-    	}
+    	} // end for
     }
 
-
-    // PROFILE ACCELERATION
-
-
-    ////////////////////////////////////////////////////
-    for( int i = 0; i < cx.drive_set.n; ++i ) {
-    	printf("[%d] POS MIN: Soft:%f Hard:%f POS MAX:  Soft:%f Hard: %f \n",
-    			cx.drive_set.drive[i].node_id,
-    			cx.drive_set.drive[i].pos_min_soft,
-    			cx.drive_set.drive[i].pos_min_hard,
-    			cx.drive_set.drive[i].pos_max_soft,
-    			cx.drive_set.drive[i].pos_max_hard);
-        int32_t pos_raw; uint32_t error;
-        canmat_402_ul_position_actual_value( cx.drive_set.cif, cx.drive_set.drive[i].node_id,
-        									 &pos_raw,
-        									 &error );
-        double pos_double = pos_raw /cx.drive_set.drive[i].pos_factor;
-        printf("[%d] Position raw: hex: %x real: %f \n", cx.drive_set.drive[i].node_id,
-        		pos_raw, pos_double);
-
-        // Profile velocity
-    	uint32_t prof_vel;
-    	canmat_402_ul_profile_velocity( cx.drive_set.cif, cx.drive_set.drive[i].node_id,
-				  &prof_vel, &error );
-    	double prof_vel_double = prof_vel / cx.drive_set.drive[i].vel_factor;
-    	printf("[%d] Profile Velocity: %x float: %f \n", cx.drive_set.drive[i].node_id,
-    	        		prof_vel, prof_vel_double );
-
-        // End velocity
-    	uint32_t end_vel;
-    	canmat_402_ul_end_velocity( cx.drive_set.cif, cx.drive_set.drive[i].node_id,
-				  &end_vel, &error );
-    	double end_vel_double = end_vel / cx.drive_set.drive[i].vel_factor;
-    	printf("[%d] End Velocity: %x float: %f \n", cx.drive_set.drive[i].node_id,
-    	        		end_vel, end_vel_double );
+    /** Debug print */
+    print_debug( cx );
 
 
-        // Profile acc
-    	uint32_t prof_acc;
-    	canmat_402_ul_profile_acceleration( cx.drive_set.cif, cx.drive_set.drive[i].node_id,
-				  &prof_acc, &error );
-    	double prof_acc_double = prof_acc / cx.drive_set.drive[i].vel_factor;
-    	printf("[%d] Profile Acceleration: %x float: %f \n", cx.drive_set.drive[i].node_id,
-    	        		prof_acc, prof_acc_double );
-
-        // End acc
-    	uint32_t profile_dec;
-    	canmat_402_ul_profile_deceleration( cx.drive_set.cif, cx.drive_set.drive[i].node_id,
-				  &profile_dec, &error );
-    	double profile_dec_double = profile_dec / cx.drive_set.drive[i].vel_factor;
-    	printf("[%d] Profile deceleration raw: hex: %x float: %f \n", cx.drive_set.drive[i].node_id,
-    	        		profile_dec, profile_dec_double );
-
-        // Target position
-    	int32_t target_position;
-    	canmat_402_ul_target_position( cx.drive_set.cif, cx.drive_set.drive[i].node_id,
-				  &target_position, &error );
-    	double target_position_double = target_position / cx.drive_set.drive[i].pos_factor;
-    	printf("[%d] Target position: hex: %x float: %f \n", cx.drive_set.drive[i].node_id,
-    	        		target_position, target_position_double );
-
-    	// Motion profile type
-    	int16_t motion_profile;
-    	canmat_402_ul_motion_profile_type( cx.drive_set.cif, cx.drive_set.drive[i].node_id,
-    									   &motion_profile, &error );
-    	printf("[%d] Motion profile type: hex: %x  \n", cx.drive_set.drive[i].node_id,
-    	    	        		motion_profile );
-
-        // Want to see the default operation mode
-        int8_t mode;
-        canmat_402_ul_modes_of_operation( cx.drive_set.cif, cx.drive_set.drive[i].node_id,
-        								  &mode, error );
-        printf("[%d] Mode: %x \n", cx.drive_set.drive[i].node_id, mode );
-
-    }
-
-
-    // run
+    /** Run */
     pthread_t feedback_thread;
     if( pthread_create( &feedback_thread, NULL, feedback_recv_start, &cx ) ) {
         SNS_DIE( "Couldn't create feedback thread: %s\n", strerror(errno) );
@@ -290,7 +217,7 @@ int main( int argc, char ** argv ) {
     }
     run(&cx);
 
-    // stop
+    /** Stop */
     if( pthread_join( feedback_thread, NULL ) ) {
         SNS_LOG( LOG_ERR, "Couldn't join feedback thread: %s\n", strerror(errno) );
     }
@@ -365,7 +292,7 @@ static void parse( struct can402_cx *cx, int argc, char **argv )
         case 'h':
         case 'H':
             puts( "Usage: can402 [OPTIONS...] \n"
-                  "Driver daemon for CANopen servo drivies\n"
+                  "Driver daemon for CANopen servo drives\n"
                   "\n"
                   "Options:\n"
                   "  -v,                       Make output more verbose\n"
@@ -460,11 +387,12 @@ static void init( struct can402_cx *cx ) {
         }
     }
 
-    // Map the feedback (TPDO Message for motor states and status word)
+    /** Map the feedback (TPDO Message for motor states and status word) */
     for( size_t i = 0; i < cx->drive_set.n; i ++ ) {
-        const canmat_obj_t *objs[2] = { CANMAT_402_OBJ_POSITION_ACTUAL_VALUE,
+
+    	const canmat_obj_t *objs[2] = { CANMAT_402_OBJ_POSITION_ACTUAL_VALUE,
                                         CANMAT_402_OBJ_VELOCITY_ACTUAL_VALUE };
-        // user TPDO
+        //-- user TPDO
         r = canmat_pdo_remap( cx->drive_set.cif, cx->drive_set.drive[i].node_id,
                               (uint8_t)(cx->drive_set.drive[i].tpdo_user), CANMAT_UL,
                               0xFE, -1, 10,
@@ -474,25 +402,26 @@ static void init( struct can402_cx *cx ) {
                      canmat_iface_strerror( cx->drive_set.cif, r) );
             goto FAIL;
         }
-        // status TPDO
+
+        //-- status TPDO
         if( 0 <= cx->drive_set.drive[i].tpdo_stat ) {
-            const canmat_obj_t *stat_obj[1] = { CANMAT_402_OBJ_STATUSWORD };
+            const canmat_obj_t *stat_obj[2] = { CANMAT_402_OBJ_STATUSWORD,
+            									CANMAT_402_OBJ_CONTROLWORD };
             r = canmat_pdo_remap( cx->drive_set.cif, cx->drive_set.drive[i].node_id,
                                   (uint8_t)(cx->drive_set.drive[i].tpdo_stat), CANMAT_UL,
                                   0xFE, -1, 10,
-                                  1, stat_obj, &cx->drive_set.drive[i].abort_code );
-            printf("CHECKING HERE \n");
-            if( r!= CANMAT_OK ) { printf("I KNEW IT! \n"); } else { printf("HUM, NOPE, IT IS MAPPING FINE STATUS WORD\n"); }
+                                  2, stat_obj, &cx->drive_set.drive[i].abort_code );
+
             if( r != CANMAT_OK ) {
                 SNS_LOG( LOG_EMERG, "can402: couldn't map status tpdo: '%s'\n",
                          canmat_iface_strerror( cx->drive_set.cif, r) );
                 goto FAIL;
             }
         }
-    }
+    } // end for
 
 
-    // Set operation mode (position / velocity) and PDOs
+    /** Set operation mode (position or velocity) and PDOs */
     for( size_t i = 0; i < cx->drive_set.n; i ++ ) {
         r = canmat_402_set_op_mode( cx->drive_set.cif, &cx->drive_set.drive[i], opt_op_mode );
         if( r != CANMAT_OK ) {
@@ -502,7 +431,7 @@ static void init( struct can402_cx *cx ) {
         }
     }
 
-    // Start: Set all drives to Operational mode
+    /** Start: Set all drives to Operational mode */
     for( size_t i = 0; i < cx->drive_set.n; i ++ ) {
         r = canmat_402_start( cx->drive_set.cif, &cx->drive_set.drive[i] );
         if( CANMAT_OK != r ) {
@@ -599,8 +528,21 @@ static void run( struct can402_cx *cx ) {
             get_msg(  cx, &cx->chan_event, &timeout, 0 );
         /*-- send_feedback --*/
         send_feedback(cx);
+        // Read target reached
+        for( int i = 0; i < cx->drive_set.n; ++i ) {
+        	/*
+        	if( cx->drive_set.drive[i].stat_word & CANMAT_402_STATMASK_TARGET_REACHED ) {
+        		printf("[%d] Target reached \n", cx->drive_set.drive[i].node_id );
+        	} else {
+        		printf("[%d] Target NOT reached \n", cx->drive_set.drive[i].node_id );
+        	}
+        	*/
+        }
+
     }
 }
+
+
 
 static double pos_limit( struct canmat_402_drive *drive, double val ) {
     // TODO: should we consider the pos offset here?
@@ -634,12 +576,6 @@ static double pos_limit( struct canmat_402_drive *drive, double val ) {
 // workaround for Schunk PRL+ 0.62 firmware
 #define VEL_MIN (INT16_MIN+1)
 #define VEL_MAX (INT16_MAX)
-
-// FIXME
-// Ask Varun or Neil. Just the extremes of the data type for position?
-// Probably won't need this since I am using the double values to check?
-#define POS_MIN (INT32_MIN+1)
-#define POS_MAX (INT32_MAX)
 
 
 /**
@@ -725,59 +661,57 @@ static void process( struct can402_cx *cx ) {
     			pos = cx->drive_set.drive[i].pos_min_soft;
     		}
 
-
     		// Clamp value
     		pos *= cx->drive_set.drive[i].pos_factor;
-
 
     		target_position = (int32_t) pos;
 
     		// Check if update is necessary
     		if( target_position != cx->drive_set.drive[i].target_pos_raw ) {
 
-    			// Check status word new_target_point bit
-    			uint16_t stat_word = cx->drive_set.drive[i].stat_word;
-    			//stat_word && ;
-    			uint16_t control_word = cx->drive_set.drive[i].ctrl_word;
-    			printf("Control word: %x \n", control_word );
-    			if( control_word & 0x0010 ) { printf(" Set point bit in CTRLWORD is 1\n"); } else { printf("Set point bit in CTRL WORD is 0 \n"); }
-       			// Send positioning data
-    			printf("Send positioning data... \n");
-        		canmat_status_t cr = canmat_rpdo_send_i32( cx->drive_set.cif,
-        				cx->drive_set.drive[i].node_id,
-        				(uint8_t)cx->drive_set.drive[i].rpdo_user,
-        				target_position );
-        		printf("Send control word \n");
+    			uint16_t ctrl_word, stat_word;
+    			canmat_status_t r;
 
-    			// We set new_set_point bit to 1 in the control word
-        		uint16_t ctrl_word;
-        		ctrl_word = cx->drive_set.drive[i].ctrl_word | 0x0010; // Set bit 4 to one
+    			// Set NEW_SET_POINT bit to 0 (getting ready for up-bit change)
+				ctrl_word = cx->drive_set.drive[i].ctrl_word;
+				ctrl_word = ctrl_word & (~CANMAT_402_CTRLMASK_PP_NEW_SET_POINT);
 
-        		canmat_status_t r = canmat_rpdo_send_u16( cx->drive_set.cif,
+        		r = canmat_rpdo_send_u16( cx->drive_set.cif,
     		    						  cx->drive_set.drive[i].node_id,
     		    						  cx->drive_set.drive[i].rpdo_ctrl,
     		    						  ctrl_word );
-    		    if( r != CANMAT_OK ) { printf("Did not set ctrl mask fine \n"); return; }
-    		    // Check that the set point was successfully received
-    		    uint16_t status_word; uint32_t error;
-/*
-    		    printf("Read status word \n");
-    		    r = canmat_402_ul_statusword( cx->drive_set.cif, cx->drive_set.drive[i].node_id,
-    		        		    							&status_word,
-    		        		                                &error );
-
-    		    if( status_word && 0x1000 ) { printf("Acknowledge of reception \n"); }
+        		if( r != CANMAT_OK ) { printf("ERROR SETTING CONTROL WORD SETTING NEW TARGET BIT \n"); }
 
 
-    		    printf("OK GOOD \n");
-    		    */
-    			if( CANMAT_OK == cr ) {
-    				printf("I sent it! \n");
+    			// Check status word new_target_point bit
+    			stat_word = cx->drive_set.drive[i].stat_word;
+
+    			// Send positioning data
+    			printf("Sending positioning data... \n");
+        		r = canmat_rpdo_send_i32( cx->drive_set.cif,
+        								  cx->drive_set.drive[i].node_id,
+        								  (uint8_t)cx->drive_set.drive[i].rpdo_user,
+        								  target_position );
+    			if( CANMAT_OK == r ) {
+    				printf("Good. Positioning data sent! \n");
     				cx->drive_set.drive[i].target_pos_raw = target_position;
     			} else {
     				SNS_LOG( LOG_ERR, "Couldn't send PDO: %s \n",
-    						canmat_iface_strerror(cx->drive_set.cif, cr) );
+    						canmat_iface_strerror(cx->drive_set.cif, r) );
     			}
+
+        		printf("Sending control word bit 1 ... \n");
+
+    			// Set NEW_SET_POINT bit to 1 (up-bit change to signal new target)
+        		ctrl_word = ctrl_word | (CANMAT_402_CTRLMASK_PP_NEW_SET_POINT);
+
+        		r = canmat_rpdo_send_u16( cx->drive_set.cif,
+    		    						  cx->drive_set.drive[i].node_id,
+    		    						  cx->drive_set.drive[i].rpdo_ctrl,
+    		    						  ctrl_word );
+    		    if( r != CANMAT_OK ) { printf("Did not set control mask fine \n"); return; }
+
+
     		}
 
     	}
@@ -903,15 +837,14 @@ static void feedback_recv( struct can402_cx *cx ) {
                 		(int) can.can_id ) {
                 	// Found matching drive
                 	// validate
-                	if( 2 == can.can_dlc ) {
+                	if( 4 == can.can_dlc ) { // 2: STATE, 2: CONTROL
                 		canmat_scalar_t status_word;
+                		canmat_scalar_t control_word;
                 		status_word.u16 = canmat_byte_ldle16( &can.data[0] );
+                		control_word.u16 = canmat_byte_ldle16( &can.data[2] );
                 		/** FIXME: Portability */
                 		__atomic_store_n( &drive->stat_word, status_word.u16, __ATOMIC_RELAXED );
-                		if( drive->stat_word && 0x400 ) {
-                			//printf("Target reached in status word \n");
-
-                		}
+                		__atomic_store_n( &drive->ctrl_word, control_word.u16, __ATOMIC_RELAXED );
                 	} else {
                 		SNS_LOG( LOG_WARNING, "PDO Message too short: %d, expected 2 \n", can.can_dlc );
                 	}
@@ -932,4 +865,84 @@ static void stop( struct can402_cx *cx ) {
         }
     }
     sns_end();
+}
+
+
+/**
+ * @function print_debug
+ */
+static void print_debug( struct can402_cx cx ) {
+
+    for( int i = 0; i < cx.drive_set.n; ++i ) {
+    	printf("[%d] POS MIN: Soft:%f Hard:%f POS MAX:  Soft:%f Hard: %f \n",
+    			cx.drive_set.drive[i].node_id,
+    			cx.drive_set.drive[i].pos_min_soft,
+    			cx.drive_set.drive[i].pos_min_hard,
+    			cx.drive_set.drive[i].pos_max_soft,
+    			cx.drive_set.drive[i].pos_max_hard);
+        int32_t pos_raw; uint32_t error;
+        canmat_402_ul_position_actual_value( cx.drive_set.cif, cx.drive_set.drive[i].node_id,
+        									 &pos_raw,
+        									 &error );
+        double pos_double = pos_raw /cx.drive_set.drive[i].pos_factor;
+        printf("[%d] Position raw: hex: %x real: %f \n", cx.drive_set.drive[i].node_id,
+        		pos_raw, pos_double);
+
+        // Profile velocity
+    	uint32_t prof_vel;
+    	canmat_402_ul_profile_velocity( cx.drive_set.cif, cx.drive_set.drive[i].node_id,
+				  &prof_vel, &error );
+    	double prof_vel_double = prof_vel / cx.drive_set.drive[i].vel_factor;
+    	printf("[%d] Profile Velocity: %x float: %f \n", cx.drive_set.drive[i].node_id,
+    	        		prof_vel, prof_vel_double );
+
+        // End velocity
+    	uint32_t end_vel;
+    	canmat_402_ul_end_velocity( cx.drive_set.cif, cx.drive_set.drive[i].node_id,
+				  &end_vel, &error );
+    	double end_vel_double = end_vel / cx.drive_set.drive[i].vel_factor;
+    	printf("[%d] End Velocity: %x float: %f \n", cx.drive_set.drive[i].node_id,
+    	        		end_vel, end_vel_double );
+
+
+        // Profile acc
+    	uint32_t prof_acc;
+    	canmat_402_ul_profile_acceleration( cx.drive_set.cif, cx.drive_set.drive[i].node_id,
+				  &prof_acc, &error );
+    	double prof_acc_double = prof_acc / cx.drive_set.drive[i].vel_factor;
+    	printf("[%d] Profile Acceleration: %x float: %f \n", cx.drive_set.drive[i].node_id,
+    	        		prof_acc, prof_acc_double );
+
+        // End acc
+    	uint32_t profile_dec;
+    	canmat_402_ul_profile_deceleration( cx.drive_set.cif, cx.drive_set.drive[i].node_id,
+				  &profile_dec, &error );
+    	double profile_dec_double = profile_dec / cx.drive_set.drive[i].vel_factor;
+    	printf("[%d] Profile deceleration raw: hex: %x float: %f \n", cx.drive_set.drive[i].node_id,
+    	        		profile_dec, profile_dec_double );
+
+        // Target position
+    	int32_t target_position;
+    	canmat_402_ul_target_position( cx.drive_set.cif, cx.drive_set.drive[i].node_id,
+				  &target_position, &error );
+    	double target_position_double = target_position / cx.drive_set.drive[i].pos_factor;
+    	printf("[%d] Target position: hex: %x float: %f \n", cx.drive_set.drive[i].node_id,
+    	        		target_position, target_position_double );
+
+    	// Motion profile type
+    	int16_t motion_profile;
+    	canmat_402_ul_motion_profile_type( cx.drive_set.cif, cx.drive_set.drive[i].node_id,
+    									   &motion_profile, &error );
+    	printf("[%d] Motion profile type: hex: %x  \n", cx.drive_set.drive[i].node_id,
+    	    	        		motion_profile );
+
+        // Want to see the default operation mode
+        int8_t mode;
+        canmat_402_ul_modes_of_operation( cx.drive_set.cif, cx.drive_set.drive[i].node_id,
+        								  &mode, error );
+        printf("[%d] Mode: %x \n", cx.drive_set.drive[i].node_id, mode );
+
+    }
+
+    return;
 }
