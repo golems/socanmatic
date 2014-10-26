@@ -181,6 +181,34 @@ int main( int argc, char ** argv ) {
         }
     }
 
+    // PROFILE VELOCITY
+    {
+    	for( int i = 0; i < cx.drive_set.n; ++i ) {
+    		double prof_vel_d = 0.17; //0.698; // 40degrees/s
+    		uint32_t prof_vel = prof_vel_d*cx.drive_set.drive[i].vel_factor;
+    		uint32_t error;
+    		canmat_402_dl_profile_velocity( cx.drive_set.cif, cx.drive_set.drive[i].node_id,
+    										prof_vel, &error );
+
+    	}
+    }
+
+    // PROFILE ACCELERATION
+    {
+    	for( int i = 0; i < cx.drive_set.n; ++i ) {
+    		double prof_acc_d = 0.7; //2.9; // 40degrees/s
+    		uint32_t prof_acc = prof_acc_d*cx.drive_set.drive[i].vel_factor;
+    		uint32_t error;
+    		canmat_402_dl_profile_acceleration( cx.drive_set.cif, cx.drive_set.drive[i].node_id,
+    											prof_acc, &error );
+
+    	}
+    }
+
+
+    // PROFILE ACCELERATION
+
+
     ////////////////////////////////////////////////////
     for( int i = 0; i < cx.drive_set.n; ++i ) {
     	printf("[%d] POS MIN: Soft:%f Hard:%f POS MAX:  Soft:%f Hard: %f \n",
