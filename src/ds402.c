@@ -276,30 +276,31 @@ enum canmat_status canmat_402_set_op_mode( struct canmat_iface *cif, struct canm
     										 &current_position_raw,
     										 &error );
     	ref_val.i32 = current_position_raw;
+
     	ctrl_and = 0xFF8F; // Bits 4,5 and 6 zeros
-    	ctrl_or = ( CANMAT_402_CTRLMASK_PP_NEW_SET_POINT ); //|
-    				//CANMAT_402_CTRLMASK_PP_CHANGE_SET_IMMEDIATELY | // Finish current positioning
-    				//CANMAT_402_CTRLMASK_PP_ABS_REL ); // Absolute position
+    	ctrl_or = 0x0020;
+    	// CANMAT_402_CTRLMASK_PP_NEW_SET_POINT = 0; // No new point to reach
+    	// CANMAT_402_CTRLMASK_PP_CHANGE_SET_IMMEDIATELY  = 1; // Go to next one
+    	// CANMAT_402_CTRLMASK_PP_ABS_REL = 0; // Absolute position
     	break;
     default: return CANMAT_ERR_PARAM;
     }
     if( NULL == ref_obj ) return CANMAT_ERR_PARAM;
 
-    // Set mode unless already set
-    if( op_mode != drive->op_mode ) {
-        // Make sure the drive is halted
-        if( ! (drive->ctrl_word & CANMAT_402_CTRLMASK_HALT) ) {
-            return CANMAT_ERR_MOTION;
-        }
+    // Set mode and no-motion reference. ALWAYS (even if the mode is the same as the latest one)
 
-        // set the mode
-        CHECK_STATUS( canmat_402_dl_modes_of_operation( cif, drive->node_id, op_mode,
-                                                        &(drive->abort_code) ) );
-        drive->op_mode = op_mode;
-
-        // Set reference to no-motion value
-        CHECK_STATUS( canmat_obj_dl( cif, drive->node_id, ref_obj, &ref_val, &(drive->abort_code) ) );
+    // Make sure the drive is halted
+    if( ! (drive->ctrl_word & CANMAT_402_CTRLMASK_HALT) ) {
+    	return CANMAT_ERR_MOTION;
     }
+
+    // set the mode
+    CHECK_STATUS( canmat_402_dl_modes_of_operation( cif, drive->node_id, op_mode,
+                                                        &(drive->abort_code) ) );
+    drive->op_mode = op_mode;
+
+    // Set reference to no-motion value
+    CHECK_STATUS( canmat_obj_dl( cif, drive->node_id, ref_obj, &ref_val, &(drive->abort_code) ) );
 
 
     // Map the RPDO
