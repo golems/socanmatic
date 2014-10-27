@@ -68,6 +68,10 @@ static struct fun_desc *lookup( const char *type ) {
     return NULL;
 }
 
+/**
+ * @function load
+ * @brief
+ */
 static void load( const char *type ) {
     const char prefix[] = "libsocanmatic_iface_";
     const char suffix[] = ".so";
@@ -95,6 +99,10 @@ static void load( const char *type ) {
     return;
 }
 
+/**
+ * @function canmat_iface_new
+ * @brief Create a new object of iface (SocketCAN/NTCAN)
+ */
 canmat_iface_t* canmat_iface_new( const char *type ) {
     struct fun_desc *d = lookup(type);
     if( ! d ) {
@@ -109,6 +117,10 @@ canmat_iface_t* canmat_iface_new( const char *type ) {
     }
 }
 
+/**
+ * @function canmat_iface_strerror
+ * @brief Return string of error
+ */
 const char *canmat_iface_strerror( canmat_iface_t *cif, canmat_status_t status ) {
     if( CANMAT_ERR_OS == status ) {
         return cif->vtable->strerror(cif);

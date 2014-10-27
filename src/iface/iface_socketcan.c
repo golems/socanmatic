@@ -107,6 +107,9 @@ static canmat_status_t v_destroy( struct canmat_iface *cif ) {
     else return CANMAT_OK;
 }
 
+/**
+ * @function v_strerror
+ */
 static const char *v_strerror( struct canmat_iface *cif ) {
     if( cif->vtable != &vtable ) return "?";
     return strerror(cif->err);

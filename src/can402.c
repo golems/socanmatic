@@ -120,6 +120,7 @@ enum canmat_402_op_mode opt_op_mode = CANMAT_402_OP_MODE_PROFILE_POSITION;
 
 /** Frequency */
 double opt_timeout_sec = 0.01; // 100 Hz
+//double opt_timeout_sec = 0.1; // 1 Hz
 
 // FIXME: 1
 // Unit system: INTEGER (MILI) m-degree/second
@@ -405,12 +406,11 @@ static void init( struct can402_cx *cx ) {
 
         //-- status TPDO
         if( 0 <= cx->drive_set.drive[i].tpdo_stat ) {
-            const canmat_obj_t *stat_obj[2] = { CANMAT_402_OBJ_STATUSWORD,
-            									CANMAT_402_OBJ_CONTROLWORD };
+            const canmat_obj_t *stat_obj[1] = { CANMAT_402_OBJ_STATUSWORD };
             r = canmat_pdo_remap( cx->drive_set.cif, cx->drive_set.drive[i].node_id,
                                   (uint8_t)(cx->drive_set.drive[i].tpdo_stat), CANMAT_UL,
                                   0xFE, -1, 10,
-                                  2, stat_obj, &cx->drive_set.drive[i].abort_code );
+                                  1, stat_obj, &cx->drive_set.drive[i].abort_code );
 
             if( r != CANMAT_OK ) {
                 SNS_LOG( LOG_EMERG, "can402: couldn't map status tpdo: '%s'\n",
@@ -528,17 +528,6 @@ static void run( struct can402_cx *cx ) {
             get_msg(  cx, &cx->chan_event, &timeout, 0 );
         /*-- send_feedback --*/
         send_feedback(cx);
-        // Read target reached
-        for( int i = 0; i < cx->drive_set.n; ++i ) {
-        	/*
-        	if( cx->drive_set.drive[i].stat_word & CANMAT_402_STATMASK_TARGET_REACHED ) {
-        		printf("[%d] Target reached \n", cx->drive_set.drive[i].node_id );
-        	} else {
-        		printf("[%d] Target NOT reached \n", cx->drive_set.drive[i].node_id );
-        	}
-        	*/
-        }
-
     }
 }
 
@@ -680,27 +669,25 @@ static void process( struct can402_cx *cx ) {
     		    						  cx->drive_set.drive[i].node_id,
     		    						  cx->drive_set.drive[i].rpdo_ctrl,
     		    						  ctrl_word );
-        		if( r != CANMAT_OK ) { printf("ERROR SETTING CONTROL WORD SETTING NEW TARGET BIT \n"); }
-
+        		if( r == CANMAT_OK ) {
+        			cx->drive_set.drive[i].ctrl_word = ctrl_word;
+        		}
 
     			// Check status word new_target_point bit
     			stat_word = cx->drive_set.drive[i].stat_word;
 
     			// Send positioning data
-    			printf("Sending positioning data... \n");
         		r = canmat_rpdo_send_i32( cx->drive_set.cif,
         								  cx->drive_set.drive[i].node_id,
         								  (uint8_t)cx->drive_set.drive[i].rpdo_user,
         								  target_position );
     			if( CANMAT_OK == r ) {
-    				printf("Good. Positioning data sent! \n");
     				cx->drive_set.drive[i].target_pos_raw = target_position;
     			} else {
-    				SNS_LOG( LOG_ERR, "Couldn't send PDO: %s \n",
+    				SNS_LOG( LOG_ERR, "Couldn't send pdo: %s \n",
     						canmat_iface_strerror(cx->drive_set.cif, r) );
     			}
 
-        		printf("Sending control word bit 1 ... \n");
 
     			// Set NEW_SET_POINT bit to 1 (up-bit change to signal new target)
         		ctrl_word = ctrl_word | (CANMAT_402_CTRLMASK_PP_NEW_SET_POINT);
@@ -709,8 +696,10 @@ static void process( struct can402_cx *cx ) {
     		    						  cx->drive_set.drive[i].node_id,
     		    						  cx->drive_set.drive[i].rpdo_ctrl,
     		    						  ctrl_word );
-    		    if( r != CANMAT_OK ) { printf("Did not set control mask fine \n"); return; }
 
+        		if( r == CANMAT_OK ) {
+        			cx->drive_set.drive[i].ctrl_word = ctrl_word;
+        		}
 
     		}
 
@@ -835,16 +824,13 @@ static void feedback_recv( struct can402_cx *cx ) {
                 /** STATUS WORD TPDO */
                 else if( CANMAT_TPDO_COBID( drive->node_id, drive->tpdo_stat) ==
                 		(int) can.can_id ) {
-                	// Found matching drive
+                     // Found matching drive
                 	// validate
-                	if( 4 == can.can_dlc ) { // 2: STATE, 2: CONTROL
+                	if( 2 == can.can_dlc ) { // 2: STATE
                 		canmat_scalar_t status_word;
-                		canmat_scalar_t control_word;
                 		status_word.u16 = canmat_byte_ldle16( &can.data[0] );
-                		control_word.u16 = canmat_byte_ldle16( &can.data[2] );
                 		/** FIXME: Portability */
                 		__atomic_store_n( &drive->stat_word, status_word.u16, __ATOMIC_RELAXED );
-                		__atomic_store_n( &drive->ctrl_word, control_word.u16, __ATOMIC_RELAXED );
                 	} else {
                 		SNS_LOG( LOG_WARNING, "PDO Message too short: %d, expected 2 \n", can.can_dlc );
                 	}

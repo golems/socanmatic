@@ -95,6 +95,10 @@ unsigned long parse_u( const char *arg, int base, uint64_t max ) {
     return u;
 }
 
+/**
+ * @function open_iface
+ * @brief Open SocketCAN / NTCAN interface
+ */
 struct canmat_iface *open_iface( const char *type, const char *name ) {
     struct canmat_iface *cif = canmat_iface_new( type );
     hard_assert( cif, "Couldn't create interface of type: %s\n", type );
