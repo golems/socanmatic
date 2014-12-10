@@ -592,7 +592,6 @@ static void process( struct can402_cx *cx ) {
 
     	halt(cx, 0); // unhalt
         if( cx->halt ) return;  // make sure we unhalted
-
         for( size_t i = 0; i < cx->msg_ref->header.n; i ++ ) {
             // position limit
             double val = pos_limit( &cx->drive_set.drive[i], cx->msg_ref->u[i] );
@@ -606,6 +605,8 @@ static void process( struct can402_cx *cx ) {
                 vl_target = VEL_MIN;
                 SNS_LOG(LOG_DEBUG, "clamp- %f -> %d 0x%x\n", val, vl_target, cx->drive_set.drive[i].node_id);
             } else vl_target = (int16_t) val;
+            
+
             // check if update necessary to save bandwidth
             if( vl_target != cx->drive_set.drive[i].target_vel_raw ) {
                 // send pdo
