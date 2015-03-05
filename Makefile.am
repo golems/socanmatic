@@ -77,6 +77,11 @@ if HAVE_SNS
 bin_PROGRAMS += can402
 can402_SOURCES = src/can402.c
 can402_LDADD = libsocanmatic.la libsocanmatic402.la -lsns -lamino -lach -llapack -lblas
+
+bin_PROGRAMS += brake_diagnostic
+brake_diagnostic_SOURCES=utils/brake_diagnostic.c
+brake_diagnostic_LDADD=libsocanmatic.la libsocanmatic402.la -lsns -lamino -lach -llapack -lblas
+
 endif
 
 
